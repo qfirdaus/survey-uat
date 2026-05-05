@@ -1,5 +1,6 @@
 /vendor/
 .env
+env
 *.log
 *.sqlite
 node_modules/
