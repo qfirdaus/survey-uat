@@ -1,7 +1,7 @@
 services:
   web:
     build: .
-    container_name: sap-uat-web   # tukar nama
+    container_name: survey-uat-web   # ✅ tukar nama
     env_file:
       - ./.env
     ports:
@@ -11,8 +11,8 @@ services:
       - ./public:/var/www/html
       - ./VERSION:/var/www/VERSION:ro
 
-      # 👉 tukar config file ni nanti
-      - ./docker/apache/sap-uat.dev.conf:/etc/apache2/sites-enabled/000-default.conf
+      # ✅ tukar ke config baru
+      - ./docker/apache/survey-uat.dev.conf:/etc/apache2/sites-enabled/000-default.conf
       - ./docker/apache/servername.conf:/etc/apache2/conf-enabled/servername.conf
 
       - ./docker/ssl:/etc/apache2/ssl
