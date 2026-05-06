@@ -35,6 +35,31 @@ const MenuAccess = {
     } catch (e) { /* silent */ }
   },
 
+  waitForModalShown(modalEl, modalInstance) {
+    return new Promise((resolve) => {
+      if (!modalEl || !modalInstance) {
+        resolve();
+        return;
+      }
+      if (modalEl.classList.contains('show')) {
+        requestAnimationFrame(() => resolve());
+        return;
+      }
+      const done = () => requestAnimationFrame(() => resolve());
+      modalEl.addEventListener('shown.bs.modal', done, { once: true });
+      modalInstance.show();
+    });
+  },
+
+  adjustMenuDataTable() {
+    try {
+      const dt = GroupState.getMenuDataTable();
+      if (dt && typeof dt.columns === 'function') {
+        dt.columns.adjust().draw(false);
+      }
+    } catch (e) { /* silent */ }
+  },
+
   attachMultiSelectToggle(selectEl) {
     if (!selectEl || selectEl.dataset.multiToggleBound === '1') return;
     selectEl.dataset.multiToggleBound = '1';
@@ -1060,6 +1085,7 @@ const MenuAccess = {
         pageLength: 10,
         lengthChange: false,
         ordering: false,
+        autoWidth: false,
         columnDefs: [
           { targets: 0, className: 'text-start align-top' },
           { targets: 1, className: 'text-start align-top' },
@@ -1074,6 +1100,10 @@ const MenuAccess = {
         }
       });
       GroupState.setMenuDataTable(table);
+      requestAnimationFrame(() => this.adjustMenuDataTable());
+      jQuery(this.modalEl)
+        .off('shown.bs.modal.menuTableAdjust')
+        .on('shown.bs.modal.menuTableAdjust', () => this.adjustMenuDataTable());
     }
 
     try {
@@ -1371,11 +1401,12 @@ const MenuAccess = {
       if (shouldRestoreParent) {
         const parentModal = GroupUtils.getModal(this.modalEl);
         if (parentModal) {
-          parentModal.show();
+          await this.waitForModalShown(this.modalEl, parentModal);
         }
       }
       this.pendingParentRestoreAfterSave = false;
-      this.openMenuEditor(groupID);
+      await this.openMenuEditor(groupID);
+      this.adjustMenuDataTable();
     } catch (e) {
       this.pendingParentRestoreAfterSave = false;
       this.editErrorEl.textContent = e.message || this.T.error_network;
