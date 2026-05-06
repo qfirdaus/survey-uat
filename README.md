@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.7.5`
+- Current version: `1.7.6`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -45,8 +45,11 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 - Group management page at `public/pages/kumpulan-pengguna.php`.
 - Supports group CRUD, group styling, module access, menu access, module/menu ordering, and sidebar refresh without full page reload.
+- Supports optional sidebar menu subgroups inside parent modules through `tbl_m_menu_subgroup` and `tbl_m_menu.f_subgroupID`.
+- Menu subgroups can be created, edited, ordered, assigned to menus, and protected from deletion while menus are still assigned.
+- Sidebar rendering remains backward-compatible: modules can still use direct menus without subgroups, while selected modules can group menus under subgroup headings.
 - Sidebar fragment updates are served by `public/ajax/sidebar-fragment.php`.
-- Related AJAX endpoints include `group-*`, `module-*`, `menu-*`, `modul-list.php`, and role-switch endpoints.
+- Related AJAX endpoints include `group-*`, `module-*`, `menu-*`, `menu-subgroup-*`, `menu-order-item-swap.php`, `modul-list.php`, and role-switch endpoints.
 - Access governance logic is supported by `GroupController.php`, `SidebarController.php`, `Group.php`, and `Modul.php`.
 
 ### Access Matrix
@@ -273,6 +276,8 @@ iqs-framework/
 - Use `Database::pdoAdditional('dbx_code')` for additional database connections created from System Settings.
 - Use `NotificationPublisher`, `NotificationWorkflowService`, or `NotificationTemplateService` for new notification flows instead of inserting notification rows directly from page code.
 - Follow `docs/notification-developer-standard-2026-05-04.md` when adding notifications to new modules so admin, event, and workflow notifications remain consistent across projects.
+- Configure sidebar modules, menus, menu access, and optional menu subgroups through `kumpulan-pengguna.php`; project programmers should not hardcode sidebar structure inside `public/includes/sidebar.php`.
+- Refer to `docs/sidebar-menu-subgroup-blueprint-2026-05-06.md` before enabling subgroup schema or adding grouped sidebar menus in a project deployment.
 - Do not hardcode database DSN, username, or password in pages/controllers.
 - Keep access checks aligned with group, module, and menu governance.
 - Record sensitive administrative changes through the audit helper/logger pattern already used in the system.

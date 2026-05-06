@@ -6,16 +6,27 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+## [1.7.6] - 2026-05-06
+
 ### Added
 - Added sidebar menu subgroup blueprint documentation with Phase 1 SQL for optional module-level menu grouping.
 - Added subgroup management endpoints and UI in `kumpulan-pengguna.php` for optional module-level menu subgroups.
 - Added audit logging for menu subgroup create, update, delete, and denied delete attempts.
+- Added subgroup-aware menu ordering support so grouped menu sections can be positioned alongside direct module menus.
 
 ### Changed
 - Changed `Modul.php` menu loading to expose optional subgroup metadata when the subgroup schema exists, while remaining backward-compatible with the current two-level sidebar schema.
 - Changed sidebar rendering to support optional nested menu subgroups inside parent modules while preserving direct module menu behavior.
 - Changed menu create/edit/list/get/group-permission flows to read and write optional `f_subgroupID` values.
+- Changed `kumpulan-pengguna.php` Menu Access UI to show subgroup context in a dedicated column with compact badges and cleaner status/action layout.
+- Changed Menu Subgroup Management UI to use auto-populated ordering, direct icon picking, protected delete visibility, and a cleaner management form.
 - Changed sidebar subgroup blueprint documentation to include final implementation notes and test checklist.
+- Changed project release metadata to lock the application version at `1.7.6`.
+
+### Fixed
+- Fixed child menu edit save flow so the parent Menu Access modal waits until it is fully rendered before rebuilding its DataTable, preventing oversized/wrapped rows after save on slower deployments.
+- Fixed menu subgroup delete behavior so delete actions are hidden or blocked when menus are already assigned to the subgroup.
+- Fixed sidebar subgroup arrow alignment and direct sidebar item spacing for Dashboard, User Manual, and Logout entries.
 
 ## [1.7.5] - 2026-05-06
 
