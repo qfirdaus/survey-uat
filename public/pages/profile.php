@@ -204,12 +204,17 @@ $PAGE_TITLE = tr('profile_title','Profil Pengguna');
           $emel      = $profileView['emel']       ?? '';
           $categoryUser = strtoupper(trim((string)($profileView['categoryUser'] ?? '')));
           $isStudentProfile = in_array($categoryUser, ['PELAJAR', 'STUDENT'], true) || !empty($_SESSION['student_profile']);
+          $isPublicProfile = in_array($categoryUser, ['UMUM', 'PUBLIC'], true);
+          $isStaffProfile = !$isStudentProfile && !$isPublicProfile;
+          $identityValue = ($isStaffProfile || $isStudentProfile) ? trim((string)$stafID) : '';
           $copyIdLabel = $isStudentProfile
             ? tr('profile_btn_copy_no_matrik', 'Salin No. Matrik')
             : tr('profile_btn_copy_no_staf', 'Salin No. Staf');
           $idLabel = $isStudentProfile
             ? tr('profile_no_matrik', 'No. Matrik')
             : tr('profile_no_staf', 'No. Staf');
+          $showIdentityStat = $identityValue !== '';
+          $showEmployeeStat = $isStaffProfile && trim((string)$nopek) !== '';
           $selectedLang = $profileView['lang']    ?? ($lang ?? 'ms');
           $jawGred   = trim($jawatan . ($gred ? ' • '.$gred : ''));
           $activeProfileTab = (string)($_GET['tab'] ?? 'profil-pengguna');
@@ -304,11 +309,11 @@ $PAGE_TITLE = tr('profile_title','Profil Pengguna');
                           </div>
                         </div>
                         <div class="quick-actions profile-identity-actions">
-                          <?php if ($stafID !== ''): ?>
+                          <?php if ($identityValue !== ''): ?>
                             <button class="btn btn-sm btn-copy-staf"
                                     type="button"
                                     aria-label="<?= h($copyIdLabel) ?>"
-                                    data-copy-value="<?= h($stafID) ?>">
+                                    data-copy-value="<?= h($identityValue) ?>">
                               <i class="ri-file-copy-2-line me-1" aria-hidden="true"></i>
                               <?= h($copyIdLabel) ?>
                             </button>
@@ -327,22 +332,28 @@ $PAGE_TITLE = tr('profile_title','Profil Pengguna');
                       </div>
                     </div>
 
-                    <div class="profile-stat-row">
-                      <div class="profile-stat-card">
-                        <div class="profile-stat-label">
-                          <i class="ri-account-box-line"></i>
-                          <?= h($idLabel) ?>
-                        </div>
-                        <div class="profile-stat-value"><?= h($stafID !== '' ? $stafID : '—') ?></div>
+                    <?php if ($showIdentityStat || $showEmployeeStat): ?>
+                      <div class="profile-stat-row">
+                        <?php if ($showIdentityStat): ?>
+                          <div class="profile-stat-card">
+                            <div class="profile-stat-label">
+                              <i class="ri-account-box-line"></i>
+                              <?= h($idLabel) ?>
+                            </div>
+                            <div class="profile-stat-value"><?= h($identityValue) ?></div>
+                          </div>
+                        <?php endif; ?>
+                        <?php if ($showEmployeeStat): ?>
+                          <div class="profile-stat-card">
+                            <div class="profile-stat-label">
+                              <i class="ri-fingerprint-line"></i>
+                              <?= h(tr('profile_no_pekerja','No. Pekerja')) ?>
+                            </div>
+                            <div class="profile-stat-value"><?= h($nopek) ?></div>
+                          </div>
+                        <?php endif; ?>
                       </div>
-                      <div class="profile-stat-card">
-                        <div class="profile-stat-label">
-                          <i class="ri-fingerprint-line"></i>
-                          <?= h(tr('profile_no_pekerja','No. Pekerja')) ?>
-                        </div>
-                        <div class="profile-stat-value"><?= h($nopek !== '' ? $nopek : '—') ?></div>
-                      </div>
-                    </div>
+                    <?php endif; ?>
 
                     <div class="profile-detail-list">
                       <div class="profile-detail-item">

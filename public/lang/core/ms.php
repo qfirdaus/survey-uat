@@ -339,6 +339,7 @@ return [
 // Maklumat Asas
 // =========================
 'profile_no_staf'               => 'No. Staf',
+'profile_no_matrik'             => 'No. Matrik',
 'profile_no_pekerja'            => 'No. Pekerja',
 'profile_jabatan'               => 'Jabatan',
 'profile_emel'                  => 'Emel',
@@ -356,6 +357,7 @@ return [
 // Butang & Quick Actions
 // =========================
 'profile_btn_copy_no_staf'      => 'Salin No. Staf',
+'profile_btn_copy_no_matrik'    => 'Salin No. Matrik',
 'profile_btn_copy_email'        => 'Salin Emel',
 'profile_identity_summary'      => 'Ringkasan Identiti',
 'profile_panel_subtitle'        => 'Maklumat akaun dan identiti pengguna yang aktif dalam sistem.',
