@@ -2518,6 +2518,7 @@ return [
 'pageTemplateGenerator_validation_required' => 'Sila lengkapkan semua medan wajib dan pilih ikon halaman.',
 'pageTemplateGenerator_error_create_failed' => 'Penciptaan template gagal. Sila cuba semula atau hubungi pentadbir sistem.',
 'topbar_notification_title' => 'Notifikasi',
+'topbar_notification_latest' => 'Kemas kini terkini',
 'topbar_notification_loading' => 'Sedang memuatkan...',
 'topbar_notification_empty' => 'Tiada notifikasi.',
 'topbar_notification_load_failed' => 'Tidak dapat memuatkan notifikasi.',

@@ -2513,6 +2513,7 @@ return [
 'pageTemplateGenerator_validation_required' => 'Please complete all required fields and choose a page icon.',
 'pageTemplateGenerator_error_create_failed' => 'Template creation failed. Please try again or contact the system administrator.',
 'topbar_notification_title' => 'Notifications',
+'topbar_notification_latest' => 'Latest updates',
 'topbar_notification_loading' => 'Loading...',
 'topbar_notification_empty' => 'No notifications.',
 'topbar_notification_load_failed' => 'Unable to load notifications.',
