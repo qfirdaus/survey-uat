@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.7.4`
+- Current version: `1.7.5`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -61,6 +61,17 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Supports audit panels for events, requests, sessions, changes, security views, metadata, and export actions.
 - AJAX endpoints include `audit-center-action.php`, `audit-center-export.php`, `audit-center-meta.php`, and `audit-center-panel.php`.
 - Audit services are supported by `AuditCenterController.php`, `AuditLogger.php`, and audit helper functions.
+
+### Notification Framework
+
+- In-app notification list page exists at `public/pages/notifications.php`.
+- Notification administration page exists at `public/pages/notification-admin.php`.
+- Notification template management page exists at `public/pages/notification-templates.php`.
+- Topbar notification dropdown shows unread count, recent notification preview, read actions, and View All navigation.
+- Supports admin announcements, direct user notifications, role/group/audience notifications, event-based notifications, and workflow task notifications.
+- Notification publishing and workflow logic is handled by `NotificationPublisher.php`, `NotificationService.php`, `NotificationWorkflowService.php`, `NotificationAudienceResolver.php`, `NotificationAdminService.php`, and `NotificationTemplateService.php`.
+- AJAX endpoints include `notification-list.php`, `notification-read.php`, `notification-read-all.php`, `notification-action.php`, `notification-admin-publish.php`, and `notification-template-action.php`.
+- Developer guidance is documented in `docs/notification-developer-standard-2026-05-04.md` and `docs/notification-developer-examples-2026-05-03.md`.
 
 ### Profile
 
@@ -140,6 +151,8 @@ Do not hardcode DSN, username, or password inside page/controller code.
 
 - Language settings are handled in System Settings.
 - Theme settings are handled in System Settings.
+- User personal theme preference is applied before the global fallback theme where available to avoid visible theme switching during navigation.
+- Sidebar branding supports the configured sidebar image under the main logo.
 - Frontend assets include Bootstrap-style components, DataTables usage, SweetAlert workflows, Remix Icon icons, and page-specific JavaScript/CSS files.
 - Tailwind/PostCSS tooling exists in `package.json` for frontend build support, although the main application is PHP-rendered.
 
@@ -152,6 +165,9 @@ The active page files under `public/pages` are:
 - `dashboard.php`
 - `kumpulan-pengguna.php`
 - `manage-manuals.php`
+- `notification-admin.php`
+- `notification-templates.php`
+- `notifications.php`
 - `profile.php`
 - `senarai-pengguna.php`
 - `soalan-lazim.php`
@@ -255,6 +271,8 @@ iqs-framework/
 - Use `Database::getInstance('mysql')->getConnection()` for the main application database when following existing patterns.
 - Use `Database::pdoSybaseStaff()` or `Database::pdoSybaseStudent()` for configured Sybase domains.
 - Use `Database::pdoAdditional('dbx_code')` for additional database connections created from System Settings.
+- Use `NotificationPublisher`, `NotificationWorkflowService`, or `NotificationTemplateService` for new notification flows instead of inserting notification rows directly from page code.
+- Follow `docs/notification-developer-standard-2026-05-04.md` when adding notifications to new modules so admin, event, and workflow notifications remain consistent across projects.
 - Do not hardcode database DSN, username, or password in pages/controllers.
 - Keep access checks aligned with group, module, and menu governance.
 - Record sensitive administrative changes through the audit helper/logger pattern already used in the system.

@@ -6,6 +6,8 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+## [1.7.5] - 2026-05-06
+
 ### Added
 - Added Phase 1 in-app notification topbar, notification page, AJAX read/list endpoints, and core language keys.
 - Added Phase 2 notification publisher and audience resolver for universal event-based notifications.
@@ -14,6 +16,23 @@ This changelog follows a release-style summary based on major project milestones
 - Added `tools/notification-seed-test.php` to seed Phase 1-3 notification test records.
 - Added Phase 4 notification admin composer page and AJAX publish endpoint for admin-managed in-app notifications.
 - Added notification template management page, CRUD endpoint, and DB-backed `publishFromTemplate()` rendering.
+- Added notification developer standard documentation and sample-code modal support for common programmer integration flows.
+- Added topbar notification dropdown integration with unread count, compact 5-item preview, read actions, and View All navigation.
+
+### Changed
+- Changed notification admin and template management pages to use full-width workspaces and DataTables-style listing behavior.
+- Changed notification setup/template modals to use tabbed professional layouts, tooltip-based field guidance, icon selection, date-time inputs, and preview surfaces.
+- Changed tabbed modals across administration pages to open top aligned, while non-tabbed modals remain centered unless the page explicitly requires all modals top aligned.
+- Changed `kumpulan-pengguna.php` so all modals open top aligned for a more consistent management workflow.
+- Changed sidebar theme loading so a user's personal theme can be applied earlier and avoids visible fallback to the global theme on navigation.
+- Changed sidebar rendering to support the configured branding image beneath the logo.
+- Changed project release metadata to lock the application version at `1.7.5`.
+
+### Fixed
+- Fixed notification admin audience value display so stored audience values are shown with clearer descriptions where possible.
+- Fixed notification admin and template table cell alignment so multi-line rows render top aligned.
+- Fixed notification template action buttons for edit, duplicate, archive, and delete flows, including delete protection for templates currently in use.
+- Fixed topbar notification badge overlap and cleaned up the notification submenu header/presentation.
 
 ## [1.7.4] - 2026-05-02
 
