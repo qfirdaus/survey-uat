@@ -278,6 +278,7 @@ final class DatabaseConnectionRegistry
         $dsnName = trim((string)($envRow['f_dsn_name'] ?? ''));
         $username = (string)($envRow['f_username'] ?? '');
         $password = (string)($envRow['f_password_ciphertext'] ?? '');
+        $extra = self::decodeExtraOptions($envRow['f_extra_json'] ?? null);
 
         if ($driver === 'odbc') {
             if ($dsnName === '' || $username === '') {
@@ -286,7 +287,7 @@ final class DatabaseConnectionRegistry
 
             return [
                 'driver' => 'odbc',
-                'dsn' => 'odbc:' . $dsnName,
+                'dsn' => 'odbc:' . self::appendOdbcSqlServerOptions($dsnName, $extra),
                 'user' => $username,
                 'pass' => $password,
             ];
@@ -302,7 +303,7 @@ final class DatabaseConnectionRegistry
                 'dsn' => sprintf(
                     'dblib:host=%s:%s;dbname=%s',
                     $host,
-                    $port !== '' ? $port : '5000',
+                    $port !== '' ? $port : ($family === 'mssql' ? '1433' : '5000'),
                     $databaseName
                 ),
                 'user' => $username,
@@ -318,10 +319,11 @@ final class DatabaseConnectionRegistry
             return [
                 'driver' => 'sqlsrv',
                 'dsn' => sprintf(
-                    'sqlsrv:Server=%s%s;Database=%s',
+                    'sqlsrv:Server=%s%s;Database=%s%s',
                     $host,
                     $port !== '' ? ',' . $port : '',
-                    $databaseName
+                    $databaseName,
+                    self::buildSqlServerDsnOptions($extra)
                 ),
                 'user' => $username,
                 'pass' => $password,
@@ -329,6 +331,57 @@ final class DatabaseConnectionRegistry
         }
 
         return null;
+    }
+
+    private static function decodeExtraOptions(mixed $value): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+        if (!is_string($value) || trim($value) === '') {
+            return [];
+        }
+        $decoded = json_decode($value, true);
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    private static function extraBool(array $extra, array $keys, bool $default = false): bool
+    {
+        foreach ($keys as $key) {
+            if (!array_key_exists($key, $extra)) {
+                continue;
+            }
+            $value = $extra[$key];
+            if (is_bool($value)) {
+                return $value;
+            }
+            return in_array(strtolower(trim((string)$value)), ['1', 'true', 'yes', 'on'], true);
+        }
+
+        return $default;
+    }
+
+    private static function buildSqlServerDsnOptions(array $extra): string
+    {
+        $parts = [];
+        if (self::extraBool($extra, ['encrypt', 'Encrypt'], false)) {
+            $parts[] = 'Encrypt=yes';
+        }
+        if (self::extraBool($extra, ['trust_server_certificate', 'TrustServerCertificate'], false)) {
+            $parts[] = 'TrustServerCertificate=yes';
+        }
+
+        return $parts !== [] ? ';' . implode(';', $parts) : '';
+    }
+
+    private static function appendOdbcSqlServerOptions(string $dsnName, array $extra): string
+    {
+        $options = ltrim(self::buildSqlServerDsnOptions($extra), ';');
+        if ($options === '') {
+            return $dsnName;
+        }
+
+        return rtrim($dsnName, ';') . ';' . $options;
     }
 
     private static function buildResolvedKey(string $code, string $environment, string $driver, string $osFamily): string

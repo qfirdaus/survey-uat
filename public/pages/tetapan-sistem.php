@@ -1209,6 +1209,28 @@ if (isset($translationBundlesJs[$lang])) {
         }).join('');
       }
 
+      function parseEnvExtraJson(value) {
+        if (!value) return {};
+        if (typeof value === 'object') return value;
+        try {
+          var decoded = JSON.parse(String(value || '{}'));
+          return decoded && typeof decoded === 'object' ? decoded : {};
+        } catch (e) {
+          return {};
+        }
+      }
+
+      function extraBool(extra, keys, defaultValue) {
+        for (var i = 0; i < keys.length; i++) {
+          if (Object.prototype.hasOwnProperty.call(extra, keys[i])) {
+            var value = extra[keys[i]];
+            if (typeof value === 'boolean') return value;
+            return ['1', 'true', 'yes', 'on'].indexOf(String(value || '').toLowerCase()) !== -1;
+          }
+        }
+        return !!defaultValue;
+      }
+
       function buildEnvRow(row, index) {
         var safe = Object.assign({
           f_environment: 'production',
@@ -1221,8 +1243,12 @@ if (isset($translationBundlesJs[$lang])) {
           f_username: '',
           f_password_ciphertext: '',
           f_charset: 'utf8mb4',
+          f_extra_json: null,
           f_is_active: true
         }, row || {});
+        var extra = parseEnvExtraJson(safe.f_extra_json);
+        var trustServerCertificate = extraBool(extra, ['trust_server_certificate', 'TrustServerCertificate'], false);
+        var encryptConnection = extraBool(extra, ['encrypt', 'Encrypt'], false);
 
         return ''
           + '<div class="db-additional-env-row" data-env-row>'
@@ -1242,6 +1268,8 @@ if (isset($translationBundlesJs[$lang])) {
           + '<div class="col-md-4"><label class="form-label">Username</label><input type="text" class="form-control" data-env-field="f_username" value="' + escapeHtml(safe.f_username) + '"></div>'
           + '<div class="col-md-4"><label class="form-label">Password</label><input type="password" class="form-control" data-env-field="f_password_ciphertext" value="' + escapeHtml(safe.f_password_ciphertext) + '"></div>'
           + '<div class="col-md-4"><label class="form-label">Charset</label><input type="text" class="form-control" data-env-field="f_charset" value="' + escapeHtml(safe.f_charset) + '"></div>'
+          + '<div class="col-md-6"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" data-env-extra="encrypt"' + (encryptConnection ? ' checked' : '') + '><label class="form-check-label">Encrypt connection</label><div class="db-additional-inline-help">Untuk SQL Server driver moden. Biarkan off jika guna dblib/FreeTDS biasa.</div></div></div>'
+          + '<div class="col-md-6"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" data-env-extra="trust_server_certificate"' + (trustServerCertificate ? ' checked' : '') + '><label class="form-check-label">Trust server certificate</label><div class="db-additional-inline-help">Tick jika SQL Server guna self-signed/internal certificate dan ODBC Driver 18 menolak certificate chain.</div></div></div>'
           + '</div>'
           + '</div>';
       }
@@ -1320,6 +1348,13 @@ if (isset($translationBundlesJs[$lang])) {
             }
             payload[key] = String(field.value || '').trim();
           });
+          var extra = {};
+          Array.prototype.forEach.call(row.querySelectorAll('[data-env-extra]'), function (field) {
+            var key = field.getAttribute('data-env-extra');
+            if (!key) return;
+            extra[key] = field.type === 'checkbox' ? !!field.checked : String(field.value || '').trim();
+          });
+          payload.f_extra_json = JSON.stringify(extra);
           return payload;
         });
       }

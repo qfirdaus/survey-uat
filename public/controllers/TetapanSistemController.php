@@ -1465,7 +1465,7 @@ class TetapanSistemController {
       }
 
       $testTarget = $this->selectAdditionalConnectionEnvRowForTesting($connection, $_POST);
-      $pdoConfig = $this->buildAdditionalTestPdoConfig($testTarget);
+      $pdoConfig = $this->buildAdditionalTestPdoConfig($testTarget, (string)($connection['f_family'] ?? ''));
       $pdo = $this->additionalConnectionFactory->make($pdoConfig);
       $pdo->query('select 1');
 
@@ -1875,19 +1875,23 @@ class TetapanSistemController {
     throw new RuntimeException('Tiada env row aktif yang sesuai untuk ujian sambungan tambahan ini.');
   }
 
-  private function buildAdditionalTestPdoConfig(array $envRow): array {
+  private function buildAdditionalTestPdoConfig(array $envRow, string $family = ''): array {
+    $family = strtolower(trim($family));
     $driver = strtolower(trim((string)($envRow['f_driver'] ?? '')));
     $host = trim((string)($envRow['f_host'] ?? ''));
     $port = trim((string)($envRow['f_port'] ?? ''));
     $databaseName = trim((string)($envRow['f_database_name'] ?? ''));
     $dsnName = trim((string)($envRow['f_dsn_name'] ?? ''));
     $charset = trim((string)($envRow['f_charset'] ?? 'utf8mb4'));
+    $dblibDefaultPort = $family === 'mssql' ? '1433' : '5000';
+    $extra = $this->decodeAdditionalExtraOptions($envRow['f_extra_json'] ?? null);
+    $sqlServerOptions = $this->buildSqlServerDsnOptions($extra);
 
     $dsn = match ($driver) {
       'mysql' => sprintf('mysql:host=%s;port=%s;dbname=%s;charset=%s', $host, $port !== '' ? $port : '3306', $databaseName, $charset !== '' ? $charset : 'utf8mb4'),
-      'dblib' => sprintf('dblib:host=%s:%s;dbname=%s', $host, $port !== '' ? $port : '5000', $databaseName),
-      'sqlsrv' => sprintf('sqlsrv:Server=%s%s;Database=%s', $host, $port !== '' ? ',' . $port : '', $databaseName),
-      'odbc' => 'odbc:' . $dsnName,
+      'dblib' => sprintf('dblib:host=%s:%s;dbname=%s', $host, $port !== '' ? $port : $dblibDefaultPort, $databaseName),
+      'sqlsrv' => sprintf('sqlsrv:Server=%s%s;Database=%s%s', $host, $port !== '' ? ',' . $port : '', $databaseName, $sqlServerOptions),
+      'odbc' => 'odbc:' . $this->appendOdbcSqlServerOptions($dsnName, $extra),
       default => throw new RuntimeException('Driver tambahan tidak disokong untuk ujian sambungan.'),
     };
 
@@ -1897,6 +1901,50 @@ class TetapanSistemController {
       'user' => (string)($envRow['f_username'] ?? ''),
       'pass' => (string)($envRow['f_password_ciphertext'] ?? ''),
     ];
+  }
+
+  private function decodeAdditionalExtraOptions(mixed $value): array {
+    if (is_array($value)) {
+      return $value;
+    }
+    if (!is_string($value) || trim($value) === '') {
+      return [];
+    }
+    $decoded = json_decode($value, true);
+    return is_array($decoded) ? $decoded : [];
+  }
+
+  private function additionalExtraBool(array $extra, array $keys, bool $default = false): bool {
+    foreach ($keys as $key) {
+      if (!array_key_exists($key, $extra)) {
+        continue;
+      }
+      $value = $extra[$key];
+      if (is_bool($value)) {
+        return $value;
+      }
+      return in_array(strtolower(trim((string)$value)), ['1', 'true', 'yes', 'on'], true);
+    }
+    return $default;
+  }
+
+  private function buildSqlServerDsnOptions(array $extra): string {
+    $parts = [];
+    if ($this->additionalExtraBool($extra, ['encrypt', 'Encrypt'], false)) {
+      $parts[] = 'Encrypt=yes';
+    }
+    if ($this->additionalExtraBool($extra, ['trust_server_certificate', 'TrustServerCertificate'], false)) {
+      $parts[] = 'TrustServerCertificate=yes';
+    }
+    return $parts !== [] ? ';' . implode(';', $parts) : '';
+  }
+
+  private function appendOdbcSqlServerOptions(string $dsnName, array $extra): string {
+    $options = ltrim($this->buildSqlServerDsnOptions($extra), ';');
+    if ($options === '') {
+      return $dsnName;
+    }
+    return rtrim($dsnName, ';') . ';' . $options;
   }
 
   private function buildAdditionalConnectionProbe(PDO $pdo, array $connection, array $envRow): array {
