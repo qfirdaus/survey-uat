@@ -447,6 +447,161 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') ==
     .menu-path { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size:.775rem; opacity:.8; }
     .menu-row { display:grid; grid-template-columns: 1fr auto; gap:.75rem; padding:.6rem 0; border-bottom:1px dashed var(--bs-border-color); }
     .menu-row:last-child { border-bottom:0; }
+    .subgroup-order-row {
+      margin-top: .25rem;
+      padding: .72rem .8rem;
+      border: 1px solid rgba(20, 184, 166, .18);
+      border-radius: 8px;
+      background: rgba(20, 184, 166, .06);
+    }
+    .subgroup-menu-child {
+      margin-left: 1.35rem;
+      padding-left: .8rem;
+      border-left: 2px solid rgba(20, 184, 166, .2);
+    }
+    .subgroup-order-title i {
+      color: #0f766e;
+    }
+    html[data-bs-theme="dark"] .subgroup-order-row {
+      border-color: rgba(45, 212, 191, .2);
+      background: rgba(45, 212, 191, .08);
+    }
+    html[data-bs-theme="dark"] .subgroup-menu-child {
+      border-left-color: rgba(45, 212, 191, .22);
+    }
+    .subgroup-manager-form {
+      border: 1px solid rgba(148, 163, 184, .18);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.92));
+      box-shadow: 0 14px 28px rgba(15, 23, 42, .06);
+    }
+    .subgroup-form-section {
+      padding: 1rem;
+      border-bottom: 1px solid rgba(148, 163, 184, .14);
+    }
+    .subgroup-form-section:last-child {
+      border-bottom: 0;
+    }
+    .subgroup-section-title {
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+      margin-bottom: .85rem;
+      font-size: .78rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .subgroup-icon-picker {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: .5rem;
+    }
+    .subgroup-icon-option {
+      height: 42px;
+      border: 1px solid rgba(148, 163, 184, .28);
+      border-radius: 8px;
+      background: #fff;
+      color: #475569;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.12rem;
+      transition: border-color .16s ease, color .16s ease, background-color .16s ease, box-shadow .16s ease, transform .16s ease;
+    }
+    .subgroup-icon-option:hover {
+      color: #0f766e;
+      border-color: rgba(20, 184, 166, .45);
+      background: rgba(20, 184, 166, .06);
+      transform: translateY(-1px);
+    }
+    .subgroup-icon-option.active {
+      color: #0f766e;
+      border-color: rgba(20, 184, 166, .7);
+      background: rgba(20, 184, 166, .1);
+      box-shadow: 0 0 0 3px rgba(20, 184, 166, .12);
+    }
+    .subgroup-order-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      min-height: 38px;
+      padding: .45rem .72rem;
+      border: 1px solid rgba(148, 163, 184, .24);
+      border-radius: 8px;
+      background: rgba(15, 23, 42, .03);
+      color: #475569;
+      font-weight: 600;
+    }
+    .subgroup-table-card {
+      border: 1px solid rgba(148, 163, 184, .18);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 14px 28px rgba(15, 23, 42, .05);
+    }
+    #menuSubgroupTable thead th {
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: #64748b;
+    }
+    #menuSubgroupError {
+      margin-left: 1rem;
+      margin-right: 1rem;
+    }
+    #menuDT th.col-status,
+    #menuDT td.col-status,
+    #menuDT th.col-actions,
+    #menuDT td.col-actions {
+      white-space: nowrap;
+      vertical-align: top;
+    }
+    #menuDT td.col-status,
+    #menuDT td.col-actions {
+      padding-left: .45rem;
+      padding-right: .45rem;
+    }
+    .menu-status-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: .28rem;
+      white-space: nowrap;
+    }
+    .menu-status-toggle .btn {
+      min-width: 42px;
+      padding: .24rem .42rem;
+      font-size: .72rem;
+      line-height: 1.2;
+    }
+    .menu-action-group {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: .35rem;
+      white-space: nowrap;
+    }
+    .menu-action-group .icon-btn {
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    html[data-bs-theme="dark"] .subgroup-manager-form,
+    html[data-bs-theme="dark"] .subgroup-icon-option {
+      background: rgba(15, 23, 42, .92);
+      border-color: rgba(148, 163, 184, .22);
+    }
+    html[data-bs-theme="dark"] .subgroup-form-section {
+      border-bottom-color: rgba(148, 163, 184, .16);
+    }
+    html[data-bs-theme="dark"] .subgroup-order-chip {
+      background: rgba(148, 163, 184, .1);
+      border-color: rgba(148, 163, 184, .2);
+      color: #cbd5e1;
+    }
     .reorder-group .btn { padding:.25rem .55rem; }
     .menu-row.saving { opacity:.6; pointer-events:none; }
     .module-reorder-note {
@@ -2355,6 +2510,13 @@ window.GroupPageRuntime = Object.assign({}, window.GroupPageRuntime || {}, {
               <select class="form-select" name="modulID" id="em_modulID"></select>
             </div>
             <div class="col-md-6">
+              <label class="form-label"><?= h(__('userGroup_field_subgroup')) ?></label>
+              <select class="form-select" name="subgroupID" id="em_subgroupID">
+                <option value="0"><?= h(__('userGroup_subgroup_none')) ?></option>
+              </select>
+              <div class="form-text"><?= h(__('userGroup_field_subgroup_help')) ?></div>
+            </div>
+            <div class="col-md-6">
               <label class="form-label"><?= h(__('userGroup_field_path')) ?></label>
               <input type="text" class="form-control" name="path" id="em_path" placeholder="<?= h(__('userGroup_field_path_placeholder')) ?>" required>
             </div>
@@ -2413,6 +2575,135 @@ window.GroupPageRuntime = Object.assign({}, window.GroupPageRuntime || {}, {
         </button>
         <button type="button" class="btn btn-primary" id="menuEditSaveBtn" <?= $permDisabledAttr ?>>
           <i class="ri-save-3-line me-1"></i> <span id="menuEditSaveBtnText"><?= h(__('userGroup_btn_save')) ?></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Subgroup Menu -->
+<div class="modal fade modal-child-accent" id="menuSubgroupModal" tabindex="-1" aria-hidden="true" aria-labelledby="menuSubgroupTitle" data-bs-backdrop="static">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="menuSubgroupTitle">
+          <i class="ri-folder-settings-line"></i>
+          <span><?= h(__('userGroup_subgroup_modal_title')) ?></span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= h(__('userGroup_btn_close')) ?>"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-lg-5">
+            <form id="menuSubgroupForm" autocomplete="off" class="subgroup-manager-form h-100">
+              <input type="hidden" id="sg_subgroupID" value="0">
+              <input type="hidden" id="sg_icon" value="ri-folder-2-line">
+              <input type="hidden" id="sg_order" value="0">
+
+              <div class="subgroup-form-section">
+                <div class="subgroup-section-title"><i class="ri-layout-4-line"></i><span><?= h(__('userGroup_field_modul')) ?></span></div>
+                <div class="row g-3">
+                  <div class="col-md-8">
+                    <label class="form-label"><?= h(__('userGroup_field_modul')) ?></label>
+                    <select class="form-select" id="sg_modulID"></select>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label"><?= h(__('userGroup_subgroup_order')) ?></label>
+                    <div class="subgroup-order-chip" title="Auto">
+                      <i class="ri-sort-asc"></i>
+                      <span id="sg_orderPreview">Auto</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="subgroup-form-section">
+                <div class="subgroup-section-title"><i class="ri-text"></i><span><?= h(__('userGroup_field_subgroup')) ?></span></div>
+                <div class="mb-3">
+                  <label class="form-label"><?= h(__('userGroup_subgroup_code')) ?></label>
+                  <input type="text" class="form-control" id="sg_code" placeholder="<?= h(__('userGroup_subgroup_code_placeholder')) ?>">
+                </div>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label"><?= h(__('userGroup_field_name_ms')) ?></label>
+                    <input type="text" class="form-control" id="sg_name_ms" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label"><?= h(__('userGroup_field_name_en')) ?></label>
+                    <input type="text" class="form-control" id="sg_name_en">
+                  </div>
+                </div>
+              </div>
+
+              <div class="subgroup-form-section">
+                <div class="subgroup-section-title"><i class="ri-palette-line"></i><span><?= h(__('userGroup_subgroup_icon')) ?></span></div>
+                <div class="subgroup-icon-picker" id="sg_iconPicker" aria-label="<?= h(__('userGroup_subgroup_icon')) ?>">
+                  <?php
+                    $subgroupIcons = [
+                      'ri-folder-2-line' => 'Folder',
+                      'ri-settings-3-line' => 'Settings',
+                      'ri-shield-user-line' => 'Access',
+                      'ri-file-list-3-line' => 'List',
+                      'ri-tools-line' => 'Tools',
+                      'ri-database-2-line' => 'Database',
+                      'ri-user-settings-line' => 'User',
+                      'ri-apps-2-line' => 'Apps',
+                      'ri-stack-line' => 'Stack',
+                      'ri-lock-password-line' => 'Security',
+                      'ri-notification-3-line' => 'Notification',
+                      'ri-window-line' => 'Page',
+                    ];
+                  ?>
+                  <?php foreach ($subgroupIcons as $iconClass => $iconLabel): ?>
+                    <button type="button" class="subgroup-icon-option<?= $iconClass === 'ri-folder-2-line' ? ' active' : '' ?>" data-icon="<?= h($iconClass) ?>" title="<?= h($iconLabel) ?>" aria-label="<?= h($iconLabel) ?>">
+                      <i class="<?= h($iconClass) ?>"></i>
+                    </button>
+                  <?php endforeach; ?>
+                </div>
+              </div>
+
+              <div class="subgroup-form-section">
+                <div class="row g-3 align-items-end">
+                  <div class="col-md-6">
+                    <label class="form-label"><?= h(__('userGroup_field_status')) ?></label>
+                    <select class="form-select" id="sg_status">
+                      <option value="1"><?= h(__('userGroup_status_on')) ?></option>
+                      <option value="0"><?= h(__('userGroup_status_off')) ?></option>
+                    </select>
+                  </div>
+                  <div class="col-md-6 text-md-end">
+                    <button type="button" class="btn btn-light me-1" id="menuSubgroupResetBtn"><?= h(__('userGroup_btn_reset')) ?></button>
+                    <button type="button" class="btn btn-primary" id="menuSubgroupSaveBtn" <?= $permDisabledAttr ?>>
+                      <i class="ri-save-3-line me-1"></i><?= h(__('userGroup_btn_save')) ?>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div id="menuSubgroupError" class="alert alert-danger d-none mt-3"></div>
+            </form>
+          </div>
+          <div class="col-lg-7">
+            <div class="table-responsive subgroup-table-card">
+              <table class="table table-sm table-hover mb-0 align-top" id="menuSubgroupTable">
+                <thead class="table-light">
+                  <tr>
+                    <th><?= h(__('userGroup_field_modul')) ?></th>
+                    <th><?= h(__('userGroup_field_subgroup')) ?></th>
+                    <th class="text-center"><?= h(__('userGroup_subgroup_order')) ?></th>
+                    <th class="text-center"><?= h(__('userGroup_col_actions')) ?></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td colspan="4" class="text-center text-muted py-4"><?= h(__('userGroup_loading')) ?>...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="ri-close-line me-1"></i> <?= h(__('userGroup_btn_close')) ?>
         </button>
       </div>
     </div>
@@ -2777,6 +3068,17 @@ window.hasDT = function() {
     delete_failed_title: <?= json_encode(__('userGroup_delete_failed_title')) ?>,
     not_allowed_title: <?= json_encode(__('userGroup_not_allowed_title')) ?>,
     field_modul: <?= json_encode(__('userGroup_field_modul')) ?>,
+    field_subgroup: <?= json_encode(__('userGroup_field_subgroup')) ?>,
+    subgroup_none: <?= json_encode(__('userGroup_subgroup_none')) ?>,
+    subgroup_manage: <?= json_encode(__('userGroup_subgroup_manage')) ?>,
+    subgroup_modal_title: <?= json_encode(__('userGroup_subgroup_modal_title')) ?>,
+    subgroup_required: <?= json_encode(__('userGroup_subgroup_required')) ?>,
+    subgroup_not_found: <?= json_encode(__('userGroup_subgroup_not_found')) ?>,
+    subgroup_in_use: <?= json_encode(__('userGroup_subgroup_in_use')) ?>,
+    subgroup_save_success: <?= json_encode(__('userGroup_subgroup_save_success')) ?>,
+    subgroup_delete_success: <?= json_encode(__('userGroup_subgroup_delete_success')) ?>,
+    subgroup_confirm_delete: <?= json_encode(__('userGroup_subgroup_confirm_delete')) ?>,
+    subgroup_load_fail: <?= json_encode(__('userGroup_subgroup_load_fail')) ?>,
     edit: <?= json_encode(__('userGroup_edit')) ?>,
     delete: <?= json_encode(__('userGroup_delete')) ?>,
     loading_modules: <?= json_encode(__('userGroup_loading_modules')) ?>,

@@ -6,6 +6,17 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+### Added
+- Added sidebar menu subgroup blueprint documentation with Phase 1 SQL for optional module-level menu grouping.
+- Added subgroup management endpoints and UI in `kumpulan-pengguna.php` for optional module-level menu subgroups.
+- Added audit logging for menu subgroup create, update, delete, and denied delete attempts.
+
+### Changed
+- Changed `Modul.php` menu loading to expose optional subgroup metadata when the subgroup schema exists, while remaining backward-compatible with the current two-level sidebar schema.
+- Changed sidebar rendering to support optional nested menu subgroups inside parent modules while preserving direct module menu behavior.
+- Changed menu create/edit/list/get/group-permission flows to read and write optional `f_subgroupID` values.
+- Changed sidebar subgroup blueprint documentation to include final implementation notes and test checklist.
+
 ## [1.7.5] - 2026-05-06
 
 ### Added

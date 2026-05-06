@@ -113,6 +113,7 @@ try {
   ], fn($c) => in_array($c, $colsMenu, true));
   $nameExprMenu = $candsMenu ? ('COALESCE('.implode(',', $candsMenu).', CONCAT("Menu ", f_menuID))')
                              : 'CONCAT("Menu ", f_menuID)';
+  $subgroupNameCol = $lang === 'en' ? 'sg.f_subgroupName_en' : 'sg.f_subgroupName_ms';
 
   // 5) Kira bilangan menu sebenar bagi setiap modul (global, tidak ikut filter kumpulan)
   $moduleMenuTotals = [];
@@ -140,23 +141,33 @@ try {
     if (!empty($menuFilterIds)) {
       // Guna FIND_IN_SET dengan CSV original supaya kekal pantas & ringkas
       $sqlMenu = "
-        SELECT f_menuID, f_modulID, {$nameExprMenu} AS nama, f_path, f_flag,
-               COALESCE(f_domain, 'SHARED') AS f_domain,
-               COALESCE(f_show_staff_only, 1) AS f_show_staff_only
-        FROM tbl_m_menu
-        WHERE f_modulID IN ($place)
-          AND FIND_IN_SET(f_menuID, ?) > 0
-        ORDER BY f_modulID, COALESCE(f_order, 99999), f_menuID
+        SELECT m.f_menuID, m.f_modulID, {$nameExprMenu} AS nama, m.f_path, m.f_flag, COALESCE(m.f_order, 99999) AS menuOrder,
+               COALESCE(m.f_subgroupID, 0) AS subgroupID,
+               COALESCE(NULLIF({$subgroupNameCol}, ''), NULLIF(sg.f_subgroupName_ms, ''), NULLIF(sg.f_subgroupName_en, ''), '') AS subgroupName,
+               COALESCE(sg.f_icon, 'ri-folder-2-line') AS subgroupIcon,
+               COALESCE(sg.f_order, 0) AS subgroupOrder,
+               COALESCE(m.f_domain, 'SHARED') AS f_domain,
+               COALESCE(m.f_show_staff_only, 1) AS f_show_staff_only
+        FROM tbl_m_menu m
+        LEFT JOIN tbl_m_menu_subgroup sg ON sg.f_subgroupID = m.f_subgroupID AND sg.f_modulID = m.f_modulID AND COALESCE(sg.f_status, 1) = 1
+        WHERE m.f_modulID IN ($place)
+          AND FIND_IN_SET(m.f_menuID, ?) > 0
+        ORDER BY m.f_modulID, COALESCE(sg.f_order, 0), COALESCE(m.f_order, 99999), m.f_menuID
       ";
       $params = array_merge($allModuleIds, [implode(',', $menuFilterIds)]);
     } else {
       $sqlMenu = "
-        SELECT f_menuID, f_modulID, {$nameExprMenu} AS nama, f_path, f_flag,
-               COALESCE(f_domain, 'SHARED') AS f_domain,
-               COALESCE(f_show_staff_only, 1) AS f_show_staff_only
-        FROM tbl_m_menu
-        WHERE f_modulID IN ($place)
-        ORDER BY f_modulID, COALESCE(f_order, 99999), f_menuID
+        SELECT m.f_menuID, m.f_modulID, {$nameExprMenu} AS nama, m.f_path, m.f_flag, COALESCE(m.f_order, 99999) AS menuOrder,
+               COALESCE(m.f_subgroupID, 0) AS subgroupID,
+               COALESCE(NULLIF({$subgroupNameCol}, ''), NULLIF(sg.f_subgroupName_ms, ''), NULLIF(sg.f_subgroupName_en, ''), '') AS subgroupName,
+               COALESCE(sg.f_icon, 'ri-folder-2-line') AS subgroupIcon,
+               COALESCE(sg.f_order, 0) AS subgroupOrder,
+               COALESCE(m.f_domain, 'SHARED') AS f_domain,
+               COALESCE(m.f_show_staff_only, 1) AS f_show_staff_only
+        FROM tbl_m_menu m
+        LEFT JOIN tbl_m_menu_subgroup sg ON sg.f_subgroupID = m.f_subgroupID AND sg.f_modulID = m.f_modulID AND COALESCE(sg.f_status, 1) = 1
+        WHERE m.f_modulID IN ($place)
+        ORDER BY m.f_modulID, COALESCE(sg.f_order, 0), COALESCE(m.f_order, 99999), m.f_menuID
       ";
       $params = $allModuleIds;
     }
@@ -171,6 +182,11 @@ try {
         'id'   => (int)$m['f_menuID'],
         'nama' => (string)$m['nama'],
         'path' => $m['f_path'] !== null ? (string)$m['f_path'] : null,
+        'menuOrder' => (int)($m['menuOrder'] ?? 99999),
+        'subgroupID' => (int)($m['subgroupID'] ?? 0),
+        'subgroupName' => (string)($m['subgroupName'] ?? ''),
+        'subgroupIcon' => (string)($m['subgroupIcon'] ?? 'ri-folder-2-line'),
+        'subgroupOrder' => (int)($m['subgroupOrder'] ?? 0),
         'domain' => (string)($m['f_domain'] ?? 'SHARED'),
         'showStaffOnly' => (int)($m['f_show_staff_only'] ?? 1),
         'flag' => (int)$m['f_flag'] === 1 ? 1 : 0,

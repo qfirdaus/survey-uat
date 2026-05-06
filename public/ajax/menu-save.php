@@ -31,6 +31,7 @@ $payload = json_decode($raw, true);
 
 $menuID   = (int)($payload['menuID'] ?? 0);
 $modulID  = (int)($payload['modulID'] ?? 0);     // parent modul baharu
+$subgroupID = (int)($payload['subgroupID'] ?? $payload['f_subgroupID'] ?? 0);
 $path     = trim((string)($payload['path'] ?? ''));
 $flag     = (int)($payload['flag'] ?? 0);        // 0/1
 $name_ms  = trim((string)($payload['name_ms'] ?? ''));
@@ -52,7 +53,7 @@ try {
   $pdo->beginTransaction();
 
   // Wujud menu + modul - Get old data untuk audit
-  $curStmt = $pdo->prepare("SELECT f_menuID, f_modulID, f_order, f_path, f_flag, f_menuName_ms, f_menuName_en, COALESCE(f_domain,'SHARED') AS f_domain, COALESCE(f_show_staff_only,1) AS f_show_staff_only FROM tbl_m_menu WHERE f_menuID = ? FOR UPDATE");
+  $curStmt = $pdo->prepare("SELECT f_menuID, f_modulID, COALESCE(f_subgroupID,0) AS f_subgroupID, f_order, f_path, f_flag, f_menuName_ms, f_menuName_en, COALESCE(f_domain,'SHARED') AS f_domain, COALESCE(f_show_staff_only,1) AS f_show_staff_only FROM tbl_m_menu WHERE f_menuID = ? FOR UPDATE");
   $curStmt->execute([$menuID]);
   $cur = $curStmt->fetch(PDO::FETCH_ASSOC);
   if (!$cur) throw new Exception((string)__('userGroup_menu_not_found'));
@@ -60,6 +61,7 @@ try {
   // Store old values untuk audit
   $oldData = [
     'f_modulID' => (int)$cur['f_modulID'],
+    'f_subgroupID' => (int)($cur['f_subgroupID'] ?? 0),
     'f_path' => (string)$cur['f_path'],
     'f_flag' => (int)$cur['f_flag'],
     'f_order' => (int)($cur['f_order'] ?? 0),
@@ -72,6 +74,12 @@ try {
   $modStmt = $pdo->prepare("SELECT f_modulID FROM tbl_m_modul WHERE f_modulID = ? LIMIT 1");
   $modStmt->execute([$modulID]);
   if (!$modStmt->fetch(PDO::FETCH_ASSOC)) throw new Exception((string)__('userGroup_target_module_not_found'));
+
+  if ($subgroupID > 0) {
+    $subgroupStmt = $pdo->prepare("SELECT f_subgroupID FROM tbl_m_menu_subgroup WHERE f_subgroupID = ? AND f_modulID = ? AND f_status = 1 LIMIT 1");
+    $subgroupStmt->execute([$subgroupID, $modulID]);
+    if (!$subgroupStmt->fetchColumn()) throw new Exception((string)__('userGroup_subgroup_not_same_module'));
+  }
 
   $oldModul = (int)$cur['f_modulID'];
   $oldOrder = (int)($cur['f_order'] ?? 0);
@@ -103,6 +111,7 @@ try {
   $upd = $pdo->prepare("
     UPDATE tbl_m_menu
     SET f_modulID = :mid,
+        f_subgroupID = :subgroupID,
         f_path    = :path,
         f_domain  = :domain,
         f_show_staff_only = :showstaffonly,
@@ -115,7 +124,7 @@ try {
     WHERE f_menuID = :id
   ");
   $upd->execute([
-    ':mid'=>$modulID, ':path'=>$path, ':domain'=>$domain, ':showstaffonly'=>$showStaffOnly, ':flag'=>($flag?1:0), ':ord'=>$newOrder,
+    ':mid'=>$modulID, ':subgroupID'=>($subgroupID > 0 ? $subgroupID : null), ':path'=>$path, ':domain'=>$domain, ':showstaffonly'=>$showStaffOnly, ':flag'=>($flag?1:0), ':ord'=>$newOrder,
         ':nms'=>$name_ms, ':nen'=>$name_en,
     ':updateby'=>(string)($_SESSION['f_stafID'] ?? $_SESSION['f_nopekerja'] ?? ''),
     ':id'=>$menuID
@@ -178,6 +187,9 @@ try {
           if ($oldData['f_modulID'] !== $modulID) {
             audit_change($changeSetId, 'f_modulID', (string)$oldData['f_modulID'], (string)$modulID, 'integer', false);
           }
+          if ($oldData['f_subgroupID'] !== $subgroupID) {
+            audit_change($changeSetId, 'f_subgroupID', (string)$oldData['f_subgroupID'], (string)$subgroupID, 'integer', false);
+          }
           if ($oldData['f_path'] !== $path) {
             audit_change($changeSetId, 'f_path', $oldData['f_path'], $path, 'string', false);
           }
@@ -214,7 +226,7 @@ try {
   GroupDataCache::clear('group_access_');
   clearSidebarNavigationCaches();
   
-  echo json_encode(['ok'=>true, 'message'=>(string)__('userGroup_menu_save_success_update'), 'menuID'=>$menuID, 'modulID'=>$modulID, 'order'=>$newOrder], JSON_UNESCAPED_UNICODE);
+  echo json_encode(['ok'=>true, 'message'=>(string)__('userGroup_menu_save_success_update'), 'menuID'=>$menuID, 'modulID'=>$modulID, 'subgroupID'=>$subgroupID, 'order'=>$newOrder], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
   if (!empty($pdo) && $pdo->inTransaction()) $pdo->rollBack();
   http_response_code(400);

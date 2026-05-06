@@ -165,24 +165,83 @@ const ModuleAccess = {
         html += '<div class="text-muted small">' + GroupUtils.esc(this.T.no_records) + '</div>';
       } else {
         html += '<div class="row fw-semibold text-body-secondary mb-2"><div class="col">' + GroupUtils.esc(this.T.col_menu) + '</div><div class="col-auto">' + GroupUtils.esc(this.T.col_reorder) + '</div></div>';
-        menus.forEach(me => {
-          const id = me.id ?? me.f_menuID;
-          html += '<div class="menu-row" data-menu-id="' + GroupUtils.esc(id) + '">';
-          html += '<div>';
-          html += '<div>' + GroupUtils.esc(me.nama || me.menuName || me.kod || '-') + '</div>';
-          if (me.path || me.f_path) html += '<div class="menu-path">' + GroupUtils.esc(me.path || me.f_path) + '</div>';
-          html += '</div>';
-          html += '<div class="btn-group reorder-group" role="group" aria-label="' + GroupUtils.esc(this.T.reorder_label || this.T.col_reorder || '') + '">';
-          html += '<button type="button" class="btn btn-outline-primary btn-sm btn-move-up" title="' + GroupUtils.esc(this.T.move_up) + '"><i class="ri-arrow-up-line"></i></button>';
-          html += '<button type="button" class="btn btn-outline-primary btn-sm btn-move-down" title="' + GroupUtils.esc(this.T.move_down) + '"><i class="ri-arrow-down-line"></i></button>';
-          html += '</div>';
-          html += '</div>';
+        this.buildMenuOrderItems(menus).forEach(item => {
+          if (item.type === 'subgroup') {
+            const sg = item.subgroup || {};
+            html += '<div class="menu-row subgroup-order-row" data-order-type="subgroup" data-subgroup-id="' + GroupUtils.esc(sg.id) + '">';
+            html += '<div class="subgroup-order-title">';
+            html += '<div class="fw-semibold"><i class="' + GroupUtils.esc(sg.icon || 'ri-folder-2-line') + ' me-1"></i>' + GroupUtils.esc(sg.name || ('Subgroup ' + sg.id)) + '</div>';
+            html += '<div class="menu-path">' + GroupUtils.esc((sg.menus || []).length + ' ' + (this.T.label_menu || 'menu')) + '</div>';
+            html += '</div>';
+            html += '<div class="btn-group reorder-group" role="group" aria-label="' + GroupUtils.esc(this.T.reorder_label || this.T.col_reorder || '') + '">';
+            html += '<button type="button" class="btn btn-outline-primary btn-sm btn-move-up" title="' + GroupUtils.esc(this.T.move_up) + '"><i class="ri-arrow-up-line"></i></button>';
+            html += '<button type="button" class="btn btn-outline-primary btn-sm btn-move-down" title="' + GroupUtils.esc(this.T.move_down) + '"><i class="ri-arrow-down-line"></i></button>';
+            html += '</div>';
+            html += '</div>';
+            (sg.menus || []).forEach(me => {
+              html += this.renderMenuOrderRow(me, sg.id, true);
+            });
+            return;
+          }
+
+          html += this.renderMenuOrderRow(item.menu, 0, false);
         });
       }
       html += '</div>';
       html += '</div>';
       html += '</div>';
     });
+    html += '</div>';
+    return html;
+  },
+
+  buildMenuOrderItems(menus) {
+    const direct = [];
+    const subgroups = new Map();
+    (Array.isArray(menus) ? menus : []).forEach((me, index) => {
+      const subgroupID = parseInt(me.subgroupID ?? me.f_subgroupID ?? 0, 10) || 0;
+      const menuOrder = parseInt(me.order ?? me.menuOrder ?? index + 1, 10) || index + 1;
+      if (subgroupID <= 0) {
+        direct.push({ type: 'menu', menu: me, order: menuOrder, sequence: index });
+        return;
+      }
+
+      if (!subgroups.has(subgroupID)) {
+        const subgroupOrder = parseInt(me.subgroupOrder ?? menuOrder, 10) || menuOrder;
+        subgroups.set(subgroupID, {
+          type: 'subgroup',
+          subgroup: {
+            id: subgroupID,
+            name: String(me.subgroupName || ('Subgroup ' + subgroupID)),
+            icon: String(me.subgroupIcon || 'ri-folder-2-line'),
+            order: subgroupOrder,
+            menus: []
+          },
+          order: subgroupOrder,
+          sequence: index
+        });
+      }
+      subgroups.get(subgroupID).subgroup.menus.push(me);
+    });
+
+    return direct.concat(Array.from(subgroups.values())).sort((a, b) => {
+      const orderCompare = (a.order || 99999) - (b.order || 99999);
+      return orderCompare !== 0 ? orderCompare : ((a.sequence || 0) - (b.sequence || 0));
+    });
+  },
+
+  renderMenuOrderRow(me, parentSubgroupID, isChild) {
+    if (!me) return '';
+    const id = me.id ?? me.f_menuID;
+    let html = '<div class="menu-row' + (isChild ? ' subgroup-menu-child' : '') + '" data-order-type="menu" data-menu-id="' + GroupUtils.esc(id) + '" data-parent-subgroup="' + GroupUtils.esc(parentSubgroupID || 0) + '">';
+    html += '<div>';
+    html += '<div>' + (isChild ? '<i class="ri-corner-down-right-line me-1 text-muted"></i>' : '') + GroupUtils.esc(me.nama || me.menuName || me.kod || '-') + '</div>';
+    if (me.path || me.f_path) html += '<div class="menu-path">' + GroupUtils.esc(me.path || me.f_path) + '</div>';
+    html += '</div>';
+    html += '<div class="btn-group reorder-group" role="group" aria-label="' + GroupUtils.esc(this.T.reorder_label || this.T.col_reorder || '') + '">';
+    html += '<button type="button" class="btn btn-outline-primary btn-sm btn-move-up" title="' + GroupUtils.esc(this.T.move_up) + '"><i class="ri-arrow-up-line"></i></button>';
+    html += '<button type="button" class="btn btn-outline-primary btn-sm btn-move-down" title="' + GroupUtils.esc(this.T.move_down) + '"><i class="ri-arrow-down-line"></i></button>';
+    html += '</div>';
     html += '</div>';
     return html;
   },
@@ -443,16 +502,180 @@ const ModuleAccess = {
   },
   
   refreshReorderButtons(bodyEl) {
-    const rows = Array.from(bodyEl.querySelectorAll('.menu-row'));
-    rows.forEach((r, idx) => {
-      const up = r.querySelector('.btn-move-up');
-      const dn = r.querySelector('.btn-move-down');
-      if (up) up.disabled = (idx === 0);
-      if (dn) dn.disabled = (idx === rows.length - 1);
+    const refreshRows = (rows) => {
+      rows.forEach((r, idx) => {
+        const up = r.querySelector('.btn-move-up');
+        const dn = r.querySelector('.btn-move-down');
+        if (up) up.disabled = (idx === 0);
+        if (dn) dn.disabled = (idx === rows.length - 1);
+      });
+    };
+
+    refreshRows(this.getTopLevelOrderRows(bodyEl));
+
+    const menuGroups = new Map();
+    bodyEl.querySelectorAll('.menu-row[data-menu-id]').forEach((row) => {
+      const key = row.getAttribute('data-parent-subgroup') || '0';
+      if (key === '0') return;
+      if (!menuGroups.has(key)) menuGroups.set(key, []);
+      menuGroups.get(key).push(row);
     });
+    menuGroups.forEach(refreshRows);
+  },
+
+  isTopLevelOrderRow(row) {
+    if (!row || !row.classList || !row.classList.contains('menu-row')) return false;
+    if (row.classList.contains('subgroup-order-row')) return true;
+    return row.hasAttribute('data-menu-id') && (row.getAttribute('data-parent-subgroup') || '0') === '0';
+  },
+
+  getTopLevelOrderRows(bodyEl) {
+    return Array.from(bodyEl.querySelectorAll('.menu-row')).filter(row => this.isTopLevelOrderRow(row));
+  },
+
+  getOrderItemBlock(row) {
+    if (!row) return [];
+    const block = [row];
+    if (!row.classList.contains('subgroup-order-row')) {
+      return block;
+    }
+
+    let cursor = row.nextElementSibling;
+    while (cursor && cursor.classList.contains('menu-row') && !this.isTopLevelOrderRow(cursor)) {
+      block.push(cursor);
+      cursor = cursor.nextElementSibling;
+    }
+    return block;
+  },
+
+  moveOrderItemBlock(row, sibling, direction) {
+    if (!row || !sibling || row.parentNode !== sibling.parentNode) return;
+    const parent = row.parentNode;
+    const rowBlock = this.getOrderItemBlock(row);
+    const siblingBlock = this.getOrderItemBlock(sibling);
+    const marker = document.createComment('module-order-marker');
+
+    parent.insertBefore(marker, rowBlock[0]);
+    rowBlock.forEach(node => parent.removeChild(node));
+
+    if (direction === 'up') {
+      parent.insertBefore(rowBlock[0], siblingBlock[0]);
+      for (let i = 1; i < rowBlock.length; i++) {
+        parent.insertBefore(rowBlock[i], siblingBlock[0]);
+      }
+    } else {
+      const afterSibling = siblingBlock[siblingBlock.length - 1].nextElementSibling;
+      rowBlock.forEach(node => parent.insertBefore(node, afterSibling));
+    }
+
+    return {
+      revert: () => {
+        rowBlock.forEach(node => {
+          if (node.parentNode === parent) {
+            parent.removeChild(node);
+          }
+        });
+        rowBlock.forEach(node => parent.insertBefore(node, marker));
+        marker.remove();
+      },
+      cleanup: () => {
+        if (marker.parentNode) {
+          marker.remove();
+        }
+      }
+    };
+  },
+
+  findReorderSibling(row, direction) {
+    if (!row) return null;
+    const parentSubgroup = row.getAttribute('data-parent-subgroup') || '0';
+    const topLevel = this.isTopLevelOrderRow(row);
+    let sibling = direction === 'up' ? row.previousElementSibling : row.nextElementSibling;
+    while (sibling) {
+      if (topLevel && this.isTopLevelOrderRow(sibling)) return sibling;
+      if (!topLevel && sibling.classList.contains('menu-row') && sibling.hasAttribute('data-menu-id') && (sibling.getAttribute('data-parent-subgroup') || '0') === parentSubgroup) {
+        return sibling;
+      }
+      sibling = direction === 'up' ? sibling.previousElementSibling : sibling.nextElementSibling;
+    }
+    return null;
   },
   
   async handleReorder(btn) {
+    const row = btn.closest('.menu-row');
+    const body = btn.closest('.accordion-body');
+    if (!row || !body) return;
+
+    const direction = btn.classList.contains('btn-move-up') ? 'up' : 'down';
+    const sibling = this.findReorderSibling(row, direction);
+    if (!sibling) return;
+
+    const topLevel = this.isTopLevelOrderRow(row);
+    let blockMove = null;
+    let revert = null;
+    if (topLevel) {
+      blockMove = this.moveOrderItemBlock(row, sibling, direction);
+      revert = blockMove?.revert || null;
+    } else if (direction === 'up') {
+      row.parentNode.insertBefore(row, sibling);
+      revert = () => sibling.parentNode.insertBefore(sibling, row);
+    } else {
+      sibling.parentNode.insertBefore(sibling, row);
+      revert = () => row.parentNode.insertBefore(row, sibling);
+    }
+
+    const cleanup = () => {
+      if (blockMove && typeof blockMove.cleanup === 'function') {
+        blockMove.cleanup();
+      }
+    };
+
+    if (topLevel) {
+      await this.saveTopLevelOrderSwap(body, row, sibling, revert, cleanup);
+      return;
+    }
+
+    await this.saveSwap(body, row, sibling, revert);
+  },
+
+  async saveTopLevelOrderSwap(bodyEl, rowA, rowB, revert, cleanup) {
+    const modulID = bodyEl.getAttribute('data-modul-id');
+    const payload = {
+      modulID,
+      aType: rowA.classList.contains('subgroup-order-row') ? 'subgroup' : 'menu',
+      aID: rowA.classList.contains('subgroup-order-row') ? rowA.getAttribute('data-subgroup-id') : rowA.getAttribute('data-menu-id'),
+      bType: rowB.classList.contains('subgroup-order-row') ? 'subgroup' : 'menu',
+      bID: rowB.classList.contains('subgroup-order-row') ? rowB.getAttribute('data-subgroup-id') : rowB.getAttribute('data-menu-id')
+    };
+
+    rowA.classList.add('saving');
+    rowB.classList.add('saving');
+    try {
+      const resp = await GroupUtils.fetchJSONSafe(GroupUtils.apiUrl('menu-order-item-swap.php'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': GroupUtils.getCSRF() },
+        body: JSON.stringify(payload)
+      });
+      if (!resp || resp.error) {
+        if (typeof revert === 'function') revert();
+        this.showError((resp && resp.message) || this.T.error_reorder);
+        setTimeout(() => this.errEl?.classList.add('d-none'), 2500);
+        return;
+      }
+      if (typeof cleanup === 'function') cleanup();
+      this.refreshReorderButtons(bodyEl);
+      this.syncSidebarAfterNavigationChange();
+    } catch (e) {
+      if (typeof revert === 'function') revert();
+      this.showError(e.message || this.T.error_network);
+      setTimeout(() => this.errEl?.classList.add('d-none'), 2500);
+    } finally {
+      rowA.classList.remove('saving');
+      rowB.classList.remove('saving');
+    }
+  },
+
+  async handleLegacyReorder(btn) {
     const row = btn.closest('.menu-row');
     const body = btn.closest('.accordion-body');
     if (!row || !body) return;
@@ -475,7 +698,37 @@ const ModuleAccess = {
       });
     }
   },
-  
+
+  async saveSubgroupSwap(bodyEl, rowA, rowB, revert) {
+    const modulID = bodyEl.getAttribute('data-modul-id');
+    const aID = rowA.getAttribute('data-subgroup-id');
+    const bID = rowB.getAttribute('data-subgroup-id');
+    rowA.classList.add('saving');
+    rowB.classList.add('saving');
+    try {
+      const resp = await GroupUtils.fetchJSONSafe(GroupUtils.apiUrl('menu-subgroup-swap.php'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': GroupUtils.getCSRF() },
+        body: JSON.stringify({ modulID, aID, bID })
+      });
+      if (!resp || resp.error) {
+        if (typeof revert === 'function') revert();
+        this.showError((resp && resp.message) || this.T.error_reorder);
+        setTimeout(() => this.errEl?.classList.add('d-none'), 2500);
+        return;
+      }
+      this.refreshReorderButtons(bodyEl);
+      this.syncSidebarAfterNavigationChange();
+    } catch (e) {
+      if (typeof revert === 'function') revert();
+      this.showError(e.message || this.T.error_network);
+      setTimeout(() => this.errEl?.classList.add('d-none'), 2500);
+    } finally {
+      rowA.classList.remove('saving');
+      rowB.classList.remove('saving');
+    }
+  },
+
   async saveSwap(bodyEl, rowA, rowB, revert) {
     const modulID = bodyEl.getAttribute('data-modul-id');
     const aID = rowA.getAttribute('data-menu-id');
@@ -507,7 +760,7 @@ const ModuleAccess = {
       rowB.classList.remove('saving');
     }
   },
-  
+
   async loadAccessData() {
     if (!this.currentGroup || !this.currentGroup.id) return;
     this.showLoading();

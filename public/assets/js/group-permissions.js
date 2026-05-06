@@ -291,7 +291,17 @@ const GroupPermissions = {
         list.forEach(m => {
           const on = cur.has(m.id);
           html += '<a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center menu-toggle" data-menu-id="' + GroupUtils.esc(m.id) + '">';
-          html += '<span><i class="ri-pages-line me-2"></i>' + GroupUtils.esc(m.name) + (m.path ? ' <span class="menu-path">(' + GroupUtils.esc(m.path) + ')</span>' : '') + '</span>';
+          html += '<span class="min-w-0">';
+          html += '<span class="d-block fw-semibold"><i class="ri-pages-line me-2"></i>' + GroupUtils.esc(m.name) + '</span>';
+          html += '<span class="d-flex flex-wrap align-items-center gap-1 mt-1">';
+          if (m.subgroupName) {
+            html += '<span class="badge rounded-pill border bg-secondary-subtle text-secondary-emphasis border-secondary-subtle"><i class="ri-folder-2-line me-1"></i>' + GroupUtils.esc(m.subgroupName) + '</span>';
+          }
+          if (m.path) {
+            html += '<span class="menu-path">(' + GroupUtils.esc(m.path) + ')</span>';
+          }
+          html += '</span>';
+          html += '</span>';
           html += '<span class="badge ' + (on ? 'bg-success' : 'bg-secondary') + '">' + GroupUtils.esc(on ? (this.T.pick_menu_on || this.T.status_on || '') : (this.T.pick_menu_off || this.T.status_off || '')) + '</span>';
           html += '</a>';
         });
@@ -367,7 +377,15 @@ const GroupPermissions = {
             menus.forEach(me => {
               const nm = me.nama || me.menuName || me.kod || '-';
               const p = me.path || me.f_path || '';
-              listHtml += '<li>' + GroupUtils.esc(nm) + (p ? ' <span class="menu-path">(' + GroupUtils.esc(p) + ')</span>' : '') + '</li>';
+              const sg = me.subgroupName || me.subgroup_name || '';
+              listHtml += '<li>' + GroupUtils.esc(nm);
+              if (sg) {
+                listHtml += ' <span class="badge rounded-pill border bg-secondary-subtle text-secondary-emphasis border-secondary-subtle"><i class="ri-folder-2-line me-1"></i>' + GroupUtils.esc(sg) + '</span>';
+              }
+              if (p) {
+                listHtml += ' <span class="menu-path">(' + GroupUtils.esc(p) + ')</span>';
+              }
+              listHtml += '</li>';
             });
             listHtml += '</ul>';
           }

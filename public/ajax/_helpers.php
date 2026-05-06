@@ -445,7 +445,7 @@ function clearSidebarNavigationCaches(): void {
     if (function_exists('apcu_delete')) {
         try {
             if (class_exists('APCUIterator')) {
-                $iterator = new APCUIterator('/^sidebar:v1:/');
+                $iterator = new APCUIterator('/^sidebar:v[0-9]+:/');
                 foreach ($iterator as $key => $unused) {
                     apcu_delete((string)$key);
                 }

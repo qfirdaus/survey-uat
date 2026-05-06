@@ -46,17 +46,32 @@ try{
       "SELECT f_modulID AS id, COALESCE(NULLIF(f_modulName_{$lang}, ''), NULLIF(f_modulName_ms,''), NULLIF(f_modulName_en,''), CONCAT('Modul ', f_modulID)) AS nama FROM tbl_m_modul ORDER BY COALESCE(f_order, 99999), f_modulID ASC"
     )->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-  $nameColMenu = "f_menuName_{$lang}";
+  $nameColMenu = "m.f_menuName_{$lang}";
+  $subgroupNameCol = $lang === 'en' ? 'sg.f_subgroupName_en' : 'sg.f_subgroupName_ms';
     // Fetch menus — only ms + en columns exist
     $menus = $db->query(
-      "SELECT f_menuID AS id, f_modulID AS modulID, COALESCE(NULLIF(" . $nameColMenu . ",''), NULLIF(f_menuName_ms,''), NULLIF(f_menuName_en,''), CONCAT('Menu ', f_menuID)) AS nama, COALESCE(f_path,'') AS path FROM tbl_m_menu ORDER BY f_modulID, COALESCE(f_order,99999), f_menuID"
+      "SELECT m.f_menuID AS id,
+              m.f_modulID AS modulID,
+              COALESCE(m.f_subgroupID, 0) AS subgroupID,
+              COALESCE(NULLIF(" . $subgroupNameCol . ",''), NULLIF(sg.f_subgroupName_ms,''), NULLIF(sg.f_subgroupName_en,''), '') AS subgroupName,
+              COALESCE(NULLIF(" . $nameColMenu . ",''), NULLIF(m.f_menuName_ms,''), NULLIF(m.f_menuName_en,''), CONCAT('Menu ', m.f_menuID)) AS nama,
+              COALESCE(m.f_path,'') AS path
+       FROM tbl_m_menu m
+       LEFT JOIN tbl_m_menu_subgroup sg ON sg.f_subgroupID = m.f_subgroupID AND sg.f_status = 1
+       ORDER BY m.f_modulID, COALESCE(sg.f_order, 0), COALESCE(m.f_order,99999), m.f_menuID"
     )->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
   $byMod = [];
   foreach($menus as $m){
     $mid = (int)$m['modulID'];
     if (!isset($byMod[$mid])) $byMod[$mid]=[];
-    $byMod[$mid][] = ['id'=>(int)$m['id'], 'nama'=>$m['nama'], 'path'=>($m['path']!==''?$m['path']:null)];
+    $byMod[$mid][] = [
+      'id'=>(int)$m['id'],
+      'nama'=>$m['nama'],
+      'path'=>($m['path']!==''?$m['path']:null),
+      'subgroupID'=>(int)($m['subgroupID'] ?? 0),
+      'subgroupName'=>(string)($m['subgroupName'] ?? ''),
+    ];
   }
 
   $result = [

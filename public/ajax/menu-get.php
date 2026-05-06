@@ -23,7 +23,7 @@ try {
 
   // Butiran menu (nama ikut bahasa + semua varian untuk edit)
   $menuStmt = $pdo->prepare(
-    "SELECT f_menuID, f_modulID, f_path, f_flag, f_order,\n" .
+    "SELECT f_menuID, f_modulID, COALESCE(f_subgroupID, 0) AS f_subgroupID, f_path, f_flag, f_order,\n" .
     "       COALESCE(f_domain,'SHARED') AS f_domain,\n" .
     "       COALESCE(f_show_staff_only,1) AS f_show_staff_only,\n" .
     "       COALESCE(f_menuName_{$lang}, f_menuName_ms, f_menuName_en) AS menuName,\n" .

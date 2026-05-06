@@ -23,7 +23,8 @@ try {
   $modulID = isset($_GET['modulID']) ? (int)$_GET['modulID'] : null;
   $all = isset($_GET['all']) ? (int)$_GET['all'] : 0;
   $active = isset($_GET['active']) ? (int)$_GET['active'] : null;
-  $cacheKey = 'menu_list_' . ($modulID ?? 'all') . '_' . ($all ? 'all' : '') . '_' . ($active ?? 'any');
+  $lang = preg_replace('/[^a-z_]/i', '', (string)($_SESSION['lang'] ?? 'ms')) ?: 'ms';
+  $cacheKey = 'menu_list_' . ($modulID ?? 'all') . '_' . ($all ? 'all' : '') . '_' . ($active ?? 'any') . '_' . $lang;
   $cached = GroupDataCache::get($cacheKey, 600);
   if ($cached !== null) {
     header('X-Cache: HIT');
@@ -38,27 +39,32 @@ try {
   $all     = isset($_GET['all']) ? (int)$_GET['all'] : 0;          // ?all=1 → semua modul
   $active  = isset($_GET['active']) ? (int)$_GET['active'] : null; // ?active=1 → hanya aktif
 
+  $subgroupNameField = $lang === 'en' ? 'sg.f_subgroupName_en' : 'sg.f_subgroupName_ms';
   $sql = "SELECT
-            f_menuID  AS id,
-            f_modulID AS modulID,
-            COALESCE(NULLIF(f_menuName_ms,''), NULLIF(f_menuName_en,''), f_path, CONCAT('Menu ', f_menuID)) AS nama,
-            f_path    AS path,
-            COALESCE(f_domain,'SHARED') AS domain,
-            COALESCE(f_show_staff_only,1) AS show_staff_only,
-            CAST(f_flag AS UNSIGNED) AS flag,
-            f_order AS menuOrder
-          FROM tbl_m_menu";
+            m.f_menuID  AS id,
+            m.f_modulID AS modulID,
+            COALESCE(m.f_subgroupID, 0) AS subgroupID,
+            COALESCE(NULLIF($subgroupNameField,''), NULLIF(sg.f_subgroupName_ms,''), NULLIF(sg.f_subgroupName_en,''), '') AS subgroupName,
+            COALESCE(NULLIF(m.f_menuName_ms,''), NULLIF(m.f_menuName_en,''), m.f_path, CONCAT('Menu ', m.f_menuID)) AS nama,
+            m.f_path    AS path,
+            COALESCE(m.f_domain,'SHARED') AS domain,
+            COALESCE(m.f_show_staff_only,1) AS show_staff_only,
+            CAST(m.f_flag AS UNSIGNED) AS flag,
+            m.f_order AS menuOrder
+          FROM tbl_m_menu m
+          LEFT JOIN tbl_m_menu_subgroup sg ON sg.f_subgroupID = m.f_subgroupID AND sg.f_status = 1";
   $conds = [];
   $params = [];
 
-  if (!$all && $modulID) { $conds[] = "f_modulID = ?"; $params[] = $modulID; }
-  if ($all && $modulID)  { $conds[] = "f_modulID = ?"; $params[] = $modulID; }
-  if ($active !== null)  { $conds[] = "f_flag = ?";    $params[] = $active; }
+  if (!$all && $modulID) { $conds[] = "m.f_modulID = ?"; $params[] = $modulID; }
+  if ($all && $modulID)  { $conds[] = "m.f_modulID = ?"; $params[] = $modulID; }
+  if ($active !== null)  { $conds[] = "m.f_flag = ?";    $params[] = $active; }
 
   if ($conds) $sql .= " WHERE ".implode(' AND ', $conds);
-  $sql .= " ORDER BY f_modulID ASC,
-                   COALESCE(f_order, 99999) ASC,
-                   f_menuID ASC";
+  $sql .= " ORDER BY m.f_modulID ASC,
+                   COALESCE(sg.f_order, 0) ASC,
+                   COALESCE(m.f_order, 99999) ASC,
+                   m.f_menuID ASC";
 
   $stmt = $pdo->prepare($sql);
   $stmt->execute($params);

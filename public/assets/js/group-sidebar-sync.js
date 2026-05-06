@@ -199,7 +199,14 @@ const SidebarSync = {
         return;
       }
 
-      sidebarEl.querySelectorAll('.side-nav .collapse.show').forEach((openPanelEl) => {
+      const toggleLevel = toggleEl.getAttribute('data-sidebar-level') || 'module';
+      const scopeSelector = toggleLevel === 'subgroup'
+        ? '.side-nav-second-level'
+        : '.side-nav';
+      const containingList = toggleEl.closest(scopeSelector) || sidebarEl;
+      const openPanels = containingList.querySelectorAll(':scope > li > .collapse.show');
+
+      openPanels.forEach((openPanelEl) => {
         if (openPanelEl === panelEl) return;
         const openToggleEl = sidebarEl.querySelector(".side-nav li [data-sidebar-toggle='true'][data-sidebar-target='#" + openPanelEl.id + "']");
         syncToggleState(openToggleEl, openPanelEl, false);

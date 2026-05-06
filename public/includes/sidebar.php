@@ -164,6 +164,185 @@ function sanitize_sidebar_user_image(?string $path): string {
     return str_replace('\\', '/', $path);
 }
 
+function sidebar_safe_dom_id(string $prefix, int|string $id): string {
+    $safe = preg_replace('/[^A-Za-z0-9_-]+/', '-', (string)$id) ?? '';
+    $safe = trim($safe, '-');
+    return $prefix . ($safe !== '' ? $safe : 'item');
+}
+
+function sidebar_group_menus_by_subgroup(array $menus): array {
+    $directMenus = [];
+    $subgroups = [];
+    $sequence = 0;
+
+    foreach ($menus as $menu) {
+        $sequence++;
+        $subgroupId = (int)($menu['f_subgroupID'] ?? $menu['subgroupID'] ?? 0);
+        $subgroupName = trim((string)($menu['subgroupName'] ?? $menu['subgroup_name'] ?? $menu['f_subgroupName_ms'] ?? $menu['f_subgroupName_en'] ?? ''));
+
+        if ($subgroupId <= 0) {
+            $menu['_sidebar_order'] = (int)($menu['f_order'] ?? 99999);
+            $menu['_sidebar_sequence'] = $sequence;
+            $directMenus[] = $menu;
+            continue;
+        }
+
+        if ($subgroupName === '') {
+            $subgroupName = 'Subgroup ' . $subgroupId;
+        }
+
+        if (!isset($subgroups[$subgroupId])) {
+            $subgroups[$subgroupId] = [
+                'id' => $subgroupId,
+                'name' => $subgroupName,
+                'icon' => validate_sidebar_icon((string)($menu['subgroupIcon'] ?? $menu['subgroup_icon'] ?? 'ri-folder-2-line')),
+                'order' => (int)($menu['subgroupOrder'] ?? $menu['subgroup_order'] ?? 0),
+                'sequence' => $sequence,
+                'menus' => [],
+            ];
+        }
+
+        $subgroups[$subgroupId]['menus'][] = $menu;
+    }
+
+    uasort($subgroups, static function (array $a, array $b): int {
+        $orderCompare = ($a['order'] <=> $b['order']);
+        return $orderCompare !== 0 ? $orderCompare : ($a['id'] <=> $b['id']);
+    });
+
+    $items = [];
+    foreach ($directMenus as $menu) {
+        $items[] = [
+            'type' => 'menu',
+            'order' => (int)($menu['_sidebar_order'] ?? 99999),
+            'sequence' => (int)($menu['_sidebar_sequence'] ?? 0),
+            'menu' => $menu,
+        ];
+    }
+    foreach ($subgroups as $subgroup) {
+        $menuOrders = array_map(
+            static fn(array $menu): int => (int)($menu['f_order'] ?? 99999),
+            is_array($subgroup['menus'] ?? null) ? $subgroup['menus'] : []
+        );
+        $fallbackOrder = $menuOrders !== [] ? min($menuOrders) : 99999;
+        $items[] = [
+            'type' => 'subgroup',
+            'order' => (int)($subgroup['order'] ?: $fallbackOrder),
+            'sequence' => (int)($subgroup['sequence'] ?? 0),
+            'subgroup' => $subgroup,
+        ];
+    }
+
+    usort($items, static function (array $a, array $b): int {
+        $orderCompare = ((int)$a['order'] <=> (int)$b['order']);
+        return $orderCompare !== 0 ? $orderCompare : ((int)$a['sequence'] <=> (int)$b['sequence']);
+    });
+
+    return [
+        'direct' => $directMenus,
+        'subgroups' => array_values($subgroups),
+        'items' => $items,
+    ];
+}
+
+function sidebar_enrich_menus_with_subgroups(array $menus, string $lang = 'ms', ?int $modulID = null): array {
+    $menuIds = [];
+    $menuPaths = [];
+    foreach ($menus as $menu) {
+        $menuId = (int)($menu['f_menuID'] ?? $menu['menuID'] ?? $menu['id'] ?? 0);
+        if ($menuId > 0) {
+            $menuIds[$menuId] = true;
+            continue;
+        }
+
+        $menuPath = sanitize_menu_path((string)($menu['f_path'] ?? $menu['path'] ?? ''));
+        if ($menuPath !== null && $menuPath !== '') {
+            $menuPaths[$menuPath] = true;
+        }
+    }
+
+    if ($menuIds === [] && ($modulID === null || $modulID <= 0 || $menuPaths === [])) {
+        return $menus;
+    }
+
+    try {
+        $pdo = Database::getInstance('mysql')->getConnection();
+        $ids = array_keys($menuIds);
+        $placeholders = [];
+        $params = [];
+        foreach ($ids as $idx => $id) {
+            $key = ':menu_' . $idx;
+            $placeholders[] = $key;
+            $params[$key] = (int)$id;
+        }
+
+        $pathPlaceholders = [];
+        if ($menuIds === [] && $modulID !== null && $modulID > 0) {
+            foreach (array_keys($menuPaths) as $idx => $path) {
+                $key = ':path_' . $idx;
+                $pathPlaceholders[] = $key;
+                $params[$key] = $path;
+            }
+            $params[':modulID'] = (int)$modulID;
+        }
+
+        $nameField = strtolower($lang) === 'en' ? 'sg.f_subgroupName_en' : 'sg.f_subgroupName_ms';
+        $whereSql = $placeholders !== []
+            ? 'm.f_menuID IN (' . implode(',', $placeholders) . ')'
+            : 'm.f_modulID = :modulID AND m.f_path IN (' . implode(',', $pathPlaceholders) . ')';
+        $sql = "
+            SELECT
+                m.f_menuID,
+                m.f_path,
+                COALESCE(m.f_subgroupID, 0) AS f_subgroupID,
+                COALESCE(NULLIF($nameField, ''), NULLIF(sg.f_subgroupName_ms, ''), NULLIF(sg.f_subgroupName_en, ''), CONCAT('Subgroup ', m.f_subgroupID)) AS subgroupName,
+                COALESCE(sg.f_icon, 'ri-folder-2-line') AS subgroupIcon,
+                COALESCE(sg.f_order, 0) AS subgroupOrder
+            FROM tbl_m_menu m
+            LEFT JOIN tbl_m_menu_subgroup sg
+                ON sg.f_subgroupID = m.f_subgroupID
+               AND sg.f_modulID = m.f_modulID
+               AND COALESCE(sg.f_status, 1) = 1
+            WHERE {$whereSql}
+        ";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $map = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $menuId = (int)($row['f_menuID'] ?? 0);
+            if ($menuId > 0) {
+                $map[$menuId] = $row;
+            }
+
+            $rowPath = sanitize_menu_path((string)($row['f_path'] ?? ''));
+            if ($rowPath !== null && $rowPath !== '') {
+                $map['path:' . $rowPath] = $row;
+            }
+        }
+
+        foreach ($menus as &$menu) {
+            $menuId = (int)($menu['f_menuID'] ?? $menu['menuID'] ?? $menu['id'] ?? 0);
+            $menuPath = sanitize_menu_path((string)($menu['f_path'] ?? $menu['path'] ?? ''));
+            $mapKey = $menuId > 0 ? $menuId : ($menuPath !== null && $menuPath !== '' ? 'path:' . $menuPath : null);
+            if ($mapKey === null || !isset($map[$mapKey])) {
+                continue;
+            }
+
+            $row = $map[$mapKey];
+            $menu['f_subgroupID'] = (int)($row['f_subgroupID'] ?? 0);
+            $menu['subgroupName'] = (string)($row['subgroupName'] ?? '');
+            $menu['subgroupIcon'] = (string)($row['subgroupIcon'] ?? 'ri-folder-2-line');
+            $menu['subgroupOrder'] = (int)($row['subgroupOrder'] ?? 0);
+        }
+        unset($menu);
+    } catch (Throwable $e) {
+        error_log('[sidebar] Failed to enrich subgroup metadata: ' . $e->getMessage());
+    }
+
+    return $menus;
+}
+
 /**
  * Check if profile data is empty or invalid
  * 
@@ -314,7 +493,7 @@ html[data-bs-theme="dark"] .sidebar-loading-text {
 /* Sidebar Chart Icon (Dashboard) */
 .side-nav .sidebar-chart-icon {
     position: absolute;
-    right: 16px;
+    right: 10px;
     top: 50%;
     transform: translateY(-50%);
     font-size: calc(var(--ct-menu-item-font-size) * 1.1);
@@ -327,7 +506,7 @@ html[data-bs-theme="dark"] .sidebar-loading-text {
 }
 .side-nav .sidebar-manual-icon {
     position: absolute;
-    right: 16px;
+    right: 10px;
     top: 50%;
     transform: translateY(-50%);
     font-size: calc(var(--ct-menu-item-font-size) * 1.1);
@@ -341,7 +520,7 @@ html[data-bs-theme="dark"] .sidebar-loading-text {
 /* Sidebar Logout Icon */
 .side-nav .sidebar-logout-icon {
     position: absolute;
-    right: 16px;
+    right: 10px;
     top: 50%;
     transform: translateY(-50%);
     font-size: calc(var(--ct-menu-item-font-size) * 1.1);
@@ -400,7 +579,7 @@ html[data-bs-theme="dark"] .sidebar-loading-text {
 }
 .side-nav .sidebar-parent-arrow {
     position: absolute;
-    right: 16px;
+    right: 10px;
     top: 50%;
     transform: translateY(-50%);
     width: 18px;
@@ -519,6 +698,105 @@ html[data-bs-theme="dark"] .sidebar-loading-text {
     top: 0.5rem;
     bottom: 0.5rem;
 }
+.side-nav .sidebar-subgroup-toggle {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: calc(100% - 12px);
+    margin: 0.1rem 6px;
+    min-height: 36px;
+    padding: 0.34rem calc(var(--ct-menu-item-padding-x) * 3) 0.34rem calc(var(--ct-menu-item-padding-x) * 0.9);
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ct-menu-item-color);
+    text-align: left;
+    line-height: 1;
+    box-shadow: none;
+    outline: none;
+    transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+.side-nav .sidebar-subgroup-toggle:hover,
+.side-nav .sidebar-subgroup-toggle:focus-visible {
+    color: var(--ct-menu-item-hover-color);
+    background-color: rgba(255, 255, 255, 0.045);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+    transform: translateX(2px);
+}
+.side-nav .sidebar-subgroup-toggle:focus {
+    outline: none;
+    box-shadow: none;
+}
+.side-nav .sidebar-subgroup-toggle > i:first-child {
+    flex: 0 0 auto;
+    margin-right: 0.45rem;
+    opacity: 0.82;
+}
+.side-nav .sidebar-subgroup-toggle > span {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.side-nav .sidebar-subgroup-arrow {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    text-align: center;
+    color: inherit;
+    opacity: 0.68;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.side-nav .sidebar-subgroup-toggle[aria-expanded="true"] {
+    color: var(--ct-menu-item-active-color);
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+}
+.side-nav .sidebar-subgroup-toggle[aria-expanded="true"] .sidebar-subgroup-arrow {
+    transform: translateY(-50%) rotate(90deg);
+    opacity: 1;
+}
+.side-nav .sidebar-subgroup-item.menuitem-active > .sidebar-subgroup-toggle {
+    color: var(--ct-menu-item-active-color);
+}
+.side-nav .side-nav-third-level {
+    position: relative;
+    margin: 0.05rem 0 0.18rem;
+    padding-left: calc(var(--ct-menu-item-icon-width) - 2px);
+    padding-bottom: 0.12rem;
+}
+.side-nav .side-nav-third-level::before {
+    content: "";
+    position: absolute;
+    left: 1.18rem;
+    top: 0.05rem;
+    bottom: 0.18rem;
+    width: 1px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06));
+    opacity: 0.5;
+}
+.side-nav .side-nav-third-level li > a {
+    display: flex;
+    align-items: center;
+    margin: 0.06rem 0.55rem 0.06rem 0.2rem;
+    min-height: 32px;
+    padding: 0.3rem 0.55rem 0.3rem calc(var(--ct-menu-item-padding-x) * 0.85);
+    border-radius: 8px;
+    line-height: 1.05;
+}
+.side-nav .side-nav-third-level li > a:hover {
+    color: var(--ct-menu-item-hover-color);
+    background-color: rgba(255, 255, 255, 0.04);
+    transform: translateX(2px);
+}
+.side-nav .side-nav-third-level li.menuitem-active > a,
+.side-nav .side-nav-third-level li > a.active {
+    color: var(--ct-menu-item-active-color);
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.025));
+}
 </style>
 <div class="sidebar-loading-overlay">
     <div class="sidebar-loading-spinner"></div>
@@ -618,6 +896,8 @@ html[data-bs-theme="dark"] .sidebar-loading-text {
                 // ✅ USE BATCH LOADED MENUS (no N+1 query)
                 $childs = $modulMenus[$modulID] ?? [];
                 if (empty($childs)) continue;
+                $childs = sidebar_enrich_menus_with_subgroups($childs, $lang, $modulID);
+                $menuGroups = sidebar_group_menus_by_subgroup($childs);
 
                 $isActive     = ($modulID === $modulAktifID);
                 $collapseCls  = $isActive ? 'collapse show' : 'collapse';
@@ -637,22 +917,76 @@ html[data-bs-theme="dark"] .sidebar-loading-text {
                     </button>
                     <div class="<?= $collapseCls ?>" id="<?= $modulId ?>">
                         <ul class="side-nav-second-level">
-                            <?php foreach ($childs as $menu): 
-                                // ✅ SANITIZE MENU PATH
-                                $menuPath = sanitize_menu_path($menu['f_path'] ?? '');
-                                if (!$menuPath) continue; // Skip invalid paths
-                                
-                                // ✅ USE HELPER FUNCTION FOR ACTIVE DETECTION
-                                $menuActive = is_menu_active($currentFile, $menuPath);
-                                $menuHref = base_path('pages/' . $menuPath);
-                                $menuName = htmlspecialchars($menu['menuName'] ?? '-', ENT_QUOTES, 'UTF-8');
-                            ?>
-                                <li class="<?= $menuActive ? 'menuitem-active' : '' ?>">
-                                    <a class="<?= $menuActive ? 'active' : '' ?>"
-                                       href="<?= htmlspecialchars($menuHref, ENT_QUOTES, 'UTF-8') ?>">
-                                        <?= $menuName ?>
-                                    </a>
-                                </li>
+                            <?php foreach ($menuGroups['items'] as $sidebarItem): ?>
+                                <?php if (($sidebarItem['type'] ?? '') === 'menu'):
+                                    $menu = is_array($sidebarItem['menu'] ?? null) ? $sidebarItem['menu'] : [];
+                                    $menuPath = sanitize_menu_path($menu['f_path'] ?? '');
+                                    if (!$menuPath) continue;
+
+                                    $menuActive = is_menu_active($currentFile, $menuPath);
+                                    $menuHref = base_path('pages/' . $menuPath);
+                                    $menuName = htmlspecialchars($menu['menuName'] ?? '-', ENT_QUOTES, 'UTF-8');
+                                ?>
+                                    <li class="<?= $menuActive ? 'menuitem-active' : '' ?>">
+                                        <a class="<?= $menuActive ? 'active' : '' ?>"
+                                           href="<?= htmlspecialchars($menuHref, ENT_QUOTES, 'UTF-8') ?>">
+                                            <?= $menuName ?>
+                                        </a>
+                                    </li>
+                                <?php elseif (($sidebarItem['type'] ?? '') === 'subgroup'):
+                                    $subgroup = is_array($sidebarItem['subgroup'] ?? null) ? $sidebarItem['subgroup'] : [];
+                                    $subgroupMenus = is_array($subgroup['menus'] ?? null) ? $subgroup['menus'] : [];
+                                    if (empty($subgroupMenus)) continue;
+
+                                    $subgroupActive = false;
+                                    foreach ($subgroupMenus as $subgroupMenu) {
+                                        $subgroupMenuPath = sanitize_menu_path($subgroupMenu['f_path'] ?? '');
+                                        if ($subgroupMenuPath && is_menu_active($currentFile, $subgroupMenuPath)) {
+                                            $subgroupActive = true;
+                                            break;
+                                        }
+                                    }
+
+                                    $subgroupDomId = sidebar_safe_dom_id('sidebarSubgroup' . $modulID . '-', (int)$subgroup['id']);
+                                    $subgroupCollapseCls = $subgroupActive ? 'collapse show' : 'collapse';
+                                    $subgroupLinkCls = 'sidebar-subgroup-toggle' . ($subgroupActive ? '' : ' collapsed');
+                                    $subgroupExpanded = $subgroupActive ? 'true' : 'false';
+                                    $subgroupName = htmlspecialchars((string)$subgroup['name'], ENT_QUOTES, 'UTF-8');
+                                    $subgroupIcon = validate_sidebar_icon((string)($subgroup['icon'] ?? 'ri-folder-2-line'));
+                                ?>
+                                    <li class="sidebar-subgroup-item<?= $subgroupActive ? ' menuitem-active' : '' ?>">
+                                        <button type="button"
+                                                data-sidebar-toggle="true"
+                                                data-sidebar-level="subgroup"
+                                                data-sidebar-target="#<?= htmlspecialchars($subgroupDomId, ENT_QUOTES, 'UTF-8') ?>"
+                                                class="<?= htmlspecialchars($subgroupLinkCls, ENT_QUOTES, 'UTF-8') ?>"
+                                                aria-expanded="<?= $subgroupExpanded ?>"
+                                                aria-controls="<?= htmlspecialchars($subgroupDomId, ENT_QUOTES, 'UTF-8') ?>">
+                                            <i class="<?= htmlspecialchars($subgroupIcon, ENT_QUOTES, 'UTF-8') ?>"></i>
+                                            <span><?= $subgroupName ?></span>
+                                            <i class="ri-arrow-right-s-line sidebar-subgroup-arrow" aria-hidden="true"></i>
+                                        </button>
+                                        <div class="<?= $subgroupCollapseCls ?>" id="<?= htmlspecialchars($subgroupDomId, ENT_QUOTES, 'UTF-8') ?>">
+                                            <ul class="side-nav-third-level">
+                                                <?php foreach ($subgroupMenus as $menu):
+                                                    $menuPath = sanitize_menu_path($menu['f_path'] ?? '');
+                                                    if (!$menuPath) continue;
+
+                                                    $menuActive = is_menu_active($currentFile, $menuPath);
+                                                    $menuHref = base_path('pages/' . $menuPath);
+                                                    $menuName = htmlspecialchars($menu['menuName'] ?? '-', ENT_QUOTES, 'UTF-8');
+                                                ?>
+                                                    <li class="<?= $menuActive ? 'menuitem-active' : '' ?>">
+                                                        <a class="<?= $menuActive ? 'active' : '' ?>"
+                                                           href="<?= htmlspecialchars($menuHref, ENT_QUOTES, 'UTF-8') ?>">
+                                                            <?= $menuName ?>
+                                                        </a>
+                                                    </li>
+                                                <?php endforeach ?>
+                                            </ul>
+                                        </div>
+                                    </li>
+                                <?php endif ?>
                             <?php endforeach ?>
                         </ul>
                     </div>
@@ -723,7 +1057,12 @@ html[data-bs-theme="dark"] .sidebar-loading-text {
                 return;
             }
 
-            var openPanels = sidebar.querySelectorAll('.side-nav .collapse.show');
+            var toggleLevel = toggleEl.getAttribute('data-sidebar-level') || 'module';
+            var scopeSelector = toggleLevel === 'subgroup'
+                ? '.side-nav-second-level'
+                : '.side-nav';
+            var containingList = toggleEl.closest(scopeSelector) || sidebar;
+            var openPanels = containingList.querySelectorAll(':scope > li > .collapse.show');
             openPanels.forEach(function (openPanelEl) {
                 if (openPanelEl === panelEl) {
                     return;

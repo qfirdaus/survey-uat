@@ -41,6 +41,7 @@ try {
     $data    = json_decode(file_get_contents('php://input'), true) ?: [];
     $groupID = (int)($data['groupID'] ?? 0);
     $modulID = (int)($data['modulID'] ?? 0);
+    $subgroupID = (int)($data['subgroupID'] ?? $data['f_subgroupID'] ?? 0);
     $path    = trim((string)($data['path'] ?? ''));
     $name_ms = (string)($data['name_ms'] ?? '');
     $name_en = (string)($data['name_en'] ?? '');
@@ -84,6 +85,16 @@ try {
         $db->rollBack(); exit;
     }
 
+    if ($subgroupID > 0) {
+        $stmt = $db->prepare("SELECT f_subgroupID FROM tbl_m_menu_subgroup WHERE f_subgroupID = :sid AND f_modulID = :mid AND f_status = 1 LIMIT 1");
+        $stmt->execute([':sid' => $subgroupID, ':mid' => $modulID]);
+        if (!$stmt->fetchColumn()) {
+            http_response_code(422);
+            echo json_encode(['error'=>true,'message'=>(string)__('userGroup_subgroup_not_same_module')], JSON_UNESCAPED_UNICODE);
+            $db->rollBack(); exit;
+        }
+    }
+
     // Dapatkan f_order seterusnya dalam modul tersebut
     $stmt = $db->prepare("SELECT COALESCE(MAX(f_order),0)+1 AS nextOrd FROM tbl_m_menu WHERE f_modulID = :mid");
     $stmt->execute([':mid'=>$modulID]);
@@ -91,10 +102,11 @@ try {
 
     // CIPTA MENU
     $stmt = $db->prepare(
-        "INSERT INTO tbl_m_menu (f_modulID, f_path, f_domain, f_show_staff_only, f_menuName_ms, f_menuName_en, f_flag, f_order, f_insertdt, f_updatedt, f_updateby) VALUES (:mid, :path, :domain, :showStaffOnly, :ms, :en, :flag, :ord, NOW(), NOW(), :updateby)"
+        "INSERT INTO tbl_m_menu (f_modulID, f_subgroupID, f_path, f_domain, f_show_staff_only, f_menuName_ms, f_menuName_en, f_flag, f_order, f_insertdt, f_updatedt, f_updateby) VALUES (:mid, :subgroupID, :path, :domain, :showStaffOnly, :ms, :en, :flag, :ord, NOW(), NOW(), :updateby)"
     );
     $stmt->execute([
         ':mid'  => $modulID,
+        ':subgroupID' => $subgroupID > 0 ? $subgroupID : null,
         ':path' => $path,
         ':domain' => $domain,
         ':showStaffOnly' => $showStaffOnly,
@@ -161,6 +173,7 @@ try {
                 'actor_label' => $actorLabel,
                 'meta'        => [
                     'modulID' => $modulID,
+                    'subgroupID' => $subgroupID,
                     'groupID' => $groupID,
                     'path' => $path,
                     'flag' => $flag
@@ -171,6 +184,7 @@ try {
                 $changeSetId = audit_begin_change($eventId, 'menu', (string)$menuID, 'Menu creation');
                 if ($changeSetId) {
                     audit_change($changeSetId, 'f_path', null, $path, 'string', false);
+                    audit_change($changeSetId, 'f_subgroupID', null, $subgroupID > 0 ? (string)$subgroupID : '', 'integer', false);
                     audit_change($changeSetId, 'f_menuName_ms', null, $name_ms, 'string', false);
                     audit_change($changeSetId, 'f_menuName_en', null, $name_en, 'string', false);
                     audit_change($changeSetId, 'f_domain', null, $domain, 'string', false);
@@ -197,6 +211,7 @@ try {
         'menu'  => [
             'f_menuID'       => $menuID,
             'f_modulID'      => $modulID,
+            'f_subgroupID'   => $subgroupID,
             'f_path'         => $path,
             'f_menuName_ms'  => $name_ms,
             'f_menuName_en'  => $name_en,

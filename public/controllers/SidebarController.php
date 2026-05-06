@@ -341,7 +341,7 @@ class SidebarController
      */
     private function getCacheKey(): string
     {
-        return 'sidebar:v1:' . md5((string)($this->groupId ?? 'guest') . '_' . $this->lang . '_' . $this->operationalMode);
+        return 'sidebar:v3:' . md5((string)($this->groupId ?? 'guest') . '_' . $this->lang . '_' . $this->operationalMode);
     }
 
     /**
