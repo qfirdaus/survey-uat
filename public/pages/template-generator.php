@@ -246,7 +246,7 @@ $shouldOpenModal = (($previewResult !== null || $errorMessage !== null) && !($ge
 </div>
 
 <div class="modal fade" id="createTemplateModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-xl tg-create-modal-dialog">
+    <div class="modal-dialog modal-xl tg-create-modal-dialog">
         <div class="modal-content tg-modal-shell">
             <div class="modal-header tg-modal-header">
                 <div>

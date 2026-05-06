@@ -1076,7 +1076,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') ==
       }
       .modal,
       .modal-dialog,
-      .modal-dialog-centered,
       .modal-content,
       .modal-content::before,
       .modal-content::after {
@@ -2275,7 +2274,7 @@ window.GroupPageRuntime = Object.assign({}, window.GroupPageRuntime || {}, {
 <script src="<?= base_url('assets/js/group-permissions.js') ?>?v=<?= $version ?? date('ymdHis') ?>"></script>
 <!-- MODAL: Akses Modul (REORDER) -->
 <div class="modal fade modal-themed" id="aksesModal" tabindex="-1" aria-hidden="true" aria-labelledby="aksesModalTitle">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="aksesModalTitle">
@@ -2304,7 +2303,7 @@ window.GroupPageRuntime = Object.assign({}, window.GroupPageRuntime || {}, {
 
 <!-- MODAL: Akses Menu (DataTable) -->
 <div class="modal fade modal-themed" id="aksesMenuModal" tabindex="-1" aria-hidden="true" aria-labelledby="aksesMenuTitle">
-  <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="aksesMenuTitle">
@@ -2333,7 +2332,7 @@ window.GroupPageRuntime = Object.assign({}, window.GroupPageRuntime || {}, {
 
 <!-- MODAL: Edit Menu -->
 <div class="modal fade modal-child-accent" id="menuEditModal" tabindex="-1" aria-hidden="true" aria-labelledby="menuEditTitle" data-bs-backdrop="static">
-  <div class="modal-dialog modal-xl modal-dialog-centered">
+  <div class="modal-dialog modal-xl">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="menuEditTitle">
@@ -2421,7 +2420,7 @@ window.GroupPageRuntime = Object.assign({}, window.GroupPageRuntime || {}, {
 </div>
 <!-- MODAL: Akses Kumpulan -->
 <div class="modal fade modal-themed" id="aksesGroupModal" tabindex="-1" aria-hidden="true" aria-labelledby="aksesGroupTitle">
-  <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="aksesGroupTitle">
@@ -2450,7 +2449,7 @@ window.GroupPageRuntime = Object.assign({}, window.GroupPageRuntime || {}, {
 
 <!-- MODAL: Ringkasan (SEPARATE) -->
 <div class="modal fade modal-themed modal-child-accent" id="ringkasanModal" tabindex="-1" aria-hidden="true" aria-labelledby="ringkasanTitle">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="ringkasanTitle">
@@ -2478,7 +2477,7 @@ window.GroupPageRuntime = Object.assign({}, window.GroupPageRuntime || {}, {
 
 <!-- MODAL: Pemilih Menu (SEPARATE) -->
 <div class="modal fade modal-themed modal-child-accent" id="menuPickModal" tabindex="-1" aria-hidden="true" aria-labelledby="menuPickTitle">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="menuPickTitle">
@@ -2507,7 +2506,7 @@ window.GroupPageRuntime = Object.assign({}, window.GroupPageRuntime || {}, {
 
       <!-- MODAL: Tambah Kumpulan -->
       <div class="modal fade modal-themed" id="groupCreateModal" tabindex="-1" aria-hidden="true" aria-labelledby="groupCreateTitle">
-        <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-dialog modal-xl">
           <div class="modal-content">
             <div class="modal-header">
               <h5 class="modal-title" id="groupCreateTitle"><i class="ri-add-line"></i> <span><?= h(__('userGroup_modal_group_create_title')) ?></span></h5>
@@ -2603,7 +2602,7 @@ window.GroupPageRuntime = Object.assign({}, window.GroupPageRuntime || {}, {
 
       <!-- MODAL: Tambah Modul -->
 <div class="modal fade modal-themed" id="moduleCreateModal" tabindex="-1" aria-hidden="true" aria-labelledby="moduleCreateTitle">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-dialog modal-lg">
           <div class="modal-content">
             <div class="modal-header">
               <h5 class="modal-title" id="moduleCreateTitle"><i class="ri-stack-line"></i> <span><?= h(__('modul_tambah_title')) ?></span></h5>

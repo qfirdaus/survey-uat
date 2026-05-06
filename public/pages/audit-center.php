@@ -733,7 +733,7 @@ $tabMeta = [
 </script>
 
 <div class="modal fade" id="audit-center-meta-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
     <div class="modal-content audit-center-meta-modal">
       <div class="modal-header">
         <div>

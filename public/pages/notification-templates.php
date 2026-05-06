@@ -79,6 +79,38 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
     #notificationTemplateModal .btn-close { filter: invert(1); opacity: .9; }
     #notificationTemplateModal .modal-body { background: #f8fafc; padding: 1.1rem 1.35rem; }
     #notificationTemplateModal .modal-footer { background: #fff; border-top: 1px solid rgba(15,23,42,.08); }
+    #notificationTemplateModal {
+      z-index: 11020 !important;
+    }
+    #notificationTemplateModal,
+    #notificationTemplateModal .modal-dialog,
+    #notificationTemplateModal .modal-dialog-centered,
+    #notificationTemplateModal .modal-content,
+    #notificationTemplateModal .modal-content::before,
+    #notificationTemplateModal .modal-content::after {
+      box-shadow: none !important;
+      outline: 0 !important;
+      filter: none !important;
+    }
+    #notificationTemplateModal.fade {
+      transition: none !important;
+    }
+    #notificationTemplateModal.fade .modal-dialog,
+    #notificationTemplateModal.show .modal-dialog {
+      transition: none !important;
+      transform: none !important;
+    }
+    #notificationTemplateModal .modal-dialog {
+      border: 0 !important;
+      background: transparent !important;
+      position: relative;
+      z-index: 1;
+    }
+    #notificationTemplateModal .modal-content {
+      border: 0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
     .notification-template-surface {
       background: #fff;
       border: 1px solid rgba(15,23,42,.08);

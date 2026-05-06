@@ -2491,7 +2491,7 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
 
 <!-- MODAL: Tukar Kumpulan -->
 <div class="modal fade" id="userGroupModal" tabindex="-1" aria-hidden="true" aria-labelledby="userGroupTitle">
-  <div class="modal-dialog modal-xl modal-dialog-centered">
+  <div class="modal-dialog modal-xl">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="userGroupTitle">
@@ -2738,7 +2738,7 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
 
 <!-- MODAL: Tambah Pengguna -->
 <div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true" aria-labelledby="addUserModalTitle">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="addUserModalTitle">
