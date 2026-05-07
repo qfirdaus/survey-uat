@@ -297,8 +297,14 @@
         if (loader) loader.classList.add('d-none');
         try {
           const api = $('#loginActivityTable').DataTable();
+          const emptyCell = $('#loginActivityTable tbody td.dataTables_empty');
+          if (emptyCell.length) {
+            emptyCell.attr('colspan', 7).addClass('text-center');
+            return;
+          }
           const info = api.page.info();
           api.rows({ page: 'current' }).nodes().each(function (el, i) {
+            if ($(el).find('td.dataTables_empty').length) return;
             $(el).find('td').eq(0).html(info.start + i + 1);
           });
         } catch (err) {

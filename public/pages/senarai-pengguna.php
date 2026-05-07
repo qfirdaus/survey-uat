@@ -487,6 +487,8 @@ function render_user_access_table(
                         ($currentUserStafIDNormalized !== '' && str_replace('-', '', $stafID) === $currentUserStafIDNormalized) ||
                         ($currentUserNoPekerjaNormalized !== '' && str_replace('-', '', $f_nopekerja) === $currentUserNoPekerjaNormalized);
                       $canManageProtectedSelf = can_self_manage_protected_staff_account_local($stafID, $currentUserStafIDNormalized);
+                      $isTargetSuperAdmin = strtoupper(trim($gKod)) === 'ADM-SA';
+                      $canViewAsUser = $isSuperAdmin && !$isCurrentLoggedInUser && !$isProtectedAccount && !$isTargetSuperAdmin && $f_flag === 1 && $loginID !== '';
                     ?>
                     <?php
                       $groupStyle = prestasi_group_ui_resolve($groupUiMaps, $gId, $gKod);
@@ -535,8 +537,18 @@ function render_user_access_table(
                       </td>
                       <td class="col-actions">
                         <?php if ($isSuperAdmin && (!$isProtectedAccount || $canManageProtectedSelf)): ?>
+                          <?php if ($canViewAsUser): ?>
+                            <button type="button"
+                              class="btn btn-outline-warning btn-sm icon-btn btn-view-as-user"
+                              title="<?= h(__('impersonation_view_as_action')) ?>"
+                              data-loginid="<?= h($loginID) ?>"
+                              data-nama="<?= h($nama) ?>"
+                              data-displayid="<?= h($visibleIdentifier) ?>">
+                              <i class="ri-eye-line"></i>
+                            </button>
+                          <?php endif; ?>
                           <button type="button"
-                            class="btn btn-outline-primary btn-sm icon-btn btn-edit-group"
+                            class="btn btn-outline-primary btn-sm icon-btn btn-edit-group<?= $canViewAsUser ? ' ms-1' : '' ?>"
                             title="<?= h(__('userList_action_change_group')) ?>"
                             data-user-id="<?= h((string)$userID) ?>"
                             data-nama="<?= h($nama) ?>"
@@ -3190,6 +3202,35 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
     if (overlay) overlay.remove();
   }
 
+  function showImpersonationBoxLoader(message = '<?= h(__('impersonation_loading_start') ?: 'Preparing View As...') ?>') {
+    if (window.showImpersonationBoxLoader) {
+      window.showImpersonationBoxLoader(message);
+      return;
+    }
+    hideLoading();
+    const overlay = document.createElement('div');
+    overlay.id = 'impersonation-box-loader';
+    overlay.className = 'impersonation-box-loader';
+    overlay.innerHTML = `
+      <div class="impersonation-box-loader__panel">
+        <div class="impersonation-box-loader__boxes" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <div class="impersonation-box-loader__text">${message}</div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+  }
+
+  function hideImpersonationBoxLoader() {
+    if (window.hideImpersonationBoxLoader) {
+      window.hideImpersonationBoxLoader();
+      return;
+    }
+    const overlay = document.getElementById('impersonation-box-loader');
+    if (overlay) overlay.remove();
+  }
+
   // Select2 loading is handled inline where needed; remove unused helper to keep bundle small.
 
   /**
@@ -3515,6 +3556,9 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
       : ((typeof r.canDeleteUser !== 'undefined')
         ? !!r.canDeleteUser
         : (!isCurrentLoggedInUserTarget(userID, stafID, nopekerja) && !isProtectedAccount));
+    const canViewAsUser = (typeof r.can_view_as_user !== 'undefined')
+      ? !!r.can_view_as_user
+      : (!!isSuperAdmin && !isCurrentLoggedInUserTarget(userID, stafID, nopekerja) && !isProtectedAccount && String(gKod).trim().toUpperCase() !== 'ADM-SA' && parseInt(flag, 10) === 1 && loginID !== '');
 
     // Create row element using jQuery to avoid unsafe innerHTML with server HTML
     const $tr = $('<tr>')
@@ -3634,6 +3678,15 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
     // Column: actions
     const $actionsTd = $('<td>').addClass('col-actions');
     if (canEditGroup) {
+      if (canViewAsUser) {
+        const $viewAsBtn = $('<button>').attr('type','button').addClass('btn btn-outline-warning btn-sm icon-btn btn-view-as-user')
+          .attr('title', '<?= h(__('impersonation_view_as_action')) ?>')
+          .attr('data-loginid', loginID)
+          .attr('data-nama', nama)
+          .attr('data-displayid', visibleIdentifier)
+          .html('<i class="ri-eye-line"></i>');
+        $actionsTd.append($viewAsBtn);
+      }
       const $editBtn = $('<button>').attr('type','button').addClass('btn btn-outline-primary btn-sm icon-btn btn-edit-group')
         .attr('title', '<?= h(__('userList_action_change_group')) ?>')
         .attr('data-user-id', userID)
@@ -3655,6 +3708,9 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
         .attr('data-scope', categoryUser === 'PELAJAR' ? 'student' : (categoryUser === 'UMUM' ? 'public' : 'staff'))
         .attr('data-flag', String(flag))
         .html('<i class="ri-pencil-line"></i>');
+      if (canViewAsUser) {
+        $editBtn.addClass('ms-1');
+      }
 
       $actionsTd.append($editBtn);
       if (canDeleteUser) {
@@ -4836,6 +4892,15 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
       return (opt.textContent || '').trim();
     }
 
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
     async function populateGroups(selectedId, scope = 'staff'){
       try{
         const groups = await fetchGroupsForScope(scope);
@@ -4853,6 +4918,103 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
 
     if (table){
       table.addEventListener('click', async function(e){
+        const viewAsBtn = e.target.closest('.btn-view-as-user');
+        if (viewAsBtn) {
+          e.preventDefault();
+          if (!isSuperAdmin) {
+            await fireSwal({
+              icon: 'info',
+              title: '<?= h(__('userList_error_title')) ?>',
+              text: '<?= h(__('userList_err_no_permission')) ?>',
+              confirmButtonText: '<?= h(__('userList_btn_ok')) ?>',
+              confirmButtonColor: '#6c757d'
+            });
+            return;
+          }
+
+          const targetLoginId = viewAsBtn.getAttribute('data-loginid') || '';
+          const targetName = viewAsBtn.getAttribute('data-nama') || targetLoginId;
+          const targetDisplayId = viewAsBtn.getAttribute('data-displayid') || targetLoginId;
+          let reason = '';
+          let impersonationMode = 'view_only';
+
+          if (window.Swal) {
+            const result = await Swal.fire({
+              icon: 'warning',
+              title: '<?= h(__('impersonation_start_title')) ?>',
+              width: 680,
+              html: `<div class="text-start small">
+                       <div class="mb-2"><?= h(__('impersonation_start_text')) ?></div>
+                       <div><strong>${escapeHtml(targetName)}</strong> <span class="text-muted">(${escapeHtml(targetDisplayId)})</span></div>
+                       <div class="mt-3">
+                         <label class="form-label fw-semibold mb-1"><?= h(__('impersonation_mode_label')) ?></label>
+                         <select class="form-select" id="impersonationModeSelect">
+                           <option value="view_only" selected><?= h(__('impersonation_mode_view_only')) ?></option>
+                           <option value="support_action"><?= h(__('impersonation_mode_support_action')) ?></option>
+                         </select>
+                         <div class="form-text"><?= h(__('impersonation_mode_help')) ?></div>
+                       </div>
+                     </div>`,
+              input: 'textarea',
+              inputLabel: '<?= h(__('impersonation_reason_label')) ?>',
+              inputPlaceholder: '<?= h(__('impersonation_reason_placeholder')) ?>',
+              inputAttributes: { maxlength: 500 },
+              showCancelButton: true,
+              confirmButtonText: '<?= h(__('impersonation_start_button')) ?>',
+              cancelButtonText: '<?= h(__('userList_modal_btn_cancel')) ?>',
+              confirmButtonColor: '#f59e0b',
+              preConfirm: (value) => {
+                const clean = String(value || '').trim();
+                if (!clean) {
+                  Swal.showValidationMessage('<?= h(__('impersonation_reason_required')) ?>');
+                  return false;
+                }
+                return clean;
+              }
+            });
+            if (!result.isConfirmed) return;
+            reason = String(result.value || '').trim();
+            impersonationMode = String(document.getElementById('impersonationModeSelect')?.value || 'view_only');
+          } else {
+            reason = String(prompt('<?= h(__('impersonation_reason_label')) ?>') || '').trim();
+            if (!reason) return;
+          }
+
+          const originalHtml = viewAsBtn.innerHTML;
+          viewAsBtn.disabled = true;
+          viewAsBtn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i>';
+          showImpersonationBoxLoader('<?= h(__('impersonation_loading_start') ?: 'Preparing View As...') ?>');
+          try {
+            const form = new FormData();
+            form.set('csrf_token', CSRF);
+            form.set('target_login_id', targetLoginId);
+            form.set('reason', reason);
+            form.set('mode', impersonationMode);
+            const response = await fetch('<?= base_url('ajax/impersonation-start.php') ?>', {
+              method: 'POST',
+              body: form,
+              credentials: 'same-origin',
+              headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || data.success !== true) {
+              throw new Error(data.message || '<?= h(__('impersonation_start_failed')) ?>');
+            }
+            window.location.href = data.redirect || '<?= base_url('pages/dashboard.php') ?>';
+          } catch (error) {
+            hideImpersonationBoxLoader();
+            viewAsBtn.disabled = false;
+            viewAsBtn.innerHTML = originalHtml;
+            await fireSwal({
+              icon: 'error',
+              title: '<?= h(__('userList_error_title')) ?>',
+              text: error.message || '<?= h(__('impersonation_start_failed')) ?>',
+              confirmButtonText: '<?= h(__('userList_btn_ok')) ?>'
+            });
+          }
+          return;
+        }
+
         // Handle delete button click
         const deleteBtn = e.target.closest('.btn-delete-user');
         if (deleteBtn) {

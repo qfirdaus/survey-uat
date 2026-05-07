@@ -138,6 +138,12 @@ Do not hardcode DSN, username, or password inside page/controller code.
 - Supported by `TemplateGeneratorController.php`, `SystemTemplateController.php`, and classes under `public/classes/SystemTemplate*.php`.
 - Used to generate or manage system page/template scaffolding from controlled template definitions.
 
+### Developer Guide
+
+- Developer guide page exists at `public/pages/developer-guide.php`.
+- Provides centralized, copyable sample code for core-safe module development, including page skeletons, AJAX/CSRF, database access, notifications, language keys, menu/access, audit, and email guidance.
+- Intended for programmers to consume framework APIs without modifying protected core files.
+
 ### Manual Management
 
 - Manual management page exists at `public/pages/manage-manuals.php`.
@@ -166,6 +172,7 @@ The active page files under `public/pages` are:
 - `access-matrix.php`
 - `audit-center.php`
 - `dashboard.php`
+- `developer-guide.php`
 - `kumpulan-pengguna.php`
 - `manage-manuals.php`
 - `notification-admin.php`

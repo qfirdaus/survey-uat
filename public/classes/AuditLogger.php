@@ -90,6 +90,50 @@ final class AuditLogger
         return $value === '' ? null : $value;
     }
 
+    private function normalizeAuditUserId($uid, ?string $loginId = null): ?int
+    {
+        $normalized = self::normalizeUserId($uid);
+        if ($normalized === null) {
+            return null;
+        }
+
+        $sessionNoPekerja = $_SESSION['f_nopekerja'] ?? $_SESSION['user']['f_nopekerja'] ?? null;
+        $sessionUserId = $_SESSION['f_userID'] ?? $_SESSION['user']['f_userID'] ?? null;
+        if ($sessionNoPekerja !== null && is_numeric((string)$sessionNoPekerja)) {
+            if ($sessionUserId !== null && is_numeric((string)$sessionUserId) && (int)$sessionUserId === $normalized) {
+                return (int)$sessionNoPekerja;
+            }
+            if ((int)$sessionNoPekerja === $normalized) {
+                return $normalized;
+            }
+        }
+
+        $effectiveLoginId = self::normalizeLoginId($loginId)
+            ?? self::normalizeLoginId($_SESSION['f_loginID'] ?? $_SESSION['user']['f_loginID'] ?? null);
+
+        if ($effectiveLoginId !== null) {
+            try {
+                $stmt = $this->pdo->prepare("
+                    SELECT f_userID, f_nopekerja
+                    FROM tbl_m_user
+                    WHERE TRIM(f_loginID) = :login_id
+                    LIMIT 1
+                ");
+                $stmt->execute([':login_id' => $effectiveLoginId]);
+                $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+                $rowUserId = isset($row['f_userID']) && is_numeric((string)$row['f_userID']) ? (int)$row['f_userID'] : null;
+                $rowNoPekerja = isset($row['f_nopekerja']) && is_numeric((string)$row['f_nopekerja']) ? (int)$row['f_nopekerja'] : null;
+                if ($rowNoPekerja !== null && ($rowUserId === $normalized || $rowNoPekerja === $normalized)) {
+                    return $rowNoPekerja;
+                }
+            } catch (Throwable $e) {
+                error_log('[AuditLogger] normalizeAuditUserId lookup failed: ' . $e->getMessage());
+            }
+        }
+
+        return $normalized;
+    }
+
     private static function normalizeAuditLabel($value): ?string
     {
         $value = strtoupper(trim((string)$value));
@@ -113,7 +157,7 @@ final class AuditLogger
         $params = [
             ':rid'   => $rid,
             ':sid'   => $ctx['session_id'] ?? null,
-            ':uid'   => self::normalizeUserId($ctx['user_id'] ?? null),
+            ':uid'   => $this->normalizeAuditUserId($ctx['user_id'] ?? null, $ctx['login_id'] ?? null),
             ':method'=> $_SERVER['REQUEST_METHOD'] ?? 'GET',
             ':path'  => strtok($_SERVER['REQUEST_URI'] ?? '/', '?'),
             ':route' => $ctx['route'] ?? null,
@@ -209,6 +253,7 @@ final class AuditLogger
                 // use as-is
             } else {
                 $fallbackMap = [
+                    'ATTEMPT' => ['INFO', 'UNKNOWN', 'PENDING'],
                     'PENDING' => ['INFO', 'UNKNOWN', 'FAIL'],
                     'IGNORED' => ['INFO', 'UNKNOWN', 'FAIL'],
                     'SKIPPED' => ['INFO', 'UNKNOWN', 'FAIL'],
@@ -261,7 +306,7 @@ final class AuditLogger
         $params = [
             ':rid'   => $e['request_id'] ?? null,
             ':sid'   => $e['session_id'] ?? null,
-            ':uid'   => self::normalizeUserId($e['user_id'] ?? null),
+            ':uid'   => $this->normalizeAuditUserId($e['user_id'] ?? null, $e['login_id'] ?? null),
             ':actor' => $e['actor_label'] ?? null,
             ':ip'    => $ipBin,
             ':etype' => $etype,

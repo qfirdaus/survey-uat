@@ -67,6 +67,23 @@ if (!function_exists('audit_event')) {
             // Ensure meta is an array
             if (!isset($e['meta']) || !is_array($e['meta'])) $e['meta'] = [];
 
+            if (function_exists('impersonation_is_active') && impersonation_is_active()) {
+                $actorContext = function_exists('impersonation_current_actor_context') ? impersonation_current_actor_context() : [];
+                $effectiveContext = function_exists('impersonation_current_effective_user_context') ? impersonation_current_effective_user_context() : [];
+                $state = function_exists('impersonation_state') ? impersonation_state() : [];
+                $e['meta']['impersonation'] = array_merge([
+                    'active' => true,
+                    'mode' => function_exists('impersonation_mode') ? impersonation_mode() : ($state['mode'] ?? 'view_only'),
+                    'reason' => (string)($state['reason'] ?? ''),
+                    'actor_login_id' => $actorContext['login_id'] ?? null,
+                    'actor_user_id' => $actorContext['user_id'] ?? null,
+                    'actor_name' => $actorContext['name'] ?? null,
+                    'effective_login_id' => $effectiveContext['login_id'] ?? null,
+                    'effective_user_id' => $effectiveContext['user_id'] ?? null,
+                    'effective_name' => $effectiveContext['name'] ?? null,
+                ], is_array($e['meta']['impersonation'] ?? null) ? $e['meta']['impersonation'] : []);
+            }
+
             // Merge non-duplicate contextual fields into meta
             if (!isset($e['meta']['request_id']) && $requestId) $e['meta']['request_id'] = $requestId;
             if (!isset($e['meta']['session_id']) && $sessionId) $e['meta']['session_id'] = $sessionId;

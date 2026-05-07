@@ -251,6 +251,10 @@
                             <input type="number" name="session_idle_timeout_minutes" class="form-control" min="1" max="240" value="<?= htmlspecialchars($generalSettings['session.idle_timeout_minutes'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
                           </div>
                           <div class="general-form-group">
+                            <?= render_general_field_header('ri-eye-line', __('config_general_impersonation_timeout_minutes') ?? 'View As Timeout (Minutes)', __('config_general_impersonation_timeout_minutes_help') ?? 'Tempoh sesi View As sebelum sistem memulihkan akaun asal secara automatik.') ?>
+                            <input type="number" name="impersonation_timeout_minutes" class="form-control" min="5" max="240" value="<?= htmlspecialchars($generalSettings['impersonation.timeout_minutes'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                          </div>
+                          <div class="general-form-group">
                             <?= render_general_field_header('ri-upload-cloud-line', __('config_general_upload_manual_max_mb') ?? 'Manual Upload Max Size (MB)', __('config_general_upload_manual_max_mb_help') ?? 'Had maksimum saiz fail PDF untuk modul manual pengguna.') ?>
                             <input type="number" name="upload_manual_max_mb" class="form-control" min="1" max="100" value="<?= htmlspecialchars($generalSettings['upload.manual_max_mb'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
                           </div>

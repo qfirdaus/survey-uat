@@ -59,6 +59,12 @@ return [
         'idle_timeout_minutes' => 30,
     ],
 
+    // Tetapan Admin View As:
+    // - timeout_minutes: had masa sesi View As sebelum dipulihkan semula
+    'impersonation' => [
+        'timeout_minutes' => 60,
+    ],
+
     // Tetapan had muat naik fail:
     // - manual_max_mb: had saiz maksimum PDF untuk modul manual pengguna
     'upload' => [

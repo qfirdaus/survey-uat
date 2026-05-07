@@ -93,7 +93,8 @@ $__routeName = (function (): string {
 audit_safe(function() use (&$__REQUEST_ID, $__routeName) {
     $ctx = [
         'session_id' => session_id() ?: null,
-        'user_id'    => $_SESSION['user']['f_userID'] ?? null, // kalau dah ada
+        'user_id'    => $_SESSION['f_nopekerja'] ?? $_SESSION['user']['f_nopekerja'] ?? null,
+        'login_id'   => $_SESSION['f_loginID'] ?? $_SESSION['user']['f_loginID'] ?? null,
         'route'      => $__routeName,                           // SET ROUTE AWAL
     ];
     $__REQUEST_ID = audit_logger()->logRequestStart($ctx);
@@ -116,6 +117,10 @@ if (!function_exists('request_is_ajax_like')) {
         $accept = strtolower(trim((string)($_SERVER['HTTP_ACCEPT'] ?? '')));
         return $accept !== '' && (str_contains($accept, 'application/json') || str_contains($accept, 'text/json'));
     }
+}
+
+if (function_exists('impersonation_write_guard')) {
+    impersonation_write_guard();
 }
 
 if (!function_exists('auth_normalize_login_id')) {
@@ -203,6 +208,10 @@ try {
 } catch (Throwable $e) {
     error_log('[init] bootstrap database failure: ' . $e->getMessage());
     render_bootstrap_db_failure_response();
+}
+
+if (function_exists('impersonation_enforce_timeout')) {
+    impersonation_enforce_timeout($pdo_mysql);
 }
 
 if (!defined('MAIN_DB_ENVIRONMENT')) {
@@ -420,29 +429,36 @@ if (!isset($_SESSION['group_active_id']) && !empty($profile['f_groupID'])) {
 
 /* -------------------------------------------------------
    5.1) KEMASKINI audit_request DENGAN user_id & route SELEPAS PROFILE SIAP
-   - Kalau permulaan tadi user_id null, dan sekarang kita dah tahu f_userID,
-     bind semula audit_request supaya rekod terikat pada user & route tepat.
+   - Kalau permulaan tadi user_id null, dan sekarang kita dah tahu f_nopekerja,
+     bind semula audit_request supaya rekod terikat pada actor & route tepat.
 -------------------------------------------------------- */
-// Bind user_id for audit. Prefer `f_userID` (MySQL user PK) if available,
-// fallback to numeric `f_nopekerja` when `f_userID` is not present.
+// Bind request ownership to the real actor during View As. The effective target
+// remains available in audit event metadata via impersonation context.
+$auditOwnerProfile = $profile;
+if (function_exists('impersonation_is_active') && impersonation_is_active() && function_exists('impersonation_actor')) {
+    $impersonationActorContext = impersonation_actor();
+    if (!empty($impersonationActorContext)) {
+        $auditOwnerProfile = [
+            'f_userID' => $impersonationActorContext['user_id'] ?? null,
+            'f_loginID' => $impersonationActorContext['login_id'] ?? null,
+            'f_nopekerja' => $impersonationActorContext['nopekerja'] ?? $impersonationActorContext['f_nopekerja'] ?? null,
+        ];
+    }
+}
+
+// Bind user_id for audit. audit_event.user_id and audit_request.user_id store
+// the staff number (`f_nopekerja`), not the MySQL primary key (`f_userID`).
 $userIdToBind = null;
-if (!empty($profile['f_userID']) && is_numeric($profile['f_userID'])) {
-    $userIdToBind = (int)$profile['f_userID'];
-} elseif (!empty($_SESSION['user']['f_userID']) && is_numeric($_SESSION['user']['f_userID'])) {
-    $userIdToBind = (int)$_SESSION['user']['f_userID'];
-} else {
-    // Try to derive numeric id from formatted staff numbers like "0530-09" or "530"
-    $candidate = $profile['f_nopekerja'] ?? $_SESSION['f_nopekerja'] ?? $_SESSION['user']['f_nopekerja'] ?? null;
-    if ($candidate) {
-        if (is_numeric($candidate)) {
-            $userIdToBind = (int)$candidate;
-        } elseif (preg_match('/^(\d+)/', $candidate, $m)) {
-            $userIdToBind = (int)$m[1];
-        }
+$candidate = $auditOwnerProfile['f_nopekerja'] ?? $_SESSION['f_nopekerja'] ?? $_SESSION['user']['f_nopekerja'] ?? $_SESSION['f_stafID'] ?? $_SESSION['user']['f_stafID'] ?? null;
+if ($candidate) {
+    if (is_numeric($candidate)) {
+        $userIdToBind = (int)$candidate;
+    } elseif (preg_match('/^(\d+)/', (string)$candidate, $m)) {
+        $userIdToBind = (int)$m[1];
     }
 }
 if ($userIdToBind !== null) {
-    $loginIdToBind = trim((string)($profile['f_loginID'] ?? $_SESSION['f_loginID'] ?? $_SESSION['user']['f_loginID'] ?? ''));
+    $loginIdToBind = trim((string)($auditOwnerProfile['f_loginID'] ?? $_SESSION['f_loginID'] ?? $_SESSION['user']['f_loginID'] ?? ''));
     if (function_exists('audit_request_bind_identity')) {
         audit_request_bind_identity($userIdToBind, $loginIdToBind !== '' ? $loginIdToBind : null, $__REQUEST_ID ?? null);
     } else {
@@ -465,7 +481,7 @@ if (
 }
 
 if (defined('AUDIT_DEBUG') && AUDIT_DEBUG) {
-    error_log("[AUDIT] BIND uid=" . (($profile['f_userID'] ?? ($_SESSION['user']['f_userID'] ?? 'null'))) . " rid=" . ($__REQUEST_ID ?? 'null') . " route=" . ($__routeName ?? 'null'));
+    error_log("[AUDIT] BIND uid=" . (($userIdToBind ?? null) !== null ? (string)$userIdToBind : 'null') . " rid=" . ($__REQUEST_ID ?? 'null') . " route=" . ($__routeName ?? 'null'));
 }
 
 // 6) Bahasa: default ikut profil jika belum ada, else 'ms'
@@ -482,7 +498,7 @@ if ($__requestedLang !== null) {
     if (in_array($__requestedLang, $allowedLanguages, true)) {
         $_SESSION['lang'] = $__requestedLang;
 
-        if ($f_loginID || $f_stafID) {
+        if (($f_loginID || $f_stafID) && !(function_exists('impersonation_is_active') && impersonation_is_active())) {
             try {
                 if ($f_loginID) {
                     $user->updateLanguagePreferenceByLoginID((string)$f_loginID, $__requestedLang);
