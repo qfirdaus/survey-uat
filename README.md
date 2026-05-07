@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.7.6`
+- Current version: `1.7.7`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -38,6 +38,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 - User directory page at `public/pages/senarai-pengguna.php`.
 - Supports staff, student, and public user management flows.
+- Supports Super Admin `View As` impersonation from the user directory for controlled support workflows, with view-only and support-action modes.
 - AJAX operations exist for listing rows, adding staff users, adding student users, adding public users, editing users, deleting users, toggling status, resolving staff/student options, and managing extra roles.
 - User logic is handled through `UserListController.php`, `User.php`, and related AJAX endpoints under `public/ajax/user-*.php`.
 
@@ -93,6 +94,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
   - Theme
   - Language
 - Settings are handled by `TetapanSistemController.php`, `Config.php`, `SystemConfigConstants.php`, and page-specific JavaScript/CSS assets.
+- General > Limits includes the `View As Timeout (Minutes)` setting for the Super Admin impersonation workflow.
 
 ### Language Architecture
 
@@ -296,6 +298,7 @@ iqs-framework/
 - Keep `.env` outside public web access.
 - Protect write actions with CSRF validation.
 - Validate role/group/menu access before exposing administrative actions.
+- Use the `View As` workflow only for support/admin investigation, keep view-only mode as the default, and verify actor/target metadata in audit records after support sessions.
 - Avoid logging secrets, passwords, DSNs with credentials, or raw sensitive payloads.
 - Review audit logs after changing user, group, module, menu, database, or system configuration behavior.
 

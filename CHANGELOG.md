@@ -6,6 +6,24 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+## [1.7.7] - 2026-05-08
+
+### Added
+- Added Super Admin `View As` impersonation from `senarai-pengguna.php`, including start/stop AJAX endpoints, a reason prompt, view-only mode, support-action mode, and a topbar banner with manual stop.
+- Added impersonation access-policy registration for start and stop endpoints.
+- Added system-configured `View As Timeout (Minutes)` under System Settings > General > Limits, replacing the previous environment-based timeout setting.
+- Added View As SOP documentation and SQL support files for `ATTEMPT` audit outcome and audit user-id normalization.
+
+### Changed
+- Changed impersonation audit ownership so request-level `user_id` and `login_id` are bound to the real actor while the effective target is preserved in impersonation metadata.
+- Changed support-action write audits to use the neutral `ATTEMPT` outcome.
+- Changed audit logging normalization so `audit_event.user_id` and `audit_request.user_id` store staff number (`f_nopekerja`) instead of the MySQL user primary key (`f_userID`) where possible.
+- Changed project release metadata to lock the application version at `1.7.7`.
+
+### Fixed
+- Fixed View As logout, stop, timeout, and view-only write-block flows so the actor session is restored consistently.
+- Fixed Profile Login Activity empty-table display so the no-records message spans the full table instead of wrapping inside the `No.` column.
+
 ## [1.7.6] - 2026-05-06
 
 ### Added
