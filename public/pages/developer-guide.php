@@ -25,6 +25,7 @@ function dg(string $key, string $fallback): string
 $lang = (string)($_SESSION['lang'] ?? 'ms');
 $version = (string)($_ENV['APP_ASSET_VER'] ?? date('ymdHis'));
 $PAGE_TITLE = dg('developerGuide_page_title', 'Developer Guide');
+$notificationDeveloperSamples = require __DIR__ . '/../includes/notification-developer-samples.php';
 
 $guideTabs = [
     'overview' => ['icon' => 'ri-compass-3-line', 'label' => dg('developerGuide_tab_overview', 'Overview')],
@@ -431,6 +432,30 @@ function renderCodeCard(string $sampleId, array $samples): void
         <pre><code><?= h($code) ?></code></pre>
     </div>
     <?php
+}
+
+function renderNotificationSampleCards(array $notificationDeveloperSamples): void
+{
+    foreach ($notificationDeveloperSamples as $sample) {
+        $code = (string)($sample['code'] ?? '');
+        ?>
+        <div class="dg-code-card">
+            <div class="dg-code-header">
+                <div>
+                    <span class="dg-code-kicker">Notification Sample</span>
+                    <h6><?= h((string)($sample['title'] ?? 'Notification Sample')) ?></h6>
+                    <?php if (!empty($sample['description'])): ?>
+                        <p class="mb-0 text-muted small"><?= h((string)$sample['description']) ?></p>
+                    <?php endif; ?>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary dg-copy-btn" data-copy-code="<?= h($code) ?>">
+                    <i class="ri-file-copy-line me-1"></i><?= h(dg('developerGuide_copy', 'Copy')) ?>
+                </button>
+            </div>
+            <pre><code><?= h($code) ?></code></pre>
+        </div>
+        <?php
+    }
 }
 ?>
 <!doctype html>
@@ -859,6 +884,7 @@ function renderCodeCard(string $sampleId, array $samples): void
                                         <button class="nav-link active" id="dg-notification-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-notification-pane-rules" type="button" role="tab" aria-controls="dg-notification-pane-rules" aria-selected="true">Rules</button>
                                         <button class="nav-link" id="dg-notification-subtab-event" data-bs-toggle="pill" data-bs-target="#dg-notification-pane-event" type="button" role="tab" aria-controls="dg-notification-pane-event" aria-selected="false">Event</button>
                                         <button class="nav-link" id="dg-notification-subtab-workflow" data-bs-toggle="pill" data-bs-target="#dg-notification-pane-workflow" type="button" role="tab" aria-controls="dg-notification-pane-workflow" aria-selected="false">Workflow</button>
+                                        <button class="nav-link" id="dg-notification-subtab-samples" data-bs-toggle="pill" data-bs-target="#dg-notification-pane-samples" type="button" role="tab" aria-controls="dg-notification-pane-samples" aria-selected="false">Admin Samples</button>
                                     </div>
                                     <div class="tab-content">
                                         <div class="tab-pane fade show active" id="dg-notification-pane-rules" role="tabpanel" aria-labelledby="dg-notification-subtab-rules">
@@ -873,6 +899,9 @@ function renderCodeCard(string $sampleId, array $samples): void
                                         </div>
                                         <div class="tab-pane fade" id="dg-notification-pane-workflow" role="tabpanel" aria-labelledby="dg-notification-subtab-workflow">
                                             <?php renderCodeCard('notification-workflow', $samples); ?>
+                                        </div>
+                                        <div class="tab-pane fade" id="dg-notification-pane-samples" role="tabpanel" aria-labelledby="dg-notification-subtab-samples">
+                                            <?php renderNotificationSampleCards($notificationDeveloperSamples); ?>
                                         </div>
                                     </div>
                                 </div>

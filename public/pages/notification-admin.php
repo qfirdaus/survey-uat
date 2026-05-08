@@ -36,6 +36,7 @@ $currentLoginId = (string)($_SESSION['f_loginID'] ?? $_SESSION['f_stafID'] ?? 'u
 $lang = (string)($_SESSION['lang'] ?? 'ms');
 $version = (string)($_ENV['APP_ASSET_VER'] ?? date('ymdHis'));
 $PAGE_TITLE = na('notification_admin_page_title', 'Notification Admin');
+$notificationDeveloperSamples = require __DIR__ . '/../includes/notification-developer-samples.php';
 ?>
 <!doctype html>
 <html lang="<?= h($lang) ?>" data-bs-theme="<?= h($_SESSION['theme.layout'] ?? 'light') ?>">
@@ -807,27 +808,50 @@ $PAGE_TITLE = na('notification_admin_page_title', 'Notification Admin');
               <div class="modal-body">
                 <div class="notification-samples-layout">
                   <div class="nav flex-column nav-pills notification-samples-tabs" role="tablist" aria-orientation="vertical">
-                    <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#sampleSubmit" type="button" role="tab">
-                      <i class="ri-send-plane-line"></i>Submit Request
-                    </button>
-                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#sampleNextStep" type="button" role="tab">
-                      <i class="ri-arrow-right-circle-line"></i>Next Approval
-                    </button>
-                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#sampleApproved" type="button" role="tab">
-                      <i class="ri-checkbox-circle-line"></i>Final Approved
-                    </button>
-                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#sampleRejected" type="button" role="tab">
-                      <i class="ri-close-circle-line"></i>Rejected / Cancel
-                    </button>
-                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#sampleParallel" type="button" role="tab">
-                      <i class="ri-team-line"></i>Parallel Approval
-                    </button>
-                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#sampleWrapper" type="button" role="tab">
-                      <i class="ri-file-code-line"></i>Module Wrapper
-                    </button>
+                    <?php
+                      $notificationSampleIcons = [
+                          'submit' => 'ri-send-plane-line',
+                          'next-step' => 'ri-arrow-right-circle-line',
+                          'approved' => 'ri-checkbox-circle-line',
+                          'rejected' => 'ri-close-circle-line',
+                          'parallel' => 'ri-team-line',
+                          'wrapper' => 'ri-file-code-line',
+                      ];
+                      $sampleIndex = 0;
+                    ?>
+                    <?php foreach ($notificationDeveloperSamples as $sampleKey => $sample): ?>
+                      <?php $samplePaneId = 'sample' . str_replace(' ', '', ucwords(str_replace('-', ' ', (string)$sampleKey))); ?>
+                      <button class="nav-link <?= $sampleIndex === 0 ? 'active' : '' ?>" data-bs-toggle="pill" data-bs-target="#<?= h($samplePaneId) ?>" type="button" role="tab">
+                        <i class="<?= h($notificationSampleIcons[$sampleKey] ?? 'ri-file-code-line') ?>"></i><?= h((string)($sample['tab'] ?? $sample['title'] ?? 'Sample')) ?>
+                      </button>
+                      <?php $sampleIndex++; ?>
+                    <?php endforeach; ?>
                   </div>
 
                   <div class="tab-content">
+                    <?php $sampleIndex = 0; ?>
+                    <?php foreach ($notificationDeveloperSamples as $sampleKey => $sample): ?>
+                      <?php $samplePaneId = 'sample' . str_replace(' ', '', ucwords(str_replace('-', ' ', (string)$sampleKey))); ?>
+                      <?php $codeId = (string)($sample['code_id'] ?? ('codeSample' . $samplePaneId)); ?>
+                      <div class="tab-pane fade <?= $sampleIndex === 0 ? 'show active' : '' ?>" id="<?= h($samplePaneId) ?>" role="tabpanel">
+                        <div class="notification-sample-panel">
+                          <div class="notification-sample-header">
+                            <div>
+                              <h6><?= h((string)($sample['title'] ?? 'Notification Sample')) ?></h6>
+                              <?php if (!empty($sample['description'])): ?>
+                                <p><?= h((string)$sample['description']) ?></p>
+                              <?php endif; ?>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-success notification-copy-sample" data-copy-target="<?= h($codeId) ?>">
+                              <i class="ri-file-copy-line me-1"></i>Copy
+                            </button>
+                          </div>
+<pre class="notification-code-block"><code id="<?= h($codeId) ?>"><?= h((string)($sample['code'] ?? '')) ?></code></pre>
+                        </div>
+                      </div>
+                      <?php $sampleIndex++; ?>
+                    <?php endforeach; ?>
+                    <?php if (false): ?>
                     <div class="tab-pane fade show active" id="sampleSubmit" role="tabpanel">
                       <div class="notification-sample-panel">
                         <div class="notification-sample-header">
@@ -1099,6 +1123,7 @@ final class PermohonanNotification
 }</code></pre>
                       </div>
                     </div>
+                    <?php endif; ?>
                   </div>
                 </div>
               </div>
