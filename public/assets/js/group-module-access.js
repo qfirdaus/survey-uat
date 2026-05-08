@@ -90,6 +90,7 @@ const ModuleAccess = {
   },
   
   showLoading() {
+    GroupUtils.showLoader('moduleAccess', this.T.loading || this.T.loading_access || 'Loading...');
     this.loadEl?.classList.remove('d-none');
     this.errEl?.classList.add('d-none');
     this.cntEl?.classList.add('d-none');
@@ -98,6 +99,8 @@ const ModuleAccess = {
   },
   
   showError(msg) {
+    GroupUtils.hideLoader('moduleAccess');
+    GroupUtils.hideLoader('moduleAction');
     this.loadEl?.classList.add('d-none');
     if (this.errEl) {
       this.errEl.textContent = msg || this.T.error_unknown;
@@ -106,6 +109,7 @@ const ModuleAccess = {
   },
   
   showContent(html) {
+    GroupUtils.hideLoader('moduleAccess');
     this.loadEl?.classList.add('d-none');
     this.errEl?.classList.add('d-none');
     if (this.cntEl) {
@@ -462,6 +466,7 @@ const ModuleAccess = {
     if (!confirmed) return;
 
     btn.disabled = true;
+    GroupUtils.showLoader('moduleAction', this.T.loading || this.T.delete_module_label || 'Loading...');
     try {
       const resp = await GroupUtils.fetchJSONSafe(GroupUtils.apiUrl('module-delete.php'), {
         method: 'POST',
@@ -498,6 +503,7 @@ const ModuleAccess = {
       setTimeout(() => this.errEl?.classList.add('d-none'), 3000);
     } finally {
       btn.disabled = false;
+      GroupUtils.hideLoader('moduleAction');
     }
   },
   

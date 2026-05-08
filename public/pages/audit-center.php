@@ -209,6 +209,36 @@ $tabMeta = [
   let lastSuccessfulPanelHtml = '';
   let loading = false;
   let searchTimer = null;
+  let auditCenterLoaderToken = null;
+
+  function showAuditCenterLoader(message) {
+    if (auditCenterLoaderToken) {
+      if (window.AppLoader && typeof window.AppLoader.update === 'function') {
+        window.AppLoader.update(message || i18n.loadingPanel);
+      } else if (window.IQSLoader && typeof window.IQSLoader.update === 'function') {
+        window.IQSLoader.update(message || i18n.loadingPanel);
+      }
+      return;
+    }
+
+    if (window.AppLoader && typeof window.AppLoader.show === 'function') {
+      auditCenterLoaderToken = window.AppLoader.show(message || i18n.loadingPanel);
+    } else if (window.IQSLoader && typeof window.IQSLoader.show === 'function') {
+      auditCenterLoaderToken = window.IQSLoader.show(message || i18n.loadingPanel);
+    }
+  }
+
+  function hideAuditCenterLoader() {
+    if (!auditCenterLoaderToken) {
+      return;
+    }
+    if (window.AppLoader && typeof window.AppLoader.hide === 'function') {
+      window.AppLoader.hide(auditCenterLoaderToken);
+    } else if (window.IQSLoader && typeof window.IQSLoader.hide === 'function') {
+      window.IQSLoader.hide(auditCenterLoaderToken);
+    }
+    auditCenterLoaderToken = null;
+  }
 
   function setLoading(flag, mode) {
     if (summaryEl) {
@@ -216,9 +246,11 @@ $tabMeta = [
     }
     if (panelEl) {
       panelEl.classList.toggle('audit-center-panel__body--loading', flag);
-      if (flag && mode !== 'search') {
-        panelEl.innerHTML = '<div class="audit-center-loading-card audit-center-loading-card--panel"><div class="audit-center-spinner"></div><div>' + i18n.loadingPanel + '</div></div>';
-      }
+    }
+    if (flag && mode !== 'search' && mode !== 'initial') {
+      showAuditCenterLoader(i18n.loadingPanel);
+    } else if (!flag) {
+      hideAuditCenterLoader();
     }
   }
 
@@ -386,7 +418,8 @@ $tabMeta = [
     try {
       const response = await fetch(endpoint + '?' + buildParams().toString(), {
         credentials: 'same-origin',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        noLoader: true,
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-No-Loader': '1' },
         cache: 'no-store'
       });
       const data = await response.json();
@@ -576,14 +609,17 @@ $tabMeta = [
     if (!confirmed) return false;
 
     button.disabled = true;
+    showAuditCenterLoader(i18n.loadingPanel);
     try {
       const response = await fetch(actionEndpoint, {
         method: 'POST',
         credentials: 'same-origin',
+        noLoader: true,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-CSRF-Token': window.csrfToken || ''
+          'X-CSRF-Token': window.csrfToken || '',
+          'X-No-Loader': '1'
         },
         body: JSON.stringify(payload)
       });
@@ -603,7 +639,7 @@ $tabMeta = [
           confirmButtonText: i18n.okButton
         });
       }
-      loadPanel(false, 'action');
+      await loadPanel(false, 'action');
     } catch (error) {
       if (window.Swal && typeof window.Swal.fire === 'function') {
         await window.Swal.fire({
@@ -615,6 +651,7 @@ $tabMeta = [
       }
     } finally {
       button.disabled = false;
+      hideAuditCenterLoader();
     }
     return false;
   });
@@ -632,27 +669,17 @@ $tabMeta = [
       params.set(key.replace(/-/g, '_'), attr);
     });
 
-    if (window.Swal && typeof window.Swal.fire === 'function') {
-      window.Swal.fire({
-        title: i18n.metaLoadingTitle,
-        text: i18n.metaLoadingText,
-        allowOutsideClick: false,
-        didOpen: function () {
-          window.Swal.showLoading();
-        }
-      });
-    }
+    showAuditCenterLoader(i18n.metaLoadingText || i18n.metaLoadingTitle);
 
     try {
       const response = await fetch(metaEndpoint + '?' + params.toString(), {
         credentials: 'same-origin',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        noLoader: true,
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-No-Loader': '1' },
         cache: 'no-store'
       });
       const data = await response.json();
-      if (window.Swal && typeof window.Swal.close === 'function') {
-        window.Swal.close();
-      }
+      hideAuditCenterLoader();
       if (await handleTerminatedSession(data)) {
         return false;
       }
@@ -666,6 +693,7 @@ $tabMeta = [
         modal.show();
       }
     } catch (error) {
+      hideAuditCenterLoader();
       if (window.Swal && typeof window.Swal.fire === 'function') {
         await window.Swal.fire({
           icon: 'error',

@@ -157,19 +157,6 @@ if ($roleSwitchFlash !== null) {
 }
 ?>
 
-<!-- Global Loader -->
-<!-- <div id="global-loader" aria-live="polite" aria-busy="true">
-  <div class="loader-inner">
-    <span
-      class="spinner"
-      role="status"
-      aria-label="<?= htmlspecialchars(__('config_js_loading') ?: 'Loading…', ENT_QUOTES, 'UTF-8') ?>">
-    </span>
-  </div>
-</div> -->
-
-
-
 <!-- ========== Development Mode Banner (Overlay) ========== -->
 <?php if (function_exists('is_development_mode') && is_development_mode()): ?>
   <div class="dev-mode-tab" id="dev-mode-tab" role="alert" aria-live="polite">
@@ -498,66 +485,6 @@ if ($roleSwitchFlash !== null) {
     white-space: nowrap;
     font-weight: 700;
   }
-  .impersonation-box-loader {
-    position: fixed;
-    inset: 0;
-    z-index: 20000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(15, 23, 42, .45);
-    backdrop-filter: blur(2px);
-  }
-  .impersonation-box-loader__panel {
-    min-width: 260px;
-    border-radius: 8px;
-    background: #fff;
-    border: 1px solid rgba(15, 23, 42, .1);
-    box-shadow: 0 18px 45px rgba(15, 23, 42, .18);
-    padding: 1.25rem 1.4rem;
-    text-align: center;
-  }
-  .impersonation-box-loader__boxes {
-    display: inline-flex;
-    align-items: end;
-    gap: .38rem;
-    height: 32px;
-  }
-  .impersonation-box-loader__boxes span {
-    display: block;
-    width: 13px;
-    height: 13px;
-    border-radius: 4px;
-    background: #2563eb;
-    animation: impersonationBoxWave .78s ease-in-out infinite;
-  }
-  .impersonation-box-loader__boxes span:nth-child(2) {
-    background: #14b8a6;
-    animation-delay: .1s;
-  }
-  .impersonation-box-loader__boxes span:nth-child(3) {
-    background: #f59e0b;
-    animation-delay: .2s;
-  }
-  .impersonation-box-loader__boxes span:nth-child(4) {
-    background: #7c3aed;
-    animation-delay: .3s;
-  }
-  .impersonation-box-loader__text {
-    margin-top: .85rem;
-    color: #334155;
-    font-weight: 700;
-    font-size: .88rem;
-  }
-  @keyframes impersonationBoxWave {
-    0%, 100% { transform: translateY(0) scale(.9); opacity: .55; }
-    50% { transform: translateY(-10px) scale(1.05); opacity: 1; }
-  }
-  html[data-bs-theme="dark"] .impersonation-box-loader__panel {
-    background: #111827;
-    border-color: rgba(148, 163, 184, .18);
-  }
-  html[data-bs-theme="dark"] .impersonation-box-loader__text { color: #e2e8f0; }
   @media (max-width: 767.98px) {
     .impersonation-banner__content {
       align-items: flex-start;
@@ -1376,29 +1303,6 @@ if ($roleSwitchFlash !== null) {
   })();
 </script>
 
-<script>
-  (function(){
-    window.showImpersonationBoxLoader = window.showImpersonationBoxLoader || function(message) {
-      var existing = document.getElementById('impersonation-box-loader');
-      if (existing) existing.remove();
-      var overlay = document.createElement('div');
-      overlay.id = 'impersonation-box-loader';
-      overlay.className = 'impersonation-box-loader';
-      overlay.innerHTML =
-        '<div class="impersonation-box-loader__panel">' +
-          '<div class="impersonation-box-loader__boxes" aria-hidden="true">' +
-            '<span></span><span></span><span></span><span></span>' +
-          '</div>' +
-          '<div class="impersonation-box-loader__text">' + (message || '<?= h(__('impersonation_loading_stop') ?: 'Restoring your account...') ?>') + '</div>' +
-        '</div>';
-      document.body.appendChild(overlay);
-    };
-    window.hideImpersonationBoxLoader = window.hideImpersonationBoxLoader || function() {
-      var overlay = document.getElementById('impersonation-box-loader');
-      if (overlay) overlay.remove();
-    };
-  })();
-</script>
 <?php if ($isImpersonating): ?>
 <script>
   (function(){
@@ -1415,7 +1319,8 @@ if ($roleSwitchFlash !== null) {
         method: 'POST',
         body: form,
         credentials: 'same-origin',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        noLoader: true,
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-No-Loader': '1' }
       })
         .then(function(response){ return response.json().catch(function(){ return {}; }).then(function(data){ return { response, data }; }); })
         .then(function(result){

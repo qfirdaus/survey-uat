@@ -1473,13 +1473,18 @@ final class PermohonanNotification
       clearAlert();
       submitBtn.disabled = true;
       submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>' + <?= json_encode(na('notification_admin_publishing', 'Publishing...'), JSON_UNESCAPED_UNICODE) ?>;
+      const loaderToken = window.AppLoader && typeof window.AppLoader.show === 'function'
+        ? window.AppLoader.show(<?= json_encode(na('notification_admin_publishing', 'Publishing...'), JSON_UNESCAPED_UNICODE) ?>)
+        : null;
 
       fetch(form.dataset.publishUrl, {
         method: 'POST',
+        noLoader: true,
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
+          'X-CSRF-Token': csrfToken,
+          'X-No-Loader': '1'
         },
         credentials: 'same-origin',
         body: JSON.stringify(readForm())
@@ -1500,6 +1505,9 @@ final class PermohonanNotification
       }).finally(function () {
         submitBtn.disabled = false;
       submitBtn.innerHTML = '<i class="ri-send-plane-line me-1"></i>' + <?= json_encode(na('notification_admin_publish', 'Publish'), JSON_UNESCAPED_UNICODE) ?>;
+        if (loaderToken && window.AppLoader && typeof window.AppLoader.hide === 'function') {
+          window.AppLoader.hide(loaderToken);
+        }
       });
     });
 

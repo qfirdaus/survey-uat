@@ -82,6 +82,7 @@ const GroupPermissions = {
   },
   
   showLoading() {
+    GroupUtils.showLoader('groupPermissions', this.T.loading || this.T.loading_access || 'Loading...');
     this.loadEl?.classList.remove('d-none');
     this.errEl?.classList.add('d-none');
     this.cntEl?.classList.add('d-none');
@@ -89,6 +90,8 @@ const GroupPermissions = {
   },
   
   showError(msg) {
+    GroupUtils.hideLoader('groupPermissions');
+    GroupUtils.hideLoader('groupPermissionsModal');
     this.loadEl?.classList.add('d-none');
     if (this.errEl) {
       this.errEl.textContent = msg || this.T.error_unknown || '';
@@ -120,6 +123,7 @@ const GroupPermissions = {
   },
 
   showContent(html) {
+    GroupUtils.hideLoader('groupPermissions');
     this.loadEl?.classList.add('d-none');
     this.errEl?.classList.add('d-none');
     if (this.cntEl) {
@@ -275,6 +279,7 @@ const GroupPermissions = {
     this.pickCntEl.classList.add('d-none');
     this.pickErrEl.classList.add('d-none');
     this.pickLoadEl.classList.remove('d-none');
+    GroupUtils.showLoader('groupPermissionsModal', this.T.loading || this.T.pick_menu_button || 'Loading...');
     this.pickSubEl.textContent = modulName ? (' — ' + modulName) : '';
 
     try {
@@ -311,6 +316,7 @@ const GroupPermissions = {
       this.showContent_safeAssign(this.pickCntEl, html);
       this.pickLoadEl.classList.add('d-none');
       this.pickCntEl.classList.remove('d-none');
+      GroupUtils.hideLoader('groupPermissionsModal');
 
       this.pickCntEl.querySelectorAll('.menu-toggle').forEach(a => {
         a.addEventListener('click', (ev) => {
@@ -336,6 +342,7 @@ const GroupPermissions = {
       this.pickLoadEl.classList.add('d-none');
       this.pickErrEl.textContent = e.message || this.T.error_network || '';
       this.pickErrEl.classList.remove('d-none');
+      GroupUtils.hideLoader('groupPermissionsModal');
     }
   },
   
@@ -352,6 +359,7 @@ const GroupPermissions = {
     this.ringCntEl.classList.add('d-none');
     this.ringErrEl.classList.add('d-none');
     this.ringLoadEl.classList.remove('d-none');
+    GroupUtils.showLoader('groupPermissionsModal', this.T.loading || this.T.modal_summary_title || 'Loading...');
 
     try {
       const j = await GroupUtils.fetchJSONSafe(GroupUtils.apiUrl('group-access.php', { groupID: GroupState.getGroupID() }));
@@ -399,10 +407,12 @@ const GroupPermissions = {
       this.showContent_safeAssign(this.ringCntEl, html);
       this.ringLoadEl.classList.add('d-none');
       this.ringCntEl.classList.remove('d-none');
+      GroupUtils.hideLoader('groupPermissionsModal');
     } catch (e) {
       this.ringLoadEl.classList.add('d-none');
       this.ringErrEl.textContent = e.message || this.T.error_network || '';
       this.ringErrEl.classList.remove('d-none');
+      GroupUtils.hideLoader('groupPermissionsModal');
     }
   },
   

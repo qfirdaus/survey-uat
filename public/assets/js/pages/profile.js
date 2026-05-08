@@ -13,6 +13,7 @@
     auditEventsDT: null,
     lastCopyTime: 0,
     isLoading: false,
+    pageLoaderTokens: {},
 
     copyText: async function (text) {
       if (!text) {
@@ -119,6 +120,28 @@
       }
     },
 
+    showPageLoader: function (key, message) {
+      this.hidePageLoader(key);
+      if (window.AppLoader && typeof window.AppLoader.show === 'function') {
+        this.pageLoaderTokens[key] = window.AppLoader.show(message || I18N.loading || I18N.dt_processing || 'Loading...');
+      } else if (window.IQSLoader && typeof window.IQSLoader.show === 'function') {
+        this.pageLoaderTokens[key] = window.IQSLoader.show(message || I18N.loading || I18N.dt_processing || 'Loading...');
+      }
+    },
+
+    hidePageLoader: function (key) {
+      const token = this.pageLoaderTokens[key];
+      if (!token) {
+        return;
+      }
+      if (window.AppLoader && typeof window.AppLoader.hide === 'function') {
+        window.AppLoader.hide(token);
+      } else if (window.IQSLoader && typeof window.IQSLoader.hide === 'function') {
+        window.IQSLoader.hide(token);
+      }
+      delete this.pageLoaderTokens[key];
+    },
+
     waitForDataTables: function (maxWait) {
       const waitMs = maxWait || 5000;
       return new Promise((resolve, reject) => {
@@ -155,14 +178,15 @@
       if (!confirmed.isConfirmed) return;
 
       try {
-        const loader = document.getElementById('loginAjaxLoader');
-        if (loader) loader.classList.remove('d-none');
+        this.showPageLoader('killSession', I18N.profile_loading || I18N.loading || 'Loading...');
 
         const response = await fetch(URLS.killSessionAjax, {
           method: 'POST',
+          noLoader: true,
           headers: {
             'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-No-Loader': '1'
           },
           body: JSON.stringify({
             session_id: sessionId,
@@ -173,7 +197,7 @@
         const data = await response.json();
 
         if (data.success) {
-          if (loader) loader.classList.add('d-none');
+          this.hidePageLoader('killSession');
 
           if (data.force_logout) {
             const countdown = parseInt(data.countdown || 10, 10);
@@ -216,7 +240,7 @@
             setTimeout(() => this.initLoginActivityTable(), 200);
           }
         } else {
-          if (loader) loader.classList.add('d-none');
+          this.hidePageLoader('killSession');
           await Swal.fire({
             icon: 'error',
             title: I18N.kill_error_title,
@@ -225,8 +249,7 @@
         }
       } catch (error) {
         console.error('Kill session error:', error);
-        const loader = document.getElementById('loginAjaxLoader');
-        if (loader) loader.classList.add('d-none');
+        this.hidePageLoader('killSession');
         await Swal.fire({ icon: 'error', title: I18N.kill_error_network });
       }
     },
@@ -252,6 +275,7 @@
       this.loginActivityDT = $('#loginActivityTable').DataTable({
         ajax: {
           url: URLS.loginActivityAjax,
+          headers: { 'X-No-Loader': '1' },
           dataSrc: 'data'
         },
         columns: [
@@ -288,13 +312,11 @@
       });
 
       $('#loginActivityTable').on('preXhr.dt', function () {
-        const loader = document.getElementById('loginAjaxLoader');
-        if (loader) loader.classList.remove('d-none');
+        ProfilePage.showPageLoader('loginActivity', I18N.profile_loading || I18N.loading || 'Loading...');
       });
 
       this.loginActivityDT.on('xhr.dt draw.dt', function () {
-        const loader = document.getElementById('loginAjaxLoader');
-        if (loader) loader.classList.add('d-none');
+        ProfilePage.hidePageLoader('loginActivity');
         try {
           const api = $('#loginActivityTable').DataTable();
           const emptyCell = $('#loginActivityTable tbody td.dataTables_empty');
@@ -313,8 +335,7 @@
       });
 
       $('#loginActivityTable').on('error.dt', function (e, settings, techNote, message) {
-        const loader = document.getElementById('loginAjaxLoader');
-        if (loader) loader.classList.add('d-none');
+        ProfilePage.hidePageLoader('loginActivity');
         console.error('DataTable error:', techNote, message);
         Swal.fire({
           icon: 'error',
@@ -371,6 +392,7 @@
       this.auditEventsDT = $('#auditEventsTable').DataTable({
         ajax: {
           url: URLS.auditEventsAjax,
+          headers: { 'X-No-Loader': '1' },
           dataSrc: 'data'
         },
         columns: [
@@ -423,13 +445,11 @@
       };
 
       $('#auditEventsTable').on('preXhr.dt', function () {
-        const loader = document.getElementById('auditEventsLoading');
-        if (loader) loader.style.display = 'block';
+        ProfilePage.showPageLoader('auditEvents', I18N.profile_loading || I18N.loading || 'Loading...');
       });
 
       this.auditEventsDT.on('xhr.dt draw.dt', function () {
-        const loader = document.getElementById('auditEventsLoading');
-        if (loader) loader.style.display = 'none';
+        ProfilePage.hidePageLoader('auditEvents');
         updateAuditNumbering();
         initAuditActivityTooltips();
       });
@@ -810,9 +830,7 @@
 
       $btn.prop('disabled', true);
       $btn.html('<i class="ri-loader-4-line ri-spin"></i>');
-
-      this.showLoading('#loginActivityLoading');
-      this.showLoading('#auditEventsLoading');
+      this.showPageLoader('refreshProfile', I18N.profile_loading || I18N.loading || 'Loading...');
 
       try {
         window.location.reload();
@@ -821,8 +839,7 @@
         this.toast(I18N.refresh_failed, 'error');
         $btn.prop('disabled', false);
         $btn.html(originalHtml);
-        this.hideLoading('#loginActivityLoading');
-        this.hideLoading('#auditEventsLoading');
+        this.hidePageLoader('refreshProfile');
       }
     },
 

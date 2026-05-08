@@ -1,115 +1,160 @@
-// ===== Anti double-init (kalau script ter-include dua kali) =====
-if (window.__AppLoaderInit) { /* already initialized */ 
-  // keluar awal, jangan pasang event handler dua kali
-  // penting untuk elak activeCount bercelaru & loader flicker
-  throw new Error('AppLoader already initialized');
-}
-window.__AppLoaderInit = true;
+(function (window, document) {
+  'use strict';
 
-(function () {
-  const loader = document.getElementById('global-loader');
-  if (!loader) return;
-
-  let activeCount = 0;
-  let forceHideTimer = null;
-
-  // ===== Cooldown selepas hide pertama =====
-  let lastHideAt = 0;
-  const MIN_RESHOW_GAP = 600; // ms – elak "re-show" dalam ~0.6s lepas hide
-
-  const canShow = () => (Date.now() - lastHideAt) > MIN_RESHOW_GAP;
-
-  const startForceHide = () => {
-    clearTimeout(forceHideTimer);
-    forceHideTimer = setTimeout(() => {
-      activeCount = 0;
-      hide();
-    }, 12000); // failsafe 12s
-  };
-
-  const show = () => {
-    // block re-show terlalu cepat lepas hide pertama (kurangkan "dua kali" effect)
-    if (!canShow()) return;
-
-    loader.style.display = 'flex';
-    void loader.offsetWidth; // force reflow utk transition
-    loader.classList.remove('loader-hidden');
-    loader.setAttribute('aria-busy', 'true');
-    startForceHide();
-  };
-
-  const hide = () => {
-    if (activeCount > 0) return;
-    loader.classList.add('loader-hidden');
-    loader.setAttribute('aria-busy', 'false');
-    clearTimeout(forceHideTimer);
-    lastHideAt = Date.now(); // rekod masa hide untuk cooldown
-    setTimeout(() => {
-      loader.style.display = 'none';
-    }, 400);
-  };
-
-  const markStart = () => { activeCount++; show(); };
-  const markEnd   = () => { if (activeCount > 0) activeCount--; if (activeCount === 0) hide(); };
-
-  // Hide segera jika script load selepas DOM ready
-  if (document.readyState !== 'loading') {
-    setTimeout(hide, 0);
-  } else {
-    document.addEventListener('DOMContentLoaded', hide, { once: true });
+  if (window.__AppLoaderInit) {
+    return;
   }
-  window.addEventListener('load', hide, { once: true });
-  window.addEventListener('pageshow', (e) => { if (e.persisted) { activeCount = 0; hide(); } });
+  window.__AppLoaderInit = true;
 
-  // Link click → show (kecuali pengecualian)
-  document.addEventListener('click', function (e) {
-    const a = e.target.closest('a');
-    if (!a) return;
-    const href   = a.getAttribute('href') || '';
-    const target = a.getAttribute('target');
-    const skip =
-      target === '_blank' ||
-      href.startsWith('#') ||
-      href.startsWith('javascript:') ||
-      a.hasAttribute('download') ||
-      a.dataset.noLoader !== undefined ||
-      e.metaKey || e.ctrlKey || e.shiftKey || e.altKey;
-    if (skip) return;
-    markStart();
-  }, true);
+  var activeTokens = [];
+  var defaultI18n = window.IQS_LOADER_I18N || {};
 
-  // Form submit → show
-  document.addEventListener('submit', function (e) {
-    const form = e.target;
-    if (form && form.dataset.noLoader === undefined) {
-      markStart();
+  function hasIqsLoader() {
+    return !!(window.IQSLoader && typeof window.IQSLoader.show === 'function');
+  }
+
+  function resolveMessage(message) {
+    if (typeof message === 'string' && message.trim() !== '') {
+      return message;
     }
-  }, true);
-
-  // Wrap fetch dengan counter + opt-out
-  const _fetch = window.fetch;
-  window.fetch = function (input, init = {}) {
-    // Allow opt-out: fetch(url, { headers: { 'X-No-Loader': '1' } })
-    const headers = init && (init.headers || {});
-    const noLoader =
-      (headers && (headers['X-No-Loader'] === '1')) ||
-      (headers && headers.get && headers.get('X-No-Loader') === '1') ||
-      init.noLoader === true;
-
-    if (!noLoader) markStart();
-    return _fetch(input, init)
-      .finally(() => { if (!noLoader) markEnd(); });
-  };
-
-  // jQuery AJAX
-  if (window.jQuery) {
-    jQuery(document).on('ajaxSend', () => markStart());
-    jQuery(document).on('ajaxComplete', () => markEnd());
+    return defaultI18n.defaultMessage || 'Loading...';
   }
 
-  // API manual
+  function isSkippedElement(element) {
+    return !!(element && (element.dataset.noLoader !== undefined || element.hasAttribute('data-no-loader')));
+  }
+
+  function show(message, options) {
+    if (!hasIqsLoader()) {
+      return null;
+    }
+
+    var token = window.IQSLoader.show(resolveMessage(message), options || {});
+    activeTokens.push(token);
+    return token;
+  }
+
+  function hide(token) {
+    if (!hasIqsLoader()) {
+      return;
+    }
+
+    if (token) {
+      activeTokens = activeTokens.filter(function (item) {
+        return String(item) !== String(token);
+      });
+      window.IQSLoader.hide(token);
+      return;
+    }
+
+    activeTokens.splice(0).forEach(function (item) {
+      window.IQSLoader.hide(item);
+    });
+    window.IQSLoader.hide();
+  }
+
+  function shouldSkipLink(event, anchor) {
+    var href = anchor.getAttribute('href') || '';
+    var target = anchor.getAttribute('target') || '';
+
+    return (
+      target === '_blank' ||
+      href === '' ||
+      href.charAt(0) === '#' ||
+      href.indexOf('javascript:') === 0 ||
+      anchor.hasAttribute('download') ||
+      isSkippedElement(anchor) ||
+      /download=excel/i.test(href) ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    );
+  }
+
+  function headerValue(headers, key) {
+    if (!headers) {
+      return null;
+    }
+    if (typeof headers.get === 'function') {
+      return headers.get(key);
+    }
+    return headers[key] || headers[key.toLowerCase()] || null;
+  }
+
+  function shouldUseFetchLoader(init) {
+    var settings = init || {};
+    return settings.loader === true || headerValue(settings.headers || {}, 'X-Use-Loader') === '1';
+  }
+
+  function shouldSkipFetch(init) {
+    var settings = init || {};
+    return settings.noLoader === true || headerValue(settings.headers || {}, 'X-No-Loader') === '1' || !shouldUseFetchLoader(settings);
+  }
+
+  if (document.readyState !== 'loading') {
+    setTimeout(function () { hide(); }, 0);
+  } else {
+    document.addEventListener('DOMContentLoaded', function () { hide(); }, { once: true });
+  }
+
+  window.addEventListener('pageshow', function () { hide(); });
+
+  document.addEventListener('click', function (event) {
+    var anchor = event.target.closest && event.target.closest('a[href]');
+    if (!anchor || shouldSkipLink(event, anchor)) {
+      return;
+    }
+    show(defaultI18n.navigation || defaultI18n.defaultMessage);
+  }, true);
+
+  document.addEventListener('submit', function (event) {
+    var form = event.target;
+    if (!form || isSkippedElement(form)) {
+      return;
+    }
+    show(defaultI18n.submitting || defaultI18n.saving || defaultI18n.defaultMessage);
+  }, true);
+
+  if (typeof window.fetch === 'function' && !window.__AppLoaderFetchWrapped) {
+    var originalFetch = window.fetch.bind(window);
+    window.fetch = function (input, init) {
+      var skip = shouldSkipFetch(init || {});
+      var token = skip ? null : show(defaultI18n.defaultMessage);
+
+      return originalFetch(input, init).finally(function () {
+        if (!skip) {
+          hide(token);
+        }
+      });
+    };
+    window.__AppLoaderFetchWrapped = true;
+  }
+
+  if (window.jQuery && !window.__AppLoaderAjaxBound) {
+    window.jQuery(document).on('ajaxSend', function (_event, _xhr, settings) {
+      if (shouldSkipFetch(settings || {})) {
+        return;
+      }
+      settings.__iqsLoaderToken = show(defaultI18n.defaultMessage);
+    });
+    window.jQuery(document).on('ajaxComplete ajaxError', function (_event, _xhr, settings) {
+      hide(settings && settings.__iqsLoaderToken);
+    });
+    window.__AppLoaderAjaxBound = true;
+  }
+
   window.AppLoader = {
-    show: () => { markStart(); },
-    hide: () => { activeCount = 0; hide(); }
+    show: function (message, options) {
+      return show(message, options);
+    },
+    hide: function (token) {
+      hide(token);
+    },
+    update: function (message) {
+      if (window.IQSLoader && typeof window.IQSLoader.update === 'function') {
+        window.IQSLoader.update(resolveMessage(message));
+      }
+    }
   };
-})();
+})(window, document);

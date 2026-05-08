@@ -46,41 +46,11 @@
   <link rel="canonical" href="<?= base_url($defaultHome) ?>" />
   <link rel="icon" type="image/x-icon" href="<?= h(base_url($faviconPath !== '' ? $faviconPath : 'assets/images/favicon.ico')) ?>" />
 
-  <style>
-    #global-loader{
-      position:fixed; inset:0; z-index:9999;
-      display:flex; align-items:center; justify-content:center;
-      background:rgba(255,255,255,.9);
-      opacity:1; visibility:visible;
-      transition:opacity .35s ease, visibility .35s ease;
-      backdrop-filter:blur(2px);
-    }
-    html[data-bs-theme="dark"] #global-loader{ background:rgba(0,0,0,.6); }
-    #global-loader.loader-hidden{ opacity:0; visibility:hidden; }
-    #global-loader .spinner{
-      width:48px; height:48px; border:4px solid currentColor;
-      border-bottom-color:transparent; border-radius:50%;
-      display:inline-block; box-sizing:border-box;
-      animation:loader-rotate .9s linear infinite;
-    }
-    @keyframes loader-rotate{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
-  </style>
-
-  <!-- NProgress (top bar) -->
-  <link rel="stylesheet" href="https://unpkg.com/nprogress@0.2.0/nprogress.css">
-  <style>
-    #nprogress .bar{height:3px} #nprogress .peg{box-shadow:none}
-    /* Overlay (optional, hanya aktif bila page minta) */
-    .loader-overlay{position:fixed;inset:0;z-index:2000;display:none;align-items:center;justify-content:center;
-      background:rgba(255,255,255,.6);backdrop-filter:blur(1px)}
-    .loader-overlay.show{display:flex}
-  </style>
-
-
   <!-- App CSS (asas) -->
   <link rel="stylesheet" href="<?= base_url('assets/css/icons.min.css') ?>?v=<?= time(); ?>" />
   <link id="app-style" rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>?v=<?= time(); ?>" />
   <link rel="stylesheet" href="<?= base_url('assets/css/custom.css') ?>?v=<?= time(); ?>" />
+  <link rel="stylesheet" href="<?= base_url('assets/css/iqs-loader.css') ?>?v=<?= time(); ?>" />
 
   <!-- Plugin CSS (ikut keperluan page) -->
   <?php if ($NEED_DATERANGE): ?>

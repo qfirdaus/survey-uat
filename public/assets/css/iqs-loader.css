@@ -1,0 +1,271 @@
+/* IQS standard transaction loader.
+   Kept separate from app.css so the admin template can be updated safely. */
+:root {
+  --iqs-loader-bg: rgba(15, 23, 42, .46);
+  --iqs-loader-panel: rgba(255, 255, 255, .96);
+  --iqs-loader-border: rgba(148, 163, 184, .24);
+  --iqs-loader-text: #172033;
+  --iqs-loader-muted: #64748b;
+  --iqs-loader-primary: #2563eb;
+  --iqs-loader-teal: #0fbaa8;
+  --iqs-loader-amber: #f59e0b;
+  --iqs-loader-violet: #7c3aed;
+}
+
+.iqs-box-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background:
+    radial-gradient(circle at 50% 46%, rgba(37, 99, 235, .18), transparent 32rem),
+    var(--iqs-loader-bg);
+  -webkit-backdrop-filter: blur(6px) saturate(1.06);
+  backdrop-filter: blur(6px) saturate(1.06);
+  opacity: 0;
+  animation: iqsLoaderOverlayIn .18s ease-out forwards;
+}
+
+.iqs-box-loader[hidden] {
+  display: none !important;
+}
+
+.iqs-box-loader.is-hiding {
+  pointer-events: none;
+  animation: iqsLoaderOverlayOut .16s ease-in forwards;
+}
+
+.iqs-box-loader__panel {
+  position: relative;
+  width: min(92vw, 360px);
+  overflow: hidden;
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(248, 250, 252, .94)),
+    var(--iqs-loader-panel);
+  border: 1px solid var(--iqs-loader-border);
+  box-shadow:
+    0 24px 64px rgba(15, 23, 42, .26),
+    0 2px 6px rgba(15, 23, 42, .08);
+  padding: 1.35rem 1.45rem 1.2rem;
+  text-align: center;
+  transform: translateY(8px) scale(.982);
+  animation: iqsLoaderPanelIn .24s cubic-bezier(.2, .8, .2, 1) forwards;
+}
+
+.iqs-box-loader.is-hiding .iqs-box-loader__panel {
+  animation: iqsLoaderPanelOut .14s ease-in forwards;
+}
+
+.iqs-box-loader__panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, .5), transparent),
+    radial-gradient(circle at 14% 0%, rgba(37, 99, 235, .16), transparent 7rem),
+    radial-gradient(circle at 86% 0%, rgba(15, 186, 168, .13), transparent 7rem);
+  transform: translateX(-62%);
+  animation: iqsLoaderSheen 2.2s ease-in-out infinite;
+}
+
+.iqs-box-loader__panel::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--iqs-loader-primary), var(--iqs-loader-teal), var(--iqs-loader-amber), var(--iqs-loader-violet));
+  background-size: 240% 100%;
+  animation: iqsLoaderBar 1.2s linear infinite;
+}
+
+.iqs-box-loader__boxes {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  margin-bottom: .95rem;
+  isolation: isolate;
+}
+
+.iqs-box-loader__boxes::before,
+.iqs-box-loader__boxes::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.iqs-box-loader__boxes::before {
+  border: 1px solid rgba(37, 99, 235, .16);
+  background: linear-gradient(180deg, rgba(37, 99, 235, .08), rgba(15, 186, 168, .05));
+}
+
+.iqs-box-loader__boxes::after {
+  inset: 6px;
+  border: 2px solid transparent;
+  border-top-color: var(--iqs-loader-primary);
+  border-right-color: var(--iqs-loader-teal);
+  animation: iqsLoaderOrbit .82s linear infinite;
+}
+
+.iqs-box-loader__boxes span {
+  position: absolute;
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  background: var(--iqs-loader-primary);
+  box-shadow: 0 5px 12px rgba(37, 99, 235, .28);
+  animation: iqsLoaderBlocks 1.08s cubic-bezier(.45, 0, .2, 1) infinite;
+}
+
+.iqs-box-loader__boxes span:nth-child(1) {
+  transform: translate(-9px, -9px);
+}
+
+.iqs-box-loader__boxes span:nth-child(2) {
+  background: var(--iqs-loader-teal);
+  box-shadow: 0 5px 12px rgba(15, 186, 168, .26);
+  animation-delay: .11s;
+  transform: translate(9px, -9px);
+}
+
+.iqs-box-loader__boxes span:nth-child(3) {
+  background: var(--iqs-loader-amber);
+  box-shadow: 0 5px 12px rgba(245, 158, 11, .26);
+  animation-delay: .22s;
+  transform: translate(9px, 9px);
+}
+
+.iqs-box-loader__boxes span:nth-child(4) {
+  background: var(--iqs-loader-violet);
+  box-shadow: 0 5px 12px rgba(124, 58, 237, .26);
+  animation-delay: .33s;
+  transform: translate(-9px, 9px);
+}
+
+.iqs-box-loader__text {
+  position: relative;
+  color: var(--iqs-loader-text);
+  font-weight: 750;
+  font-size: .9rem;
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+.iqs-box-loader__text::after {
+  content: "Sila tunggu sebentar";
+  display: block;
+  margin-top: .28rem;
+  color: var(--iqs-loader-muted);
+  font-size: .72rem;
+  font-weight: 600;
+}
+
+@keyframes iqsLoaderOverlayIn {
+  to { opacity: 1; }
+}
+
+@keyframes iqsLoaderOverlayOut {
+  to { opacity: 0; }
+}
+
+@keyframes iqsLoaderPanelIn {
+  to {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes iqsLoaderPanelOut {
+  to {
+    transform: translateY(4px) scale(.985);
+  }
+}
+
+@keyframes iqsLoaderSheen {
+  0%, 44% { transform: translateX(-72%); opacity: 0; }
+  58% { opacity: 1; }
+  100% { transform: translateX(72%); opacity: 0; }
+}
+
+@keyframes iqsLoaderBar {
+  to { background-position: 240% 0; }
+}
+
+@keyframes iqsLoaderOrbit {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes iqsLoaderBlocks {
+  0%, 100% {
+    opacity: .76;
+    filter: saturate(.9);
+  }
+  50% {
+    opacity: 1;
+    filter: saturate(1.18);
+    transform: translate(0, 0) scale(1.12);
+  }
+}
+
+html[data-bs-theme="dark"] {
+  --iqs-loader-bg: rgba(2, 6, 23, .62);
+  --iqs-loader-panel: rgba(15, 23, 42, .94);
+  --iqs-loader-border: rgba(148, 163, 184, .2);
+  --iqs-loader-text: #e5edf8;
+  --iqs-loader-muted: #94a3b8;
+}
+
+html[data-bs-theme="dark"] .iqs-box-loader__panel {
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, .97), rgba(2, 6, 23, .92)),
+    var(--iqs-loader-panel);
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, .42),
+    0 0 0 1px rgba(255, 255, 255, .02) inset;
+}
+
+html[data-bs-theme="dark"] .iqs-box-loader__panel::before {
+  background:
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, .08), transparent),
+    radial-gradient(circle at 14% 0%, rgba(37, 99, 235, .16), transparent 7rem),
+    radial-gradient(circle at 86% 0%, rgba(15, 186, 168, .12), transparent 7rem);
+}
+
+@media (max-width: 575.98px) {
+  .iqs-box-loader {
+    padding: 1rem;
+  }
+
+  .iqs-box-loader__panel {
+    width: min(300px, calc(100vw - 2rem));
+    padding: 1.2rem 1rem 1.05rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iqs-box-loader,
+  .iqs-box-loader__panel,
+  .iqs-box-loader__panel::before,
+  .iqs-box-loader__panel::after,
+  .iqs-box-loader__boxes::after,
+  .iqs-box-loader__boxes span {
+    animation: none !important;
+  }
+
+  .iqs-box-loader {
+    opacity: 1;
+  }
+
+  .iqs-box-loader__panel {
+    transform: none;
+  }
+}

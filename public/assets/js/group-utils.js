@@ -34,6 +34,33 @@ const GroupUtils = {
   getCSRF() {
     return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
   },
+
+  _loaderTokens: {},
+
+  showLoader(key, message) {
+    const loaderKey = String(key || 'group');
+    this.hideLoader(loaderKey);
+    const text = message || this.t('loading', 'Loading...');
+    if (window.AppLoader && typeof window.AppLoader.show === 'function') {
+      this._loaderTokens[loaderKey] = window.AppLoader.show(text);
+    } else if (window.IQSLoader && typeof window.IQSLoader.show === 'function') {
+      this._loaderTokens[loaderKey] = window.IQSLoader.show(text);
+    }
+  },
+
+  hideLoader(key) {
+    const loaderKey = String(key || 'group');
+    const token = this._loaderTokens[loaderKey];
+    if (!token) {
+      return;
+    }
+    if (window.AppLoader && typeof window.AppLoader.hide === 'function') {
+      window.AppLoader.hide(token);
+    } else if (window.IQSLoader && typeof window.IQSLoader.hide === 'function') {
+      window.IQSLoader.hide(token);
+    }
+    delete this._loaderTokens[loaderKey];
+  },
   
   hasDataTable() {
     return !!(window.jQuery && jQuery.fn && jQuery.fn.DataTable);
@@ -62,8 +89,9 @@ const GroupUtils = {
   // Safe JSON fetch
   async fetchJSONSafe(url, opts) {
     const requestOpts = Object.assign({}, opts || {});
+    requestOpts.noLoader = requestOpts.noLoader !== false;
     requestOpts.headers = Object.assign(
-      { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-No-Loader': '1' },
       (opts && opts.headers) || {}
     );
     requestOpts.credentials = requestOpts.credentials || 'same-origin';
@@ -133,7 +161,6 @@ document.addEventListener('show.bs.modal', function (e) {
 
 // Export untuk global access
 window.GroupUtils = GroupUtils;
-
 
 
 

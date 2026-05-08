@@ -147,6 +147,32 @@
         }
     }
 
+    var emailTemplateLoaderTokens = {};
+
+    function showPageLoader(key, message) {
+        hidePageLoader(key);
+        var pageData = window.EmailTemplatePageData || {};
+        var text = message || pageData.loadingProcessingText || pageData.loadingPreviewText || 'Loading...';
+        if (window.AppLoader && typeof window.AppLoader.show === 'function') {
+            emailTemplateLoaderTokens[key] = window.AppLoader.show(text);
+        } else if (window.IQSLoader && typeof window.IQSLoader.show === 'function') {
+            emailTemplateLoaderTokens[key] = window.IQSLoader.show(text);
+        }
+    }
+
+    function hidePageLoader(key) {
+        var token = emailTemplateLoaderTokens[key];
+        if (!token) {
+            return;
+        }
+        if (window.AppLoader && typeof window.AppLoader.hide === 'function') {
+            window.AppLoader.hide(token);
+        } else if (window.IQSLoader && typeof window.IQSLoader.hide === 'function') {
+            window.IQSLoader.hide(token);
+        }
+        delete emailTemplateLoaderTokens[key];
+    }
+
     function syncSampleVariablesField(field, fallbackJson) {
         if (!field) {
             return {};
@@ -235,18 +261,6 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        var globalLoader = document.getElementById('global-loader');
-        if (globalLoader) {
-            globalLoader.classList.add('loader-hidden');
-            globalLoader.style.display = 'none';
-            globalLoader.setAttribute('aria-busy', 'false');
-        }
-
-        var preloader = document.getElementById('preloader');
-        if (preloader) {
-            preloader.style.display = 'none';
-        }
-
         document.body.classList.remove('loading');
 
         var pageData = window.EmailTemplatePageData || {};
@@ -512,6 +526,7 @@
 
             clearFieldErrors(form);
             setButtonLoading(submitNode, true, pageData.loadingProcessingText || '');
+            showPageLoader('templateSubmit', pageData.loadingProcessingText || '');
 
             return requestTemplateAction(new FormData(form))
                 .then(function (payload) {
@@ -527,6 +542,7 @@
                 })
                 .finally(function () {
                     setButtonLoading(submitNode, false);
+                    hidePageLoader('templateSubmit');
                 });
         }
 
@@ -761,6 +777,7 @@
             return fetch(pageData.actionUrl || '', {
                 method: 'POST',
                 body: formData,
+                noLoader: true,
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
                     'X-No-Loader': '1',
@@ -1107,9 +1124,11 @@
                 }
 
                 setButtonLoading(previewButton, true, pageData.loadingPreviewText || '');
+                showPageLoader('templatePreview', pageData.loadingPreviewText || '');
                 fetch(pageData.previewUrl || '', {
                     method: 'POST',
                     body: getFormPayload(),
+                    noLoader: true,
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         'X-No-Loader': '1',
@@ -1134,6 +1153,7 @@
                     })
                     .finally(function () {
                         setButtonLoading(previewButton, false);
+                        hidePageLoader('templatePreview');
                     });
             });
         }
@@ -1157,9 +1177,11 @@
                 formData.append('test_email', emailValue);
 
                 setButtonLoading(testSendButton, true, pageData.loadingSendingText || '');
+                showPageLoader('templateTestSend', pageData.loadingSendingText || '');
                 fetch(pageData.testSendUrl || '', {
                     method: 'POST',
                     body: formData,
+                    noLoader: true,
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         'X-No-Loader': '1',
@@ -1182,6 +1204,7 @@
                     })
                     .finally(function () {
                         setButtonLoading(testSendButton, false);
+                        hidePageLoader('templateTestSend');
                     });
             });
         }

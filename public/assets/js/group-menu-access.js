@@ -210,10 +210,12 @@ const MenuAccess = {
 
       // Export to global so page scripts can call populateCreateModal()
       try { window.MenuAccess = MenuAccess; } catch (e) { /* ignore */ }
+      GroupUtils.showLoader('menuAction', this.T.loading || this.T.btn_save || 'Loading...');
       try {
         const resp = await fetch(GroupUtils.apiUrl('group-create.php'), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': GroupUtils.getCSRF() },
+          noLoader: true,
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': GroupUtils.getCSRF(), 'X-No-Loader': '1' },
           body: JSON.stringify(payload)
         });
         const j = await resp.json();
@@ -258,6 +260,8 @@ const MenuAccess = {
 
       } catch (err) {
         if (errEl) { errEl.textContent = err.message || this.T.error_network || 'Ralat rangkaian'; errEl.classList.remove('d-none'); }
+      } finally {
+        GroupUtils.hideLoader('menuAction');
       }
     });
 
@@ -341,13 +345,16 @@ const MenuAccess = {
       }));
       if (!ask.isConfirmed) return;
 
+      GroupUtils.showLoader('menuAction', this.T.loading || this.T.confirm_yes_delete || 'Loading...');
       try {
         const resp = await fetch(GroupUtils.apiUrl('group-delete.php'), {
           method: 'POST',
+          noLoader: true,
           headers: {
             'Content-Type': 'application/json',
             'X-CSRF-Token': GroupUtils.getCSRF(),
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'X-No-Loader': '1'
           },
           body: JSON.stringify({ groupID: gid })
         });
@@ -389,6 +396,8 @@ const MenuAccess = {
           title: this.T.not_allowed_title || 'Tidak Dibenarkan',
           text: err && err.message ? err.message : (this.T.delete_group_network_fail || 'Ralat rangkaian semasa memadam kumpulan.'),
         }));
+      } finally {
+        GroupUtils.hideLoader('menuAction');
       }
     });
     // Ensure modal UI matches current mode when shown
@@ -714,6 +723,7 @@ const MenuAccess = {
   },
   
   showLoading() {
+    GroupUtils.showLoader('menuAccess', this.T.loading || this.T.loading_menu || 'Loading...');
     this.loadEl?.classList.remove('d-none');
     this.errEl?.classList.add('d-none');
     this.cntEl?.classList.add('d-none');
@@ -721,6 +731,8 @@ const MenuAccess = {
   },
   
   showError(msg) {
+    GroupUtils.hideLoader('menuAccess');
+    GroupUtils.hideLoader('menuAction');
     this.loadEl?.classList.add('d-none');
     if (this.errEl) {
       this.errEl.textContent = msg || this.T.error_unknown;
@@ -729,6 +741,7 @@ const MenuAccess = {
   },
   
   showContent(html) {
+    GroupUtils.hideLoader('menuAccess');
     this.loadEl?.classList.add('d-none');
     this.errEl?.classList.add('d-none');
     if (this.cntEl) {
@@ -1350,6 +1363,7 @@ const MenuAccess = {
 
     try {
       const target = (mode === 'create') ? 'menu-create.php' : 'menu-save.php';
+      GroupUtils.showLoader('menuAction', this.T.loading || this.T.btn_save || 'Loading...');
       const j = await GroupUtils.fetchJSONSafe(GroupUtils.apiUrl(target, { groupID }), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': GroupUtils.getCSRF() },
@@ -1411,6 +1425,8 @@ const MenuAccess = {
       this.pendingParentRestoreAfterSave = false;
       this.editErrorEl.textContent = e.message || this.T.error_network;
       this.editErrorEl.classList.remove('d-none');
+    } finally {
+      GroupUtils.hideLoader('menuAction');
     }
   },
   
@@ -1491,6 +1507,7 @@ const MenuAccess = {
       if (delBtn) delBtn.disabled = true;
     }
 
+    GroupUtils.showLoader('menuAction', MenuAccess.T.loading || MenuAccess.T.confirm_yes || 'Loading...');
     try {
       const payload = {
         csrf_token: GroupUtils.getCSRF(),
@@ -1561,6 +1578,7 @@ const MenuAccess = {
       }
     } finally {
       if (delBtn) delBtn.disabled = false;
+      GroupUtils.hideLoader('menuAction');
     }
   },
   
@@ -1704,6 +1722,7 @@ const MenuAccess = {
     if (!tableBody) return;
     tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">' + GroupUtils.esc(this.T.loading || 'Loading') + '...</td></tr>';
     const modulID = parseInt(document.getElementById('sg_modulID')?.value || '0', 10) || 0;
+    GroupUtils.showLoader('menuAction', this.T.loading || 'Loading...');
     try {
       const j = await GroupUtils.fetchJSONSafe(GroupUtils.apiUrl('menu-subgroup-list.php', { modulID, active: 0 }));
       const rows = Array.isArray(j?.subgroups) ? j.subgroups : [];
@@ -1731,6 +1750,8 @@ const MenuAccess = {
       }).join('');
     } catch (e) {
       tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger py-4">' + GroupUtils.esc(e.message || this.T.subgroup_load_fail || 'Gagal memuat subgroup') + '</td></tr>';
+    } finally {
+      GroupUtils.hideLoader('menuAction');
     }
   },
 
@@ -1751,6 +1772,7 @@ const MenuAccess = {
       if (errEl) { errEl.textContent = this.T.subgroup_required || 'Sila pilih modul dan isi nama subgroup.'; errEl.classList.remove('d-none'); }
       return;
     }
+    GroupUtils.showLoader('menuAction', this.T.loading || this.T.btn_save || 'Loading...');
     try {
       const j = await GroupUtils.fetchJSONSafe(GroupUtils.apiUrl('menu-subgroup-save.php'), {
         method: 'POST',
@@ -1764,6 +1786,8 @@ const MenuAccess = {
       this.syncSidebarAfterNavigationChange();
     } catch (e) {
       if (errEl) { errEl.textContent = e.message || this.T.error_network; errEl.classList.remove('d-none'); }
+    } finally {
+      GroupUtils.hideLoader('menuAction');
     }
   },
 
@@ -1771,6 +1795,7 @@ const MenuAccess = {
     if (!row || !row.id) return;
     const ok = window.confirm(this.T.subgroup_confirm_delete || 'Padam subgroup ini?');
     if (!ok) return;
+    GroupUtils.showLoader('menuAction', this.T.loading || this.T.confirm_yes_delete || 'Loading...');
     try {
       const j = await GroupUtils.fetchJSONSafe(GroupUtils.apiUrl('menu-subgroup-delete.php'), {
         method: 'POST',
@@ -1784,6 +1809,8 @@ const MenuAccess = {
     } catch (e) {
       const errEl = document.getElementById('menuSubgroupError');
       if (errEl) { errEl.textContent = e.message || this.T.error_network; errEl.classList.remove('d-none'); }
+    } finally {
+      GroupUtils.hideLoader('menuAction');
     }
   },
   

@@ -3170,36 +3170,27 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
    * Loading overlay management
    */
   function showLoading(message = '<?= h(__('userList_processing')) ?>') {
-    hideLoading(); // Remove existing if any
-    const overlay = document.createElement('div');
-    overlay.id = 'loading-overlay';
-    overlay.className = 'loading-overlay';
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-    `;
-    overlay.innerHTML = `
-      <div class="loading-spinner text-center" style="background: white; padding: 2rem; border-radius: 8px;">
-        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-          <span class="visually-hidden"><?= h(__('userList_loading')) ?></span>
-        </div>
-        <p class="mt-3 mb-0">${message}</p>
-      </div>
-    `;
-    document.body.appendChild(overlay);
+    hideLoading();
+    if (window.AppLoader && typeof window.AppLoader.show === 'function') {
+      window.__userListLoaderToken = window.AppLoader.show(message);
+      return;
+    }
+
+    if (window.IQSLoader && typeof window.IQSLoader.show === 'function') {
+      window.__userListLoaderToken = window.IQSLoader.show(message);
+    }
   }
 
   function hideLoading() {
-    const overlay = document.getElementById('loading-overlay');
-    if (overlay) overlay.remove();
+    if (!window.__userListLoaderToken) {
+      return;
+    }
+    if (window.AppLoader && typeof window.AppLoader.hide === 'function') {
+      window.AppLoader.hide(window.__userListLoaderToken);
+    } else if (window.IQSLoader && typeof window.IQSLoader.hide === 'function') {
+      window.IQSLoader.hide(window.__userListLoaderToken);
+    }
+    window.__userListLoaderToken = null;
   }
 
   function showImpersonationBoxLoader(message = '<?= h(__('impersonation_loading_start') ?: 'Preparing View As...') ?>') {
@@ -3207,19 +3198,7 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
       window.showImpersonationBoxLoader(message);
       return;
     }
-    hideLoading();
-    const overlay = document.createElement('div');
-    overlay.id = 'impersonation-box-loader';
-    overlay.className = 'impersonation-box-loader';
-    overlay.innerHTML = `
-      <div class="impersonation-box-loader__panel">
-        <div class="impersonation-box-loader__boxes" aria-hidden="true">
-          <span></span><span></span><span></span><span></span>
-        </div>
-        <div class="impersonation-box-loader__text">${message}</div>
-      </div>
-    `;
-    document.body.appendChild(overlay);
+    showLoading(message);
   }
 
   function hideImpersonationBoxLoader() {
@@ -3227,8 +3206,7 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
       window.hideImpersonationBoxLoader();
       return;
     }
-    const overlay = document.getElementById('impersonation-box-loader');
-    if (overlay) overlay.remove();
+    hideLoading();
   }
 
   // Select2 loading is handled inline where needed; remove unused helper to keep bundle small.

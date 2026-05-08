@@ -1126,20 +1126,18 @@ $version = date('ymdHis');
 
                 const formData = new FormData(uploadForm);
                 setUploadBusy(true);
-                if (window.Swal) {
-                    Swal.fire({
-                        title: T.uploadLoadingTitle,
-                        text: T.uploadLoadingText,
-                        allowOutsideClick: false,
-                        didOpen: () => Swal.showLoading()
-                    });
+                let manualUploadLoaderToken = null;
+                if (window.AppLoader && typeof window.AppLoader.show === 'function') {
+                    manualUploadLoaderToken = window.AppLoader.show(T.uploadLoadingText || T.uploadLoadingTitle);
                 }
 
                 try {
                     const response = await fetch('<?= h(base_url('ajax/manual-upload.php')) ?>', {
                         method: 'POST',
+                        noLoader: true,
                         headers: {
-                            'Accept': 'application/json'
+                            'Accept': 'application/json',
+                            'X-No-Loader': '1'
                         },
                         body: formData
                     });
@@ -1185,6 +1183,9 @@ $version = date('ymdHis');
                     }
                 } finally {
                     setUploadBusy(false);
+                    if (manualUploadLoaderToken && window.AppLoader && typeof window.AppLoader.hide === 'function') {
+                        window.AppLoader.hide(manualUploadLoaderToken);
+                    }
                 }
             });
 

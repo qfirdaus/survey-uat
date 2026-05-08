@@ -52,6 +52,18 @@ if (str_ends_with($currentPage, 'dashboard.php') && strpos($_SERVER['REQUEST_URI
 <script src="<?= base_url('assets/vendor/sweetalert2/sweetalert2.all.min.js') ?>"></script>
 
 <!-- Loader JS (tanpa defer, biar dia hijack fetch/klik awal-awal) -->
+<script>
+  window.IQS_LOADER_I18N = {
+    defaultMessage: <?= json_encode(__('config_js_loading') ?: 'Memuat...', JSON_UNESCAPED_UNICODE) ?>,
+    saving: <?= json_encode(__('config_js_btn_loading_save') ?: 'Menyimpan...', JSON_UNESCAPED_UNICODE) ?>,
+    submitting: <?= json_encode(__('config_js_btn_loading_save') ?: 'Menghantar...', JSON_UNESCAPED_UNICODE) ?>,
+    navigation: <?= json_encode(__('config_js_loading') ?: 'Memuat halaman...', JSON_UNESCAPED_UNICODE) ?>,
+    logout: <?= json_encode(__('logout_alert_title') ?: 'Log Keluar...', JSON_UNESCAPED_UNICODE) ?>,
+    impersonationStart: <?= json_encode(__('impersonation_loading_start') ?: 'Menyediakan paparan View As...', JSON_UNESCAPED_UNICODE) ?>,
+    impersonationStop: <?= json_encode(__('impersonation_loading_stop') ?: 'Memulihkan akaun asal...', JSON_UNESCAPED_UNICODE) ?>
+  };
+</script>
+<script src="<?= base_url('assets/js/iqs-loader.js') ?>?v=<?= $version ?>"></script>
 <script src="<?= base_url('assets/js/loader.js') ?>?v=<?= $version ?>"></script>
 
 <!-- ========== Global JavaScript Variables ========== -->
@@ -129,6 +141,9 @@ $baseUrl = rtrim(base_url(''), '/');
         window.alert(text);
       }
 
+      if (window.AppLoader && typeof window.AppLoader.show === 'function') {
+        window.AppLoader.show((window.IQS_LOADER_I18N && window.IQS_LOADER_I18N.logout) || SESSION_TERM_I18N.title);
+      }
       window.location.href = redirect;
       return true;
     },
@@ -229,6 +244,9 @@ $isLoggedIn = !empty($_SESSION['f_stafID']);
   };
 
   const forceLogout = () => {
+    if (window.AppLoader && typeof window.AppLoader.show === 'function') {
+      window.AppLoader.show((window.IQS_LOADER_I18N && window.IQS_LOADER_I18N.logout) || I18N.timeoutTitle);
+    }
     window.location.href = LOGOUT_URL;
   };
 
@@ -494,80 +512,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
-</script>
-
-<script src="https://unpkg.com/nprogress@0.2.0/nprogress.js"></script>
-<script>
-// GLOBAL LOADER
-(function () {
-  // ====== CONFIG BOLEH DITETAPKAN DI PAGE ======
-  // <body data-loader="off|bar|overlay|both" data-loader-spinner="Memuat data…"></body>
-  var body   = document.body;
-  var mode   = (body.dataset.loader || 'bar').toLowerCase(); // default: bar
-  var text   = body.dataset.loaderSpinner || 'Memuat data…';
-  if (mode === 'off') return;
-
-  // ====== NProgress (bar) ======
-  var useBar = (mode === 'bar' || mode === 'both');
-  if (useBar && window.NProgress) {
-    NProgress.configure({ showSpinner:false, trickleSpeed:120 });
-    window.addEventListener('beforeunload', function(){ NProgress.start(); });
-    window.addEventListener('pageshow', function(){ setTimeout(function(){ try{NProgress.done();}catch(e){} },80); });
-  }
-
-  // ====== Overlay (spinner) ======
-  var useOverlay = (mode === 'overlay' || mode === 'both');
-  var overlay;
-  function ovShow(){ if(!useOverlay) return; overlay.classList.add('show'); }
-  function ovHide(){ if(!useOverlay) return; overlay.classList.remove('show'); }
-  if (useOverlay) {
-    overlay = document.createElement('div');
-    overlay.className = 'loader-overlay';
-    // Build spinner content without using string concatenation to avoid inserting untrusted HTML
-    (function(){
-      var inner = document.createElement('div'); inner.className = 'text-center';
-      var spinner = document.createElement('div'); spinner.className = 'spinner-border'; spinner.setAttribute('role','status'); spinner.setAttribute('aria-hidden','true');
-      var txt = document.createElement('div'); txt.className = 'mt-2 small text-muted'; txt.textContent = text || '';
-      inner.appendChild(spinner);
-      inner.appendChild(txt);
-      overlay.appendChild(inner);
-    })();
-    document.body.appendChild(overlay);
-  }
-
-  function startAll(){ if(useBar) NProgress.start(); ovShow(); }
-  function stopAll(){  if(useBar) NProgress.done(); ovHide(); }
-
-  // ====== TRIGGER: LINK CLICK ======
-  document.addEventListener('click', function (e) {
-    var a = e.target.closest('a[href]');
-    if (!a) return;
-    var href = a.getAttribute('href') || '';
-
-    // abaikan: anchor, new tab, modifier keys, file download/export
-    if (href.charAt(0) === '#') return;
-    if (a.hasAttribute('download') || a.target === '_blank' || e.ctrlKey || e.metaKey || e.shiftKey) return;
-    if (a.dataset.noLoader !== undefined) return;
-    if (/download=excel/i.test(href)) return; // elak “terkunci” bila hanya trigger download
-
-    startAll();
-  }, true);
-
-  // ====== TRIGGER: FORM SUBMIT ======
-  document.addEventListener('submit', function (e) {
-    var f = e.target;
-    if (f && f.dataset.noLoader !== undefined) return;
-    startAll();
-  }, true);
-
-  // ====== jQuery AJAX (jika ada) ======
-  if (window.jQuery) {
-    $(document).ajaxStart(startAll);
-    $(document).ajaxStop(stopAll);
-    $(document).ajaxError(stopAll);
-  }
-
-  // safety stop
-  window.addEventListener('pageshow', stopAll);
-})();
 </script>

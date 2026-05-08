@@ -20,6 +20,31 @@
     }
   }
 
+  const tetapanLoaderTokens = {};
+
+  function showTetapanLoader(key, message) {
+    hideTetapanLoader(key);
+    const text = message || (getTetapanTranslator()('config_js_btn_loading_save') || 'Saving...');
+    if (window.AppLoader && typeof window.AppLoader.show === 'function') {
+      tetapanLoaderTokens[key] = window.AppLoader.show(text);
+    } else if (window.IQSLoader && typeof window.IQSLoader.show === 'function') {
+      tetapanLoaderTokens[key] = window.IQSLoader.show(text);
+    }
+  }
+
+  function hideTetapanLoader(key) {
+    const token = tetapanLoaderTokens[key];
+    if (!token) {
+      return;
+    }
+    if (window.AppLoader && typeof window.AppLoader.hide === 'function') {
+      window.AppLoader.hide(token);
+    } else if (window.IQSLoader && typeof window.IQSLoader.hide === 'function') {
+      window.IQSLoader.hide(token);
+    }
+    delete tetapanLoaderTokens[key];
+  }
+
   function rememberActiveTab(tabSelector) {
     if (!tabSelector) {
       return;
@@ -85,6 +110,7 @@
     }
 
     fallbackSetButtonLoading(button, true);
+    showTetapanLoader('fallbackSubmit', __('config_js_saving_changes') || __('config_js_btn_loading_save') || 'Saving...');
 
     const formData = new FormData(form);
     formData.set('ajax', '1');
@@ -136,6 +162,7 @@
       })
       .finally(function () {
         fallbackSetButtonLoading(button, false);
+        hideTetapanLoader('fallbackSubmit');
       });
 
     return true;
@@ -202,6 +229,7 @@
         btnUji.dataset.originalHtml = btnUji.innerHTML;
       }
       btnUji.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> ' + (__('config_js_uji_emel_btn_loading') || 'Testing...');
+      showTetapanLoader('fallbackEmailTest', __('config_js_uji_emel_btn_loading') || 'Testing...');
 
       fetch(baseUrl + 'ajax/uji-emel.php', {
         method: 'POST',
@@ -238,6 +266,7 @@
         .finally(function () {
           btnUji.disabled = false;
           btnUji.innerHTML = btnUji.dataset.originalHtml || '<i class="ri-mail-send-line me-1"></i> ' + (__('config_js_uji_emel_btn_default') || 'Uji Sambungan Emel');
+          hideTetapanLoader('fallbackEmailTest');
         });
     });
 
@@ -2743,6 +2772,7 @@
       }
       state.pending = true;
       setSaveFeedbackState(form, button, 'saving', __('config_js_saving_changes') || 'The system is saving your changes...');
+      showTetapanLoader('submitFormDirect', __('config_js_saving_changes') || __('config_js_btn_loading_save') || 'Saving...');
 
       const formData = new FormData(form);
       formData.set('ajax', '1');
@@ -2835,6 +2865,7 @@
           if (button) {
             setButtonLoading(button, false);
           }
+          hideTetapanLoader('submitFormDirect');
           refreshDirtyIndicator(form, button);
         });
 
@@ -3601,6 +3632,7 @@
         formData.append('uji_email', result.value);
         btnUji.disabled = true;
         btnUji.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> ' + __('config_js_uji_emel_btn_loading');
+        showTetapanLoader('emailTest', __('config_js_uji_emel_btn_loading') || 'Testing...');
 
         const csrfToken = document.querySelector('meta[name="csrf-token"]')
           ? document.querySelector('meta[name="csrf-token"]').getAttribute('content')
@@ -3642,6 +3674,7 @@
           .finally(function () {
             btnUji.disabled = false;
             btnUji.innerHTML = '<i class="ri-mail-send-line me-1"></i> ' + __('config_js_uji_emel_btn_default');
+            hideTetapanLoader('emailTest');
           });
       });
     };
