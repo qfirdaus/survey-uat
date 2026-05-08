@@ -473,6 +473,28 @@ function renderCodeCard(string $sampleId, array $samples): void
             background: linear-gradient(135deg, #2563eb, #14b8a6);
             color: #fff;
         }
+        .dg-subtabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .45rem;
+            margin: 1rem 0;
+            padding-bottom: .75rem;
+            border-bottom: 1px solid rgba(15,23,42,.08);
+        }
+        .dg-subtabs .nav-link {
+            border: 1px solid rgba(15,23,42,.08);
+            border-radius: 999px;
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 800;
+            font-size: .82rem;
+            padding: .42rem .75rem;
+        }
+        .dg-subtabs .nav-link.active {
+            border-color: rgba(37,99,235,.28);
+            background: rgba(37,99,235,.1);
+            color: #1d4ed8;
+        }
         .dg-panel { padding: 1.15rem; }
         .dg-panel-title { display: flex; align-items: center; gap: .55rem; margin-bottom: .35rem; }
         .dg-panel-title h5 { margin: 0; font-weight: 800; }
@@ -599,6 +621,17 @@ function renderCodeCard(string $sampleId, array $samples): void
         html[data-bs-theme="dark"] .dg-boundary-head { background: #0f172a; }
         html[data-bs-theme="dark"] .dg-boundary-table,
         html[data-bs-theme="dark"] .dg-boundary-row { border-color: rgba(148,163,184,.18); }
+        html[data-bs-theme="dark"] .dg-subtabs { border-color: rgba(148,163,184,.18); }
+        html[data-bs-theme="dark"] .dg-subtabs .nav-link {
+            background: #0f172a;
+            border-color: rgba(148,163,184,.18);
+            color: #cbd5e1;
+        }
+        html[data-bs-theme="dark"] .dg-subtabs .nav-link.active {
+            background: rgba(37,99,235,.22);
+            border-color: rgba(96,165,250,.35);
+            color: #bfdbfe;
+        }
         @media (max-width: 991.98px) {
             .dg-tab-card { position: static; }
             .dg-rule-grid, .dg-doc-grid, .dg-pattern-grid { grid-template-columns: 1fr; }
@@ -663,38 +696,49 @@ function renderCodeCard(string $sampleId, array $samples): void
                                 <div class="dg-panel">
                                     <div class="dg-panel-title"><i class="ri-compass-3-line"></i><h5><?= h(dg('developerGuide_overview_title', 'Core-safe development rules')) ?></h5></div>
                                     <p class="dg-muted"><?= h(dg('developerGuide_overview_text', 'Programmers should build project modules by consuming framework APIs and UI-managed configuration, not by editing core runtime files.')) ?></p>
-                                    <div class="dg-rule-grid mt-3">
-                                        <div class="dg-rule-card"><h6>Do</h6><p>Use services, controllers, AJAX helpers, custom language files, and UI-managed menu/access setup.</p></div>
-                                        <div class="dg-rule-card"><h6>Do Not</h6><p>Do not edit sidebar, topbar, init, Database core, Notification core, Audit core, or core language files for project needs.</p></div>
-                                        <div class="dg-rule-card"><h6>Register</h6><p>After creating a page, register module/menu/subgroup and group access from User Groups, not from source code.</p></div>
+                                    <div class="nav dg-subtabs" id="dg-overview-subtabs" role="tablist">
+                                        <button class="nav-link active" id="dg-overview-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-overview-pane-rules" type="button" role="tab" aria-controls="dg-overview-pane-rules" aria-selected="true">Rules</button>
+                                        <button class="nav-link" id="dg-overview-subtab-docs" data-bs-toggle="pill" data-bs-target="#dg-overview-pane-docs" type="button" role="tab" aria-controls="dg-overview-pane-docs" aria-selected="false">References</button>
+                                        <button class="nav-link" id="dg-overview-subtab-boundary" data-bs-toggle="pill" data-bs-target="#dg-overview-pane-boundary" type="button" role="tab" aria-controls="dg-overview-pane-boundary" aria-selected="false">Core Boundary</button>
                                     </div>
-                                    <div class="dg-callout mt-3">Recommended flow: generate or create page files, add controller/service/AJAX, add language keys in custom files, register menu/access in UI, then test authorization and audit behavior.</div>
-                                    <h6 class="mt-4 mb-2 fw-bold">Reference Documents</h6>
-                                    <div class="dg-doc-grid">
-                                        <?php foreach ($docLinks as $doc): ?>
-                                            <div class="dg-doc-card">
-                                                <i class="<?= h((string)$doc['icon']) ?>"></i>
-                                                <div>
-                                                    <h6><?= h((string)$doc['title']) ?></h6>
-                                                    <code><?= h((string)$doc['path']) ?></code>
-                                                </div>
+                                    <div class="tab-content">
+                                        <div class="tab-pane fade show active" id="dg-overview-pane-rules" role="tabpanel" aria-labelledby="dg-overview-subtab-rules">
+                                            <div class="dg-rule-grid mt-3">
+                                                <div class="dg-rule-card"><h6>Do</h6><p>Use services, controllers, AJAX helpers, custom language files, and UI-managed menu/access setup.</p></div>
+                                                <div class="dg-rule-card"><h6>Do Not</h6><p>Do not edit sidebar, topbar, init, Database core, Notification core, Audit core, or core language files for project needs.</p></div>
+                                                <div class="dg-rule-card"><h6>Register</h6><p>After creating a page, register module/menu/subgroup and group access from User Groups, not from source code.</p></div>
                                             </div>
-                                        <?php endforeach; ?>
-                                    </div>
-                                    <h6 class="mt-4 mb-2 fw-bold">Core Boundary Map</h6>
-                                    <div class="dg-boundary-table">
-                                        <div class="dg-boundary-row dg-boundary-head">
-                                            <div>Area</div>
-                                            <div>Core File</div>
-                                            <div>Programmer Usage</div>
+                                            <div class="dg-callout mt-3">Recommended flow: generate or create page files, add controller/service/AJAX, add language keys in custom files, register menu/access in UI, then test authorization and audit behavior.</div>
                                         </div>
-                                        <?php foreach ($coreBoundaries as $boundary): ?>
-                                            <div class="dg-boundary-row">
-                                                <div><strong><?= h((string)$boundary['area']) ?></strong></div>
-                                                <div><code><?= h((string)$boundary['core']) ?></code></div>
-                                                <div><?= h((string)$boundary['use']) ?></div>
+                                        <div class="tab-pane fade" id="dg-overview-pane-docs" role="tabpanel" aria-labelledby="dg-overview-subtab-docs">
+                                            <div class="dg-doc-grid">
+                                                <?php foreach ($docLinks as $doc): ?>
+                                                    <div class="dg-doc-card">
+                                                        <i class="<?= h((string)$doc['icon']) ?>"></i>
+                                                        <div>
+                                                            <h6><?= h((string)$doc['title']) ?></h6>
+                                                            <code><?= h((string)$doc['path']) ?></code>
+                                                        </div>
+                                                    </div>
+                                                <?php endforeach; ?>
                                             </div>
-                                        <?php endforeach; ?>
+                                        </div>
+                                        <div class="tab-pane fade" id="dg-overview-pane-boundary" role="tabpanel" aria-labelledby="dg-overview-subtab-boundary">
+                                            <div class="dg-boundary-table">
+                                                <div class="dg-boundary-row dg-boundary-head">
+                                                    <div>Area</div>
+                                                    <div>Core File</div>
+                                                    <div>Programmer Usage</div>
+                                                </div>
+                                                <?php foreach ($coreBoundaries as $boundary): ?>
+                                                    <div class="dg-boundary-row">
+                                                        <div><strong><?= h((string)$boundary['area']) ?></strong></div>
+                                                        <div><code><?= h((string)$boundary['core']) ?></code></div>
+                                                        <div><?= h((string)$boundary['use']) ?></div>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -702,177 +746,305 @@ function renderCodeCard(string $sampleId, array $samples): void
                             <div class="tab-pane fade" id="dg-pane-page" role="tabpanel" aria-labelledby="dg-tab-page">
                                 <div class="dg-panel">
                                     <div class="dg-panel-title"><i class="ri-pages-line"></i><h5>Page Skeleton</h5></div>
-                                    <ul class="dg-list">
-                                        <li>Use `template-generator.php` where possible for baseline files.</li>
-                                        <li>Keep page-specific orchestration in a controller or service.</li>
-                                        <li>Use shared includes for head, topbar, sidebar, and scripts.</li>
-                                    </ul>
-                                    <?php renderCodeCard('page-basic', $samples); ?>
-                                    <?php renderCodeCard('controller-basic', $samples); ?>
+                                    <div class="nav dg-subtabs" id="dg-page-subtabs" role="tablist">
+                                        <button class="nav-link active" id="dg-page-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-page-pane-rules" type="button" role="tab" aria-controls="dg-page-pane-rules" aria-selected="true">Rules</button>
+                                        <button class="nav-link" id="dg-page-subtab-page" data-bs-toggle="pill" data-bs-target="#dg-page-pane-page" type="button" role="tab" aria-controls="dg-page-pane-page" aria-selected="false">Page File</button>
+                                        <button class="nav-link" id="dg-page-subtab-controller" data-bs-toggle="pill" data-bs-target="#dg-page-pane-controller" type="button" role="tab" aria-controls="dg-page-pane-controller" aria-selected="false">Controller</button>
+                                    </div>
+                                    <div class="tab-content">
+                                        <div class="tab-pane fade show active" id="dg-page-pane-rules" role="tabpanel" aria-labelledby="dg-page-subtab-rules">
+                                            <ul class="dg-list">
+                                                <li>Use `template-generator.php` where possible for baseline files.</li>
+                                                <li>Keep page-specific orchestration in a controller or service.</li>
+                                                <li>Use shared includes for head, topbar, sidebar, footer, and scripts.</li>
+                                            </ul>
+                                        </div>
+                                        <div class="tab-pane fade" id="dg-page-pane-page" role="tabpanel" aria-labelledby="dg-page-subtab-page">
+                                            <?php renderCodeCard('page-basic', $samples); ?>
+                                        </div>
+                                        <div class="tab-pane fade" id="dg-page-pane-controller" role="tabpanel" aria-labelledby="dg-page-subtab-controller">
+                                            <?php renderCodeCard('controller-basic', $samples); ?>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="tab-pane fade" id="dg-pane-service" role="tabpanel" aria-labelledby="dg-tab-service">
                                 <div class="dg-panel">
                                     <div class="dg-panel-title"><i class="ri-service-line"></i><h5>Service Pattern</h5></div>
-                                    <ul class="dg-list">
-                                        <li>Use a controller for page/request orchestration.</li>
-                                        <li>Use a service for business rules such as approval flow, validation, notification, audit, and integration calls.</li>
-                                        <li>Use a repository for database read/write details when a module grows beyond one simple page.</li>
-                                    </ul>
-                                    <div class="dg-callout mt-3">Rule of thumb: pages should display, controllers should coordinate, services should decide, repositories should query.</div>
-                                    <?php renderCodeCard('service-repository', $samples); ?>
+                                    <div class="nav dg-subtabs" id="dg-service-subtabs" role="tablist">
+                                        <button class="nav-link active" id="dg-service-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-service-pane-rules" type="button" role="tab" aria-controls="dg-service-pane-rules" aria-selected="true">Separation</button>
+                                        <button class="nav-link" id="dg-service-subtab-sample" data-bs-toggle="pill" data-bs-target="#dg-service-pane-sample" type="button" role="tab" aria-controls="dg-service-pane-sample" aria-selected="false">Sample</button>
+                                    </div>
+                                    <div class="tab-content">
+                                        <div class="tab-pane fade show active" id="dg-service-pane-rules" role="tabpanel" aria-labelledby="dg-service-subtab-rules">
+                                            <ul class="dg-list">
+                                                <li>Use a controller for page/request orchestration.</li>
+                                                <li>Use a service for business rules such as approval flow, validation, notification, audit, and integration calls.</li>
+                                                <li>Use a repository for database read/write details when a module grows beyond one simple page.</li>
+                                            </ul>
+                                            <div class="dg-callout mt-3">Rule of thumb: pages should display, controllers should coordinate, services should decide, repositories should query.</div>
+                                        </div>
+                                        <div class="tab-pane fade" id="dg-service-pane-sample" role="tabpanel" aria-labelledby="dg-service-subtab-sample">
+                                            <?php renderCodeCard('service-repository', $samples); ?>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="tab-pane fade" id="dg-pane-database" role="tabpanel" aria-labelledby="dg-tab-database">
                                 <div class="dg-panel">
                                     <div class="dg-panel-title"><i class="ri-database-2-line"></i><h5>Database</h5></div>
-                                    <ul class="dg-list">
-                                        <li>Main MySQL is for framework/application data.</li>
-                                        <li>Additional DB is for project integrations, reports, lookups, and external transactions.</li>
-                                        <li>Never hardcode DSN, username, or password in module code.</li>
-                                    </ul>
-                                    <?php renderCodeCard('database-main', $samples); ?>
-                                    <?php renderCodeCard('database-additional', $samples); ?>
-                                    <?php renderCodeCard('database-transaction', $samples); ?>
+                                    <div class="nav dg-subtabs" id="dg-database-subtabs" role="tablist">
+                                        <button class="nav-link active" id="dg-database-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-database-pane-rules" type="button" role="tab" aria-controls="dg-database-pane-rules" aria-selected="true">Rules</button>
+                                        <button class="nav-link" id="dg-database-subtab-main" data-bs-toggle="pill" data-bs-target="#dg-database-pane-main" type="button" role="tab" aria-controls="dg-database-pane-main" aria-selected="false">Main MySQL</button>
+                                        <button class="nav-link" id="dg-database-subtab-additional" data-bs-toggle="pill" data-bs-target="#dg-database-pane-additional" type="button" role="tab" aria-controls="dg-database-pane-additional" aria-selected="false">Additional DB</button>
+                                        <button class="nav-link" id="dg-database-subtab-transaction" data-bs-toggle="pill" data-bs-target="#dg-database-pane-transaction" type="button" role="tab" aria-controls="dg-database-pane-transaction" aria-selected="false">Transaction</button>
+                                    </div>
+                                    <div class="tab-content">
+                                        <div class="tab-pane fade show active" id="dg-database-pane-rules" role="tabpanel" aria-labelledby="dg-database-subtab-rules">
+                                            <ul class="dg-list">
+                                                <li>Main MySQL is for framework/application data.</li>
+                                                <li>Additional DB is for project integrations, reports, lookups, and external transactions.</li>
+                                                <li>Never hardcode DSN, username, or password in module code.</li>
+                                            </ul>
+                                        </div>
+                                        <div class="tab-pane fade" id="dg-database-pane-main" role="tabpanel" aria-labelledby="dg-database-subtab-main">
+                                            <?php renderCodeCard('database-main', $samples); ?>
+                                        </div>
+                                        <div class="tab-pane fade" id="dg-database-pane-additional" role="tabpanel" aria-labelledby="dg-database-subtab-additional">
+                                            <?php renderCodeCard('database-additional', $samples); ?>
+                                        </div>
+                                        <div class="tab-pane fade" id="dg-database-pane-transaction" role="tabpanel" aria-labelledby="dg-database-subtab-transaction">
+                                            <?php renderCodeCard('database-transaction', $samples); ?>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="tab-pane fade" id="dg-pane-ajax" role="tabpanel" aria-labelledby="dg-tab-ajax">
                                 <div class="dg-panel">
                                     <div class="dg-panel-title"><i class="ri-terminal-box-line"></i><h5>AJAX & CSRF</h5></div>
-                                    <ul class="dg-list">
-                                        <li>Every write endpoint must use `require_login()` and CSRF validation.</li>
-                                        <li>Return JSON through shared response helpers.</li>
-                                        <li>Log internal errors, but return safe user-facing messages.</li>
-                                    </ul>
-                                    <?php renderCodeCard('ajax-basic', $samples); ?>
-                                    <?php renderCodeCard('frontend-fetch', $samples); ?>
-                                    <?php renderCodeCard('datatable-ajax', $samples); ?>
+                                    <div class="nav dg-subtabs" id="dg-ajax-subtabs" role="tablist">
+                                        <button class="nav-link active" id="dg-ajax-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-ajax-pane-rules" type="button" role="tab" aria-controls="dg-ajax-pane-rules" aria-selected="true">Rules</button>
+                                        <button class="nav-link" id="dg-ajax-subtab-endpoint" data-bs-toggle="pill" data-bs-target="#dg-ajax-pane-endpoint" type="button" role="tab" aria-controls="dg-ajax-pane-endpoint" aria-selected="false">Endpoint</button>
+                                        <button class="nav-link" id="dg-ajax-subtab-fetch" data-bs-toggle="pill" data-bs-target="#dg-ajax-pane-fetch" type="button" role="tab" aria-controls="dg-ajax-pane-fetch" aria-selected="false">Fetch</button>
+                                        <button class="nav-link" id="dg-ajax-subtab-datatable" data-bs-toggle="pill" data-bs-target="#dg-ajax-pane-datatable" type="button" role="tab" aria-controls="dg-ajax-pane-datatable" aria-selected="false">DataTable</button>
+                                    </div>
+                                    <div class="tab-content">
+                                        <div class="tab-pane fade show active" id="dg-ajax-pane-rules" role="tabpanel" aria-labelledby="dg-ajax-subtab-rules">
+                                            <ul class="dg-list">
+                                                <li>Every write endpoint must use `require_login()` and CSRF validation.</li>
+                                                <li>Return JSON through shared response helpers.</li>
+                                                <li>Log internal errors, but return safe user-facing messages.</li>
+                                            </ul>
+                                        </div>
+                                        <div class="tab-pane fade" id="dg-ajax-pane-endpoint" role="tabpanel" aria-labelledby="dg-ajax-subtab-endpoint">
+                                            <?php renderCodeCard('ajax-basic', $samples); ?>
+                                        </div>
+                                        <div class="tab-pane fade" id="dg-ajax-pane-fetch" role="tabpanel" aria-labelledby="dg-ajax-subtab-fetch">
+                                            <?php renderCodeCard('frontend-fetch', $samples); ?>
+                                        </div>
+                                        <div class="tab-pane fade" id="dg-ajax-pane-datatable" role="tabpanel" aria-labelledby="dg-ajax-subtab-datatable">
+                                            <?php renderCodeCard('datatable-ajax', $samples); ?>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="tab-pane fade" id="dg-pane-notification" role="tabpanel" aria-labelledby="dg-tab-notification">
                                 <div class="dg-panel">
                                     <div class="dg-panel-title"><i class="ri-notification-3-line"></i><h5>Notification</h5></div>
-                                    <ul class="dg-list">
-                                        <li>Use `NotificationPublisher` for event/information notifications.</li>
-                                        <li>Use `NotificationWorkflowService` for approval/action tasks.</li>
-                                        <li>Do not insert directly into notification tables.</li>
-                                    </ul>
-                                    <?php renderCodeCard('notification-event', $samples); ?>
-                                    <?php renderCodeCard('notification-workflow', $samples); ?>
+                                    <div class="nav dg-subtabs" id="dg-notification-subtabs" role="tablist">
+                                        <button class="nav-link active" id="dg-notification-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-notification-pane-rules" type="button" role="tab" aria-controls="dg-notification-pane-rules" aria-selected="true">Rules</button>
+                                        <button class="nav-link" id="dg-notification-subtab-event" data-bs-toggle="pill" data-bs-target="#dg-notification-pane-event" type="button" role="tab" aria-controls="dg-notification-pane-event" aria-selected="false">Event</button>
+                                        <button class="nav-link" id="dg-notification-subtab-workflow" data-bs-toggle="pill" data-bs-target="#dg-notification-pane-workflow" type="button" role="tab" aria-controls="dg-notification-pane-workflow" aria-selected="false">Workflow</button>
+                                    </div>
+                                    <div class="tab-content">
+                                        <div class="tab-pane fade show active" id="dg-notification-pane-rules" role="tabpanel" aria-labelledby="dg-notification-subtab-rules">
+                                            <ul class="dg-list">
+                                                <li>Use `NotificationPublisher` for event/information notifications.</li>
+                                                <li>Use `NotificationWorkflowService` for approval/action tasks.</li>
+                                                <li>Do not insert directly into notification tables.</li>
+                                            </ul>
+                                        </div>
+                                        <div class="tab-pane fade" id="dg-notification-pane-event" role="tabpanel" aria-labelledby="dg-notification-subtab-event">
+                                            <?php renderCodeCard('notification-event', $samples); ?>
+                                        </div>
+                                        <div class="tab-pane fade" id="dg-notification-pane-workflow" role="tabpanel" aria-labelledby="dg-notification-subtab-workflow">
+                                            <?php renderCodeCard('notification-workflow', $samples); ?>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="tab-pane fade" id="dg-pane-language" role="tabpanel" aria-labelledby="dg-tab-language">
                                 <div class="dg-panel">
                                     <div class="dg-panel-title"><i class="ri-translate-2"></i><h5>Language</h5></div>
-                                    <ul class="dg-list">
-                                        <li>Project/module keys belong in `public/lang/custom/*.php`.</li>
-                                        <li>Do not edit `public/lang/core/*.php` for project-specific text.</li>
-                                        <li>Run `php tools/language-split-tool.php validate` after language changes.</li>
-                                    </ul>
-                                    <?php renderCodeCard('language-custom', $samples); ?>
+                                    <div class="nav dg-subtabs" id="dg-language-subtabs" role="tablist">
+                                        <button class="nav-link active" id="dg-language-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-language-pane-rules" type="button" role="tab" aria-controls="dg-language-pane-rules" aria-selected="true">Rules</button>
+                                        <button class="nav-link" id="dg-language-subtab-sample" data-bs-toggle="pill" data-bs-target="#dg-language-pane-sample" type="button" role="tab" aria-controls="dg-language-pane-sample" aria-selected="false">Custom Keys</button>
+                                    </div>
+                                    <div class="tab-content">
+                                        <div class="tab-pane fade show active" id="dg-language-pane-rules" role="tabpanel" aria-labelledby="dg-language-subtab-rules">
+                                            <ul class="dg-list">
+                                                <li>Project/module keys belong in `public/lang/custom/*.php`.</li>
+                                                <li>Do not edit `public/lang/core/*.php` for project-specific text.</li>
+                                                <li>Run `php tools/language-split-tool.php validate` after language changes.</li>
+                                            </ul>
+                                        </div>
+                                        <div class="tab-pane fade" id="dg-language-pane-sample" role="tabpanel" aria-labelledby="dg-language-subtab-sample">
+                                            <?php renderCodeCard('language-custom', $samples); ?>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="tab-pane fade" id="dg-pane-menu" role="tabpanel" aria-labelledby="dg-tab-menu">
                                 <div class="dg-panel">
                                     <div class="dg-panel-title"><i class="ri-menu-search-line"></i><h5>Menu & Access</h5></div>
-                                    <ul class="dg-list">
-                                        <li>Register pages through `kumpulan-pengguna.php` Menu Access.</li>
-                                        <li>Use optional menu subgroups when a parent module needs grouped child menus.</li>
-                                        <li>Do not hardcode sidebar links in `public/includes/sidebar.php`.</li>
-                                        <li>Use Access Matrix to review effective access.</li>
-                                    </ul>
-                                    <div class="dg-pattern-grid mt-3">
-                                        <div class="dg-step-card">
-                                            <span class="dg-step-no">1</span>
-                                            <h6>Create Module/Menu</h6>
-                                            <p>Register page path such as `pages/my-module.php`, icon, order, and visibility from Menu Access.</p>
+                                    <div class="nav dg-subtabs" id="dg-menu-subtabs" role="tablist">
+                                        <button class="nav-link active" id="dg-menu-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-menu-pane-rules" type="button" role="tab" aria-controls="dg-menu-pane-rules" aria-selected="true">Rules</button>
+                                        <button class="nav-link" id="dg-menu-subtab-flow" data-bs-toggle="pill" data-bs-target="#dg-menu-pane-flow" type="button" role="tab" aria-controls="dg-menu-pane-flow" aria-selected="false">Setup Flow</button>
+                                        <button class="nav-link" id="dg-menu-subtab-reference" data-bs-toggle="pill" data-bs-target="#dg-menu-pane-reference" type="button" role="tab" aria-controls="dg-menu-pane-reference" aria-selected="false">Reference</button>
+                                    </div>
+                                    <div class="tab-content">
+                                        <div class="tab-pane fade show active" id="dg-menu-pane-rules" role="tabpanel" aria-labelledby="dg-menu-subtab-rules">
+                                            <ul class="dg-list">
+                                                <li>Register pages through `kumpulan-pengguna.php` Menu Access.</li>
+                                                <li>Use optional menu subgroups when a parent module needs grouped child menus.</li>
+                                                <li>Do not hardcode sidebar links in `public/includes/sidebar.php`.</li>
+                                                <li>Use Access Matrix to review effective access.</li>
+                                            </ul>
                                         </div>
-                                        <div class="dg-step-card">
-                                            <span class="dg-step-no">2</span>
-                                            <h6>Add Subgroup If Needed</h6>
-                                            <p>Use subgroup only when one parent menu contains multiple logical sections.</p>
+                                        <div class="tab-pane fade" id="dg-menu-pane-flow" role="tabpanel" aria-labelledby="dg-menu-subtab-flow">
+                                            <div class="dg-pattern-grid mt-3">
+                                                <div class="dg-step-card">
+                                                    <span class="dg-step-no">1</span>
+                                                    <h6>Create Module/Menu</h6>
+                                                    <p>Register page path such as `pages/my-module.php`, icon, order, and visibility from Menu Access.</p>
+                                                </div>
+                                                <div class="dg-step-card">
+                                                    <span class="dg-step-no">2</span>
+                                                    <h6>Add Subgroup If Needed</h6>
+                                                    <p>Use subgroup only when one parent menu contains multiple logical sections.</p>
+                                                </div>
+                                                <div class="dg-step-card">
+                                                    <span class="dg-step-no">3</span>
+                                                    <h6>Assign Group Access</h6>
+                                                    <p>Enable the menu for the correct user group and confirm the expected status.</p>
+                                                </div>
+                                                <div class="dg-step-card">
+                                                    <span class="dg-step-no">4</span>
+                                                    <h6>Verify Effective Access</h6>
+                                                    <p>Use Access Matrix and test direct URL access with an unauthorized account.</p>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div class="dg-step-card">
-                                            <span class="dg-step-no">3</span>
-                                            <h6>Assign Group Access</h6>
-                                            <p>Enable the menu for the correct user group and confirm the expected status.</p>
-                                        </div>
-                                        <div class="dg-step-card">
-                                            <span class="dg-step-no">4</span>
-                                            <h6>Verify Effective Access</h6>
-                                            <p>Use Access Matrix and test direct URL access with an unauthorized account.</p>
+                                        <div class="tab-pane fade" id="dg-menu-pane-reference" role="tabpanel" aria-labelledby="dg-menu-subtab-reference">
+                                            <div class="dg-callout mt-3">Reference: `docs/sidebar-menu-subgroup-blueprint-2026-05-06.md`.</div>
                                         </div>
                                     </div>
-                                    <div class="dg-callout mt-3">Reference: `docs/sidebar-menu-subgroup-blueprint-2026-05-06.md`.</div>
                                 </div>
                             </div>
 
                             <div class="tab-pane fade" id="dg-pane-audit" role="tabpanel" aria-labelledby="dg-tab-audit">
                                 <div class="dg-panel">
                                     <div class="dg-panel-title"><i class="ri-shield-check-line"></i><h5>Audit</h5></div>
-                                    <ul class="dg-list">
-                                        <li>Use audit helpers for sensitive module actions.</li>
-                                        <li>Never log passwords, DSNs with credentials, tokens, or full sensitive payloads.</li>
-                                        <li>Use clear `event_type`, `target_type`, and `target_id` values.</li>
-                                        <li>During Admin View As, use actor/effective-user helpers when module code needs to explain support actions.</li>
-                                    </ul>
-                                    <?php renderCodeCard('audit-event', $samples); ?>
-                                    <?php renderCodeCard('impersonation-context', $samples); ?>
+                                    <div class="nav dg-subtabs" id="dg-audit-subtabs" role="tablist">
+                                        <button class="nav-link active" id="dg-audit-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-audit-pane-rules" type="button" role="tab" aria-controls="dg-audit-pane-rules" aria-selected="true">Rules</button>
+                                        <button class="nav-link" id="dg-audit-subtab-event" data-bs-toggle="pill" data-bs-target="#dg-audit-pane-event" type="button" role="tab" aria-controls="dg-audit-pane-event" aria-selected="false">Audit Event</button>
+                                        <button class="nav-link" id="dg-audit-subtab-viewas" data-bs-toggle="pill" data-bs-target="#dg-audit-pane-viewas" type="button" role="tab" aria-controls="dg-audit-pane-viewas" aria-selected="false">View As</button>
+                                    </div>
+                                    <div class="tab-content">
+                                        <div class="tab-pane fade show active" id="dg-audit-pane-rules" role="tabpanel" aria-labelledby="dg-audit-subtab-rules">
+                                            <ul class="dg-list">
+                                                <li>Use audit helpers for sensitive module actions.</li>
+                                                <li>Never log passwords, DSNs with credentials, tokens, or full sensitive payloads.</li>
+                                                <li>Use clear `event_type`, `target_type`, and `target_id` values.</li>
+                                                <li>During Admin View As, use actor/effective-user helpers when module code needs to explain support actions.</li>
+                                            </ul>
+                                        </div>
+                                        <div class="tab-pane fade" id="dg-audit-pane-event" role="tabpanel" aria-labelledby="dg-audit-subtab-event">
+                                            <?php renderCodeCard('audit-event', $samples); ?>
+                                        </div>
+                                        <div class="tab-pane fade" id="dg-audit-pane-viewas" role="tabpanel" aria-labelledby="dg-audit-subtab-viewas">
+                                            <?php renderCodeCard('impersonation-context', $samples); ?>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="tab-pane fade" id="dg-pane-email" role="tabpanel" aria-labelledby="dg-tab-email">
                                 <div class="dg-panel">
                                     <div class="dg-panel-title"><i class="ri-mail-send-line"></i><h5>Email</h5></div>
-                                    <ul class="dg-list">
-                                        <li>Manage reusable templates through `template-emel.php`.</li>
-                                        <li>Keep module-specific variables in service/controller code.</li>
-                                        <li>Avoid hardcoded long email bodies inside business pages.</li>
-                                    </ul>
-                                    <?php renderCodeCard('email-template', $samples); ?>
+                                    <div class="nav dg-subtabs" id="dg-email-subtabs" role="tablist">
+                                        <button class="nav-link active" id="dg-email-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-email-pane-rules" type="button" role="tab" aria-controls="dg-email-pane-rules" aria-selected="true">Rules</button>
+                                        <button class="nav-link" id="dg-email-subtab-template" data-bs-toggle="pill" data-bs-target="#dg-email-pane-template" type="button" role="tab" aria-controls="dg-email-pane-template" aria-selected="false">Template</button>
+                                    </div>
+                                    <div class="tab-content">
+                                        <div class="tab-pane fade show active" id="dg-email-pane-rules" role="tabpanel" aria-labelledby="dg-email-subtab-rules">
+                                            <ul class="dg-list">
+                                                <li>Manage reusable templates through `template-emel.php`.</li>
+                                                <li>Keep module-specific variables in service/controller code.</li>
+                                                <li>Avoid hardcoded long email bodies inside business pages.</li>
+                                            </ul>
+                                        </div>
+                                        <div class="tab-pane fade" id="dg-email-pane-template" role="tabpanel" aria-labelledby="dg-email-subtab-template">
+                                            <?php renderCodeCard('email-template', $samples); ?>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="tab-pane fade" id="dg-pane-ui" role="tabpanel" aria-labelledby="dg-tab-ui">
                                 <div class="dg-panel">
                                     <div class="dg-panel-title"><i class="ri-layout-4-line"></i><h5>UI Patterns</h5></div>
-                                    <div class="dg-pattern-grid">
-                                        <div class="dg-step-card">
-                                            <span class="dg-step-no"><i class="ri-table-line"></i></span>
-                                            <h6>DataTables</h6>
-                                            <p>Use the same table structure, paging, search spacing, and top-aligned cells as existing admin pages.</p>
+                                    <div class="nav dg-subtabs" id="dg-ui-subtabs" role="tablist">
+                                        <button class="nav-link active" id="dg-ui-subtab-components" data-bs-toggle="pill" data-bs-target="#dg-ui-pane-components" type="button" role="tab" aria-controls="dg-ui-pane-components" aria-selected="true">Components</button>
+                                        <button class="nav-link" id="dg-ui-subtab-boundary" data-bs-toggle="pill" data-bs-target="#dg-ui-pane-boundary" type="button" role="tab" aria-controls="dg-ui-pane-boundary" aria-selected="false">Boundary</button>
+                                    </div>
+                                    <div class="tab-content">
+                                        <div class="tab-pane fade show active" id="dg-ui-pane-components" role="tabpanel" aria-labelledby="dg-ui-subtab-components">
+                                            <div class="dg-pattern-grid">
+                                                <div class="dg-step-card">
+                                                    <span class="dg-step-no"><i class="ri-table-line"></i></span>
+                                                    <h6>DataTables</h6>
+                                                    <p>Use the same table structure, paging, search spacing, and top-aligned cells as existing admin pages.</p>
+                                                </div>
+                                                <div class="dg-step-card">
+                                                    <span class="dg-step-no"><i class="ri-window-line"></i></span>
+                                                    <h6>Modals</h6>
+                                                    <p>Tabbed modals should open top-aligned; simple confirmation or single-form modals can remain centered.</p>
+                                                </div>
+                                                <div class="dg-step-card">
+                                                    <span class="dg-step-no"><i class="ri-information-line"></i></span>
+                                                    <h6>Field Help</h6>
+                                                    <p>Use small info icons with tooltips for detailed guidance instead of long inline descriptions.</p>
+                                                </div>
+                                                <div class="dg-step-card">
+                                                    <span class="dg-step-no"><i class="ri-palette-line"></i></span>
+                                                    <h6>Theme Safety</h6>
+                                                    <p>Use existing CSS variables and theme classes. Do not hardcode page colors that fight user theme settings.</p>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div class="dg-step-card">
-                                            <span class="dg-step-no"><i class="ri-window-line"></i></span>
-                                            <h6>Modals</h6>
-                                            <p>Tabbed modals should open top-aligned; simple confirmation or single-form modals can remain centered.</p>
-                                        </div>
-                                        <div class="dg-step-card">
-                                            <span class="dg-step-no"><i class="ri-information-line"></i></span>
-                                            <h6>Field Help</h6>
-                                            <p>Use small info icons with tooltips for detailed guidance instead of long inline descriptions.</p>
-                                        </div>
-                                        <div class="dg-step-card">
-                                            <span class="dg-step-no"><i class="ri-palette-line"></i></span>
-                                            <h6>Theme Safety</h6>
-                                            <p>Use existing CSS variables and theme classes. Do not hardcode page colors that fight user theme settings.</p>
+                                        <div class="tab-pane fade" id="dg-ui-pane-boundary" role="tabpanel" aria-labelledby="dg-ui-subtab-boundary">
+                                            <div class="dg-callout mt-3">Keep page UI inside the module page or module stylesheet. Avoid changing shared includes unless the feature is truly framework-level.</div>
                                         </div>
                                     </div>
-                                    <div class="dg-callout mt-3">Keep page UI inside the module page or module stylesheet. Avoid changing shared includes unless the feature is truly framework-level.</div>
                                 </div>
                             </div>
 
                             <div class="tab-pane fade" id="dg-pane-checklist" role="tabpanel" aria-labelledby="dg-tab-checklist">
                                 <div class="dg-panel">
                                     <div class="dg-panel-title"><i class="ri-list-check-3"></i><h5>Release Checklist</h5></div>
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
+                                    <div class="nav dg-subtabs" id="dg-checklist-subtabs" role="tablist">
+                                        <button class="nav-link active" id="dg-checklist-subtab-before" data-bs-toggle="pill" data-bs-target="#dg-checklist-pane-before" type="button" role="tab" aria-controls="dg-checklist-pane-before" aria-selected="true">Before Coding</button>
+                                        <button class="nav-link" id="dg-checklist-subtab-handover" data-bs-toggle="pill" data-bs-target="#dg-checklist-pane-handover" type="button" role="tab" aria-controls="dg-checklist-pane-handover" aria-selected="false">Before Handover</button>
+                                    </div>
+                                    <div class="tab-content">
+                                        <div class="tab-pane fade show active" id="dg-checklist-pane-before" role="tabpanel" aria-labelledby="dg-checklist-subtab-before">
                                             <div class="dg-rule-card h-100">
                                                 <h6>Before Coding</h6>
                                                 <ul class="dg-list">
@@ -883,7 +1055,7 @@ function renderCodeCard(string $sampleId, array $samples): void
                                                 </ul>
                                             </div>
                                         </div>
-                                        <div class="col-md-6">
+                                        <div class="tab-pane fade" id="dg-checklist-pane-handover" role="tabpanel" aria-labelledby="dg-checklist-subtab-handover">
                                             <div class="dg-rule-card h-100">
                                                 <h6>Before Handover</h6>
                                                 <ul class="dg-list">
@@ -903,6 +1075,8 @@ function renderCodeCard(string $sampleId, array $samples): void
             </div>
         </div>
     </div>
+
+    <?php include __DIR__ . '/../includes/footer.php'; ?>
 </div>
 
 <?php include __DIR__ . '/../includes/script.php'; ?>
