@@ -1,4 +1,5 @@
 <?php
+//Update
 declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/init.php';
@@ -160,6 +161,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/init.php';
 require_login();
+require_page_access('pages/my-module.php');
 require_once __DIR__ . '/_helpers.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -857,9 +859,11 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
                                         <button class="nav-link" id="dg-ajax-subtab-datatable" data-bs-toggle="pill" data-bs-target="#dg-ajax-pane-datatable" type="button" role="tab" aria-controls="dg-ajax-pane-datatable" aria-selected="false">DataTable</button>
                                     </div>
                                     <div class="tab-content">
-                                        <div class="tab-pane fade show active" id="dg-ajax-pane-rules" role="tabpanel" aria-labelledby="dg-ajax-subtab-rules">
-                                            <ul class="dg-list">
-                                                <li>Every write endpoint must use `require_login()` and CSRF validation.</li>
+        <div class="tab-pane fade show active" id="dg-ajax-pane-rules" role="tabpanel" aria-labelledby="dg-ajax-subtab-rules">
+            <ul class="dg-list">
+                                                <li>Every AJAX endpoint must include `init.php` and call `require_login()`.</li>
+                                                <li>Page-specific AJAX endpoints must call `require_page_access('pages/parent-page.php')` so direct AJAX access follows the same menu/group permission as the parent page.</li>
+                                                <li>Every write endpoint must use CSRF validation.</li>
                                                 <li>Return JSON through shared response helpers.</li>
                                                 <li>Log internal errors, but return safe user-facing messages.</li>
                                             </ul>
