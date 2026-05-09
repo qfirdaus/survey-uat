@@ -1107,9 +1107,8 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
                 </div>
             </div>
         </div>
+        <?php include __DIR__ . '/../includes/footer.php'; ?>
     </div>
-
-    <?php include __DIR__ . '/../includes/footer.php'; ?>
 </div>
 
 <?php include __DIR__ . '/../includes/script.php'; ?>
