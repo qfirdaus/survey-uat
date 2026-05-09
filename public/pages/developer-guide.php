@@ -1,5 +1,4 @@
 <?php
-//Update
 declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/init.php';
@@ -89,6 +88,7 @@ $PAGE_TITLE = __('myModule_page_title');
         <!-- Page content here -->
       </div>
     </div>
+    <?php include __DIR__ . '/../includes/footer.php'; ?>
   </div>
 </div>
 <?php include __DIR__ . '/../includes/script.php'; ?>
@@ -253,6 +253,7 @@ JS,
 // ajax/my-module-list.php
 require_once __DIR__ . '/../includes/init.php';
 require_login();
+require_page_access('pages/my-module.php');
 require_once __DIR__ . '/_helpers.php';
 
 $pdo = Database::getInstance('mysql')->getConnection();
