@@ -428,6 +428,35 @@ const MenuAccess = {
     return !!window.GroupPageRuntime?.canManageGroups;
   },
 
+  findGroupTableRow(groupId) {
+    const table = this.getGroupTableApi();
+    const targetGroupId = parseInt(groupId || '0', 10) || 0;
+    if (!table || targetGroupId <= 0) return null;
+
+    let matchedRow = null;
+    table.rows().every(function () {
+      const node = this.node();
+      let rowGroupId = parseInt(node?.getAttribute?.('data-group-id') || '0', 10) || 0;
+
+      if (rowGroupId <= 0) {
+        const data = this.data();
+        if (Array.isArray(data)) {
+          const actionHtml = String((data[5] || '') + (data[6] || '') + (data[7] || ''));
+          const match = actionHtml.match(/data-group-id=["']?(\d+)/);
+          rowGroupId = match ? (parseInt(match[1], 10) || 0) : 0;
+        }
+      }
+
+      if (rowGroupId === targetGroupId) {
+        matchedRow = this;
+        return false;
+      }
+      return true;
+    });
+
+    return matchedRow;
+  },
+
   normalizeGroupRecord(group = {}) {
     const modulAccess = Array.isArray(group.modulAccess)
       ? group.modulAccess
@@ -456,12 +485,11 @@ const MenuAccess = {
   },
 
   extractGroupRecordFromRow(groupId) {
-    const table = this.getGroupTableApi();
     const targetGroupId = parseInt(groupId || '0', 10) || 0;
-    if (!table || targetGroupId <= 0) return null;
+    if (targetGroupId <= 0) return null;
 
-    const row = table.row('tr[data-group-id="' + targetGroupId + '"]');
-    if (!row.any()) return null;
+    const row = this.findGroupTableRow(targetGroupId);
+    if (!row) return null;
 
     const node = row.node();
     const data = row.data();
@@ -509,7 +537,8 @@ const MenuAccess = {
   buildGroupRowData(group = {}, index = 1) {
     const record = this.normalizeGroupRecord(group);
     const hasAccess = record.modulAccess.length > 0 || record.menuAccess.length > 0;
-    const canDeleteGroup = !hasAccess;
+    const hasCompleteIdentity = record.id > 0 && (record.kod !== '' || record.nama !== '');
+    const canDeleteGroup = hasCompleteIdentity && !hasAccess;
     const barColor = record.color || '#94a3b8';
     const esc = (value) => GroupUtils.esc(String(value ?? ''));
     const escAttr = (value) => this.escapeAttr(value);
@@ -588,14 +617,15 @@ const MenuAccess = {
     const table = this.getGroupTableApi();
     const record = this.normalizeGroupRecord(this.mergeGroupRecord(group));
     if (!table || record.id <= 0) return false;
+    const hasCompleteIdentity = record.kod !== '' || record.nama !== '';
 
-    const selector = 'tr[data-group-id="' + record.id + '"]';
-    const existingRow = table.row(selector);
-    if (existingRow.any()) {
+    const existingRow = this.findGroupTableRow(record.id);
+    if (existingRow) {
       existingRow.data(this.buildGroupRowData(record));
       const node = existingRow.node();
       if (node) node.setAttribute('data-group-id', String(record.id));
     } else {
+      if (!hasCompleteIdentity) return false;
       const node = table.row.add(this.buildGroupRowData(record)).draw(false).node();
       if (node) node.setAttribute('data-group-id', String(record.id));
     }
@@ -646,11 +676,10 @@ const MenuAccess = {
   },
 
   removeGroupTableRow(groupId) {
-    const table = this.getGroupTableApi();
     const targetGroupId = parseInt(groupId || '0', 10) || 0;
-    if (!table || targetGroupId <= 0) return false;
-    const row = table.row('tr[data-group-id="' + targetGroupId + '"]');
-    if (!row.any()) return false;
+    if (targetGroupId <= 0) return false;
+    const row = this.findGroupTableRow(targetGroupId);
+    if (!row) return false;
     row.remove().draw(false);
     this.reindexGroupTable();
     return true;
