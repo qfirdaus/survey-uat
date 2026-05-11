@@ -35,7 +35,7 @@ $guideTabs = [
     'ajax' => ['icon' => 'ri-terminal-box-line', 'label' => dg('developerGuide_tab_ajax', 'AJAX & CSRF')],
     'notification' => ['icon' => 'ri-notification-3-line', 'label' => dg('developerGuide_tab_notification', 'Notification')],
     'language' => ['icon' => 'ri-translate-2', 'label' => dg('developerGuide_tab_language', 'Language')],
-    'menu' => ['icon' => 'ri-menu-search-line', 'label' => dg('developerGuide_tab_menu', 'Menu & Access')],
+    'menu' => ['icon' => 'ri-menu-2-line', 'label' => dg('developerGuide_tab_menu', 'Menu & Access')],
     'audit' => ['icon' => 'ri-shield-check-line', 'label' => dg('developerGuide_tab_audit', 'Audit')],
     'email' => ['icon' => 'ri-mail-send-line', 'label' => dg('developerGuide_tab_email', 'Email')],
     'ui' => ['icon' => 'ri-layout-4-line', 'label' => dg('developerGuide_tab_ui', 'UI Patterns')],
@@ -47,7 +47,7 @@ $docLinks = [
     ['icon' => 'ri-code-box-line', 'title' => 'Notification Examples', 'path' => 'docs/notification-developer-examples-2026-05-03.md'],
     ['icon' => 'ri-database-2-line', 'title' => 'Additional Database', 'path' => 'docs/additional-database-platform-implementation-2026-04-27.md'],
     ['icon' => 'ri-translate-2', 'title' => 'Language Core/Custom', 'path' => 'docs/language-core-custom-split-audit-2026-05-02.md'],
-    ['icon' => 'ri-menu-search-line', 'title' => 'Sidebar Subgroup', 'path' => 'docs/sidebar-menu-subgroup-blueprint-2026-05-06.md'],
+    ['icon' => 'ri-menu-2-line', 'title' => 'Sidebar Subgroup', 'path' => 'docs/sidebar-menu-subgroup-blueprint-2026-05-06.md'],
     ['icon' => 'ri-layout-grid-line', 'title' => 'Page Generator Roadmap', 'path' => 'docs/page-template-generator-roadmap-2026-03-27.md'],
 ];
 
@@ -936,7 +936,7 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
 
                             <div class="tab-pane fade" id="dg-pane-menu" role="tabpanel" aria-labelledby="dg-tab-menu">
                                 <div class="dg-panel">
-                                    <div class="dg-panel-title"><i class="ri-menu-search-line"></i><h5>Menu & Access</h5></div>
+                                    <div class="dg-panel-title"><i class="ri-menu-2-line"></i><h5>Menu & Access</h5></div>
                                     <div class="nav dg-subtabs" id="dg-menu-subtabs" role="tablist">
                                         <button class="nav-link active" id="dg-menu-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-menu-pane-rules" type="button" role="tab" aria-controls="dg-menu-pane-rules" aria-selected="true">Rules</button>
                                         <button class="nav-link" id="dg-menu-subtab-flow" data-bs-toggle="pill" data-bs-target="#dg-menu-pane-flow" type="button" role="tab" aria-controls="dg-menu-pane-flow" aria-selected="false">Setup Flow</button>
