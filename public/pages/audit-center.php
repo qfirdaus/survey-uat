@@ -212,31 +212,10 @@ $tabMeta = [
   let auditCenterLoaderToken = null;
 
   function showAuditCenterLoader(message) {
-    if (auditCenterLoaderToken) {
-      if (window.AppLoader && typeof window.AppLoader.update === 'function') {
-        window.AppLoader.update(message || i18n.loadingPanel);
-      } else if (window.IQSLoader && typeof window.IQSLoader.update === 'function') {
-        window.IQSLoader.update(message || i18n.loadingPanel);
-      }
-      return;
-    }
-
-    if (window.AppLoader && typeof window.AppLoader.show === 'function') {
-      auditCenterLoaderToken = window.AppLoader.show(message || i18n.loadingPanel);
-    } else if (window.IQSLoader && typeof window.IQSLoader.show === 'function') {
-      auditCenterLoaderToken = window.IQSLoader.show(message || i18n.loadingPanel);
-    }
+    auditCenterLoaderToken = message || i18n.loadingPanel;
   }
 
   function hideAuditCenterLoader() {
-    if (!auditCenterLoaderToken) {
-      return;
-    }
-    if (window.AppLoader && typeof window.AppLoader.hide === 'function') {
-      window.AppLoader.hide(auditCenterLoaderToken);
-    } else if (window.IQSLoader && typeof window.IQSLoader.hide === 'function') {
-      window.IQSLoader.hide(auditCenterLoaderToken);
-    }
     auditCenterLoaderToken = null;
   }
 

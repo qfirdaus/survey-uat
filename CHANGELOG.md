@@ -6,6 +6,23 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+## [1.7.8] - 2026-05-20
+
+### Added
+- Added `.sync-update-ignore` support to `sync-updates.sh` and `update-files.sh` so selected update files can be excluded from `updates/` collection and downstream sync distribution.
+- Added `e-prestasi` to the registered downstream project list for `sync-updates.sh`.
+
+### Changed
+- Changed global loader behavior so the full-page loader is now reserved for sidebar navigation, while in-page actions rely on local loading states.
+- Changed `kumpulan-pengguna.php` group, menu, and module flows to use standardized SweetAlert handling, faster modal-open sequencing, and earlier success feedback after confirmed server writes.
+- Changed project release metadata to lock the application version at `1.7.8`.
+
+### Fixed
+- Fixed `kumpulan-pengguna.php` table refresh behavior so add/edit/delete menu actions no longer create malformed or ghost rows during in-place updates.
+- Fixed group delete-button visibility so the main table now follows the same eligibility rules as the backend, including protected groups and assigned-user checks.
+- Fixed `kumpulan-pengguna.php` Module Access column so the action button remains available for manageable groups instead of appearing unintentionally disabled.
+- Fixed post-transaction feedback timing across group and module management flows so success alerts are shown without waiting for heavier sidebar or table refresh work to finish.
+
 ## [1.7.7] - 2026-05-08
 
 ### Added

@@ -39,26 +39,12 @@ const GroupUtils = {
 
   showLoader(key, message) {
     const loaderKey = String(key || 'group');
-    this.hideLoader(loaderKey);
-    const text = message || this.t('loading', 'Loading...');
-    if (window.AppLoader && typeof window.AppLoader.show === 'function') {
-      this._loaderTokens[loaderKey] = window.AppLoader.show(text);
-    } else if (window.IQSLoader && typeof window.IQSLoader.show === 'function') {
-      this._loaderTokens[loaderKey] = window.IQSLoader.show(text);
-    }
+    this._loaderTokens[loaderKey] = message || this.t('loading', 'Loading...');
+    return this._loaderTokens[loaderKey];
   },
 
   hideLoader(key) {
     const loaderKey = String(key || 'group');
-    const token = this._loaderTokens[loaderKey];
-    if (!token) {
-      return;
-    }
-    if (window.AppLoader && typeof window.AppLoader.hide === 'function') {
-      window.AppLoader.hide(token);
-    } else if (window.IQSLoader && typeof window.IQSLoader.hide === 'function') {
-      window.IQSLoader.hide(token);
-    }
     delete this._loaderTokens[loaderKey];
   },
   
@@ -143,6 +129,16 @@ const GroupUtils = {
       const s = String(href).toLowerCase();
       return s.split('/').pop().split('?')[0].split('#')[0];
     }
+  },
+
+  fireAlert(options = {}) {
+    if (window.GroupSwal && typeof window.GroupSwal.fire === 'function') {
+      return window.GroupSwal.fire(options);
+    }
+    if (window.Swal && typeof window.Swal.fire === 'function') {
+      return window.Swal.fire(options);
+    }
+    return Promise.resolve(null);
   }
 };
 

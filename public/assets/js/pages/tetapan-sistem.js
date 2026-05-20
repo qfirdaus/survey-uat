@@ -25,22 +25,12 @@
   function showTetapanLoader(key, message) {
     hideTetapanLoader(key);
     const text = message || (getTetapanTranslator()('config_js_btn_loading_save') || 'Saving...');
-    if (window.AppLoader && typeof window.AppLoader.show === 'function') {
-      tetapanLoaderTokens[key] = window.AppLoader.show(text);
-    } else if (window.IQSLoader && typeof window.IQSLoader.show === 'function') {
-      tetapanLoaderTokens[key] = window.IQSLoader.show(text);
-    }
+    tetapanLoaderTokens[key] = text;
   }
 
   function hideTetapanLoader(key) {
-    const token = tetapanLoaderTokens[key];
-    if (!token) {
+    if (!tetapanLoaderTokens[key]) {
       return;
-    }
-    if (window.AppLoader && typeof window.AppLoader.hide === 'function') {
-      window.AppLoader.hide(token);
-    } else if (window.IQSLoader && typeof window.IQSLoader.hide === 'function') {
-      window.IQSLoader.hide(token);
     }
     delete tetapanLoaderTokens[key];
   }

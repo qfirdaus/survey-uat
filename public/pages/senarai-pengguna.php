@@ -3171,25 +3171,10 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
    */
   function showLoading(message = '<?= h(__('userList_processing')) ?>') {
     hideLoading();
-    if (window.AppLoader && typeof window.AppLoader.show === 'function') {
-      window.__userListLoaderToken = window.AppLoader.show(message);
-      return;
-    }
-
-    if (window.IQSLoader && typeof window.IQSLoader.show === 'function') {
-      window.__userListLoaderToken = window.IQSLoader.show(message);
-    }
+    window.__userListLoaderToken = message;
   }
 
   function hideLoading() {
-    if (!window.__userListLoaderToken) {
-      return;
-    }
-    if (window.AppLoader && typeof window.AppLoader.hide === 'function') {
-      window.AppLoader.hide(window.__userListLoaderToken);
-    } else if (window.IQSLoader && typeof window.IQSLoader.hide === 'function') {
-      window.IQSLoader.hide(window.__userListLoaderToken);
-    }
     window.__userListLoaderToken = null;
   }
 

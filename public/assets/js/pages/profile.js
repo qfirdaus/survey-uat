@@ -122,22 +122,12 @@
 
     showPageLoader: function (key, message) {
       this.hidePageLoader(key);
-      if (window.AppLoader && typeof window.AppLoader.show === 'function') {
-        this.pageLoaderTokens[key] = window.AppLoader.show(message || I18N.loading || I18N.dt_processing || 'Loading...');
-      } else if (window.IQSLoader && typeof window.IQSLoader.show === 'function') {
-        this.pageLoaderTokens[key] = window.IQSLoader.show(message || I18N.loading || I18N.dt_processing || 'Loading...');
-      }
+      this.pageLoaderTokens[key] = message || I18N.loading || I18N.dt_processing || 'Loading...';
     },
 
     hidePageLoader: function (key) {
-      const token = this.pageLoaderTokens[key];
-      if (!token) {
+      if (!this.pageLoaderTokens[key]) {
         return;
-      }
-      if (window.AppLoader && typeof window.AppLoader.hide === 'function') {
-        window.AppLoader.hide(token);
-      } else if (window.IQSLoader && typeof window.IQSLoader.hide === 'function') {
-        window.IQSLoader.hide(token);
       }
       delete this.pageLoaderTokens[key];
     },

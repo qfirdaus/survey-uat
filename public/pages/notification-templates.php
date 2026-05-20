@@ -661,9 +661,6 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
     clearAlert();
     saveBtn.disabled = true;
     saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>' + labels.saving;
-    const loaderToken = window.AppLoader && typeof window.AppLoader.show === 'function'
-      ? window.AppLoader.show(labels.saving)
-      : null;
     post(readForm())
       .then(function (data) {
         updateFromResponse(data);
@@ -675,9 +672,6 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
       .finally(function () {
         saveBtn.disabled = false;
         saveBtn.innerHTML = '<i class="ri-save-line me-1"></i>' + labels.save;
-        if (loaderToken && window.AppLoader && typeof window.AppLoader.hide === 'function') {
-          window.AppLoader.hide(loaderToken);
-        }
       });
   });
 

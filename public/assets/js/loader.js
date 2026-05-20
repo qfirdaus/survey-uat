@@ -72,6 +72,19 @@
     );
   }
 
+  function isSidebarNavigationLink(anchor) {
+    if (!anchor || !anchor.closest) {
+      return false;
+    }
+
+    var sidebar = anchor.closest('#leftside-menu');
+    if (!sidebar) {
+      return false;
+    }
+
+    return !anchor.hasAttribute('data-sidebar-toggle');
+  }
+
   function headerValue(headers, key) {
     if (!headers) {
       return null;
@@ -102,18 +115,10 @@
 
   document.addEventListener('click', function (event) {
     var anchor = event.target.closest && event.target.closest('a[href]');
-    if (!anchor || shouldSkipLink(event, anchor)) {
+    if (!anchor || shouldSkipLink(event, anchor) || !isSidebarNavigationLink(anchor)) {
       return;
     }
     show(defaultI18n.navigation || defaultI18n.defaultMessage);
-  }, true);
-
-  document.addEventListener('submit', function (event) {
-    var form = event.target;
-    if (!form || isSkippedElement(form)) {
-      return;
-    }
-    show(defaultI18n.submitting || defaultI18n.saving || defaultI18n.defaultMessage);
   }, true);
 
   if (typeof window.fetch === 'function' && !window.__AppLoaderFetchWrapped) {

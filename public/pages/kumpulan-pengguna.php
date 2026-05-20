@@ -2298,7 +2298,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') ==
                               $barColor = $rawColor;
                             }
                             $hasAccess = (trim($modAks) !== '' || trim($menuAks) !== '');
-                            $canDeleteGroup = (trim($modAks) === '' && trim($menuAks) === '');
+                            $userCount = (int)($g['userCount'] ?? 0);
+                            $saId = defined('PRESTASI_ROLE_ID_ADM_SA') ? (int)PRESTASI_ROLE_ID_ADM_SA : 0;
+                            $saCode = defined('PRESTASI_ROLE_KOD_ADM_SA')
+                              ? strtoupper(trim((string)PRESTASI_ROLE_KOD_ADM_SA))
+                              : (defined('PRESTASI_ROLE_ADM_SA') ? strtoupper(trim((string)PRESTASI_ROLE_ADM_SA)) : 'ADM-SA');
+                            $isProtectedGroup = ($saId > 0 && $groupID === $saId) || (strtoupper(trim($kod)) === $saCode);
+                            $canDeleteGroup = !$hasAccess && $userCount === 0 && !$isProtectedGroup;
                           ?>
                           <tr data-group-id="<?= $groupID ?>">
                             <td><?= $i + 1 ?></td>
@@ -2359,7 +2365,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') ==
 
                             <!-- Akses Modul -->
                             <td class="text-center td-mod">
-                              <?php if ($hasAccess): ?>
+                              <?php if ($groupID > 0): ?>
                                 <button
                                   type="button"
                                   class="btn btn-sm btn-outline-primary icon-btn view-access<?= $permDisabledClass ?>"
@@ -3194,20 +3200,21 @@ window.hasDT = function() {
     fire(options) {
       if (!window.Swal || typeof Swal.fire !== 'function') return Promise.resolve(null);
       const opts = options && typeof options === 'object' ? options : {};
+      const defaultCustomClass = {
+        container: 'group-swal-container',
+        popup: 'group-swal-popup',
+        title: 'group-swal-title',
+        htmlContainer: 'group-swal-html',
+        confirmButton: 'group-swal-confirm',
+        cancelButton: 'group-swal-cancel',
+        actions: 'group-swal-actions',
+        icon: 'group-swal-icon'
+      };
       return Swal.fire(Object.assign({
         confirmButtonText: T.btn_ok || 'OK',
         buttonsStyling: false,
         reverseButtons: true,
-        customClass: {
-          container: 'group-swal-container',
-          popup: 'group-swal-popup',
-          title: 'group-swal-title',
-          htmlContainer: 'group-swal-html',
-          confirmButton: 'group-swal-confirm',
-          cancelButton: 'group-swal-cancel',
-          actions: 'group-swal-actions',
-          icon: 'group-swal-icon'
-        }
+        customClass: Object.assign({}, defaultCustomClass, (opts.customClass && typeof opts.customClass === 'object') ? opts.customClass : {})
       }, opts));
     }
   };
@@ -3543,8 +3550,12 @@ window.hasDT = function() {
             if (window.MenuAccess && typeof window.MenuAccess.syncGroupPreview === 'function') {
               window.MenuAccess.syncGroupPreview();
             }
-            // populate modul/menu selects before showing
-            try { if (window.MenuAccess && typeof window.MenuAccess.populateCreateModal === 'function') window.MenuAccess.populateCreateModal().finally(()=>modal.show()); else modal.show(); } catch(e){ modal.show(); }
+            modal.show();
+            try {
+              if (window.MenuAccess && typeof window.MenuAccess.populateCreateModal === 'function') {
+                window.MenuAccess.populateCreateModal().catch(()=>{});
+              }
+            } catch(e){ /* ignore */ }
           });
         }
       };
@@ -3819,6 +3830,14 @@ document.addEventListener('DOMContentLoaded', function(){
         if (modalEl && window.bootstrap && bootstrap.Modal) {
           bootstrap.Modal.getOrCreateInstance(modalEl).hide();
         }
+        const successAlert = GroupUtils.fireAlert({
+          icon: 'success',
+          title: <?= json_encode((string)__('config_js_berjaya')) ?>,
+          text: resp.message || (isEditMode
+            ? <?= json_encode((string)__('modul_kemaskini_msg')) ?>
+            : <?= json_encode((string)__('modul_berjaya_msg')) ?>),
+          confirmButtonText: <?= json_encode((string)__('config_js_btn_ok')) ?>
+        });
         if (window.ModuleAccess && typeof ModuleAccess.reloadCurrentAccess === 'function') {
           await ModuleAccess.reloadCurrentAccess();
         }
@@ -3827,38 +3846,14 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         syncSidebarAfterModuleChange();
         setModuleFormMode('create');
-
-        if (window.Swal && typeof Swal.fire === 'function') {
-          (window.GroupSwal ? GroupSwal.fire({
-            icon: 'success',
-            title: <?= json_encode((string)__('config_js_berjaya')) ?>,
-            text: resp.message || (isEditMode
-              ? <?= json_encode((string)__('modul_kemaskini_msg')) ?>
-              : <?= json_encode((string)__('modul_berjaya_msg')) ?>),
-            confirmButtonText: <?= json_encode((string)__('config_js_btn_ok')) ?>
-          }) : Swal.fire({
-            icon: 'success',
-            title: <?= json_encode((string)__('config_js_berjaya')) ?>,
-            text: resp.message || (isEditMode
-              ? <?= json_encode((string)__('modul_kemaskini_msg')) ?>
-              : <?= json_encode((string)__('modul_berjaya_msg')) ?>),
-            confirmButtonText: <?= json_encode((string)__('config_js_btn_ok')) ?>
-          }));
-        }
+        await successAlert;
       } catch (err) {
-        if (window.Swal && typeof Swal.fire === 'function') {
-          (window.GroupSwal ? GroupSwal.fire({
-            icon: 'error',
-            title: <?= json_encode((string)__('modul_ralat_title')) ?>,
-            text: err.message || <?= json_encode((string)__('userGroup_error_unknown')) ?>,
-            confirmButtonText: <?= json_encode((string)__('config_js_btn_ok')) ?>
-          }) : Swal.fire({
-            icon: 'error',
-            title: <?= json_encode((string)__('modul_ralat_title')) ?>,
-            text: err.message || <?= json_encode((string)__('userGroup_error_unknown')) ?>,
-            confirmButtonText: <?= json_encode((string)__('config_js_btn_ok')) ?>
-          }));
-        }
+        GroupUtils.fireAlert({
+          icon: 'error',
+          title: <?= json_encode((string)__('modul_ralat_title')) ?>,
+          text: err.message || <?= json_encode((string)__('userGroup_error_unknown')) ?>,
+          confirmButtonText: <?= json_encode((string)__('config_js_btn_ok')) ?>
+        });
       } finally {
         saveBtn.disabled = false;
       }

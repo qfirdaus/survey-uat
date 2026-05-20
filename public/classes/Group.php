@@ -13,7 +13,8 @@ class Group extends BaseModel
     public function getAll(): array
     {
         $sql = "SELECT f_groupID, f_groupKod, f_groupName, f_modulAccess, f_menuAccess, f_categoryUser,
-                       f_color, f_badge_class, f_row_class, f_priority, f_mod
+                       f_color, f_badge_class, f_row_class, f_priority, f_mod,
+                       (SELECT COUNT(*) FROM tbl_m_user u WHERE u.f_groupID = tbl_m_group.f_groupID) AS userCount
                 FROM tbl_m_group
                 ORDER BY f_groupID ASC";
         return $this->fetchAll($sql);

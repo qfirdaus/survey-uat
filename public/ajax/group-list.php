@@ -7,6 +7,17 @@ require_once __DIR__ . '/_helpers.php';
 require_once __DIR__ . '/../includes/functions-db.php';
 header('Content-Type: application/json; charset=utf-8');
 
+function group_is_system_protected(array $group): bool {
+    $groupId = (int)($group['id'] ?? $group['f_groupID'] ?? 0);
+    $groupKod = strtoupper(trim((string)($group['kod'] ?? $group['f_groupKod'] ?? '')));
+    $saId = defined('PRESTASI_ROLE_ID_ADM_SA') ? (int)PRESTASI_ROLE_ID_ADM_SA : 0;
+    $saCode = defined('PRESTASI_ROLE_KOD_ADM_SA')
+        ? strtoupper(trim((string)PRESTASI_ROLE_KOD_ADM_SA))
+        : (defined('PRESTASI_ROLE_ADM_SA') ? strtoupper(trim((string)PRESTASI_ROLE_ADM_SA)) : 'ADM-SA');
+
+    return ($saId > 0 && $groupId === $saId) || ($groupKod !== '' && $groupKod === $saCode);
+}
+
 function group_category_for_scope(string $scope): ?string {
     return match (strtolower(trim($scope))) {
         'staff', 'staf' => 'STAF',
@@ -90,6 +101,7 @@ try {
         group_optional_select($db, 'f_mod', 'mod', '0'),
         group_optional_select($db, 'f_badge_class', 'badgeClass', "''"),
         group_optional_select($db, 'f_row_class', 'rowClass', "''"),
+        '(SELECT COUNT(*) FROM tbl_m_user u WHERE u.f_groupID = tbl_m_group.f_groupID) AS userCount',
     ];
 
     $sql = "
@@ -111,6 +123,9 @@ try {
         $r['menuAccess'] = array_values(array_filter(array_map('trim', explode(',', (string)($r['menuAccess'] ?? ''))), static fn($v) => $v !== ''));
         $r['priority'] = (int)($r['priority'] ?? 0);
         $r['mod'] = (int)($r['mod'] ?? 0);
+        $r['userCount'] = (int)($r['userCount'] ?? 0);
+        $hasAccess = !empty($r['modulAccess']) || !empty($r['menuAccess']);
+        $r['canDelete'] = !$hasAccess && $r['userCount'] === 0 && !group_is_system_protected($r);
     }
 
     $payload = ['error' => false, 'groups' => $rows];

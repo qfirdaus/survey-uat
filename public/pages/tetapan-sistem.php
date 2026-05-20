@@ -690,15 +690,10 @@ if (isset($translationBundlesJs[$lang])) {
       function inlineSetPageLoading(key, loading, message) {
         window.__tetapanInlineLoaderTokens = window.__tetapanInlineLoaderTokens || {};
         if (loading) {
-          if (window.AppLoader && typeof window.AppLoader.show === 'function') {
-            window.__tetapanInlineLoaderTokens[key] = window.AppLoader.show(message || (((window.__ && window.__('config_js_btn_loading_save')) || 'Saving...')));
-          }
+          window.__tetapanInlineLoaderTokens[key] = message || (((window.__ && window.__('config_js_btn_loading_save')) || 'Saving...'));
           return;
         }
 
-        if (window.__tetapanInlineLoaderTokens[key] && window.AppLoader && typeof window.AppLoader.hide === 'function') {
-          window.AppLoader.hide(window.__tetapanInlineLoaderTokens[key]);
-        }
         delete window.__tetapanInlineLoaderTokens[key];
       }
 
@@ -924,9 +919,7 @@ if (isset($translationBundlesJs[$lang])) {
             btnUji.dataset.originalHtml = btnUji.innerHTML;
           }
           btnUji.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> ' + (((window.__ && window.__('config_js_uji_emel_btn_loading')) || 'Testing...'));
-          if (window.AppLoader && typeof window.AppLoader.show === 'function') {
-            window.__tetapanInlineEmailLoaderToken = window.AppLoader.show(((window.__ && window.__('config_js_uji_emel_btn_loading')) || 'Testing...'));
-          }
+          window.__tetapanInlineEmailLoaderToken = (((window.__ && window.__('config_js_uji_emel_btn_loading')) || 'Testing...'));
 
             fetch(baseUrl + 'ajax/uji-emel.php', {
               method: 'POST',
@@ -972,9 +965,6 @@ if (isset($translationBundlesJs[$lang])) {
             .finally(function () {
               btnUji.disabled = false;
               btnUji.innerHTML = btnUji.dataset.originalHtml || '<i class="ri-mail-send-line me-1"></i> ' + (((window.__ && window.__('config_js_uji_emel_btn_default')) || 'Uji Sambungan Emel'));
-              if (window.__tetapanInlineEmailLoaderToken && window.AppLoader && typeof window.AppLoader.hide === 'function') {
-                window.AppLoader.hide(window.__tetapanInlineEmailLoaderToken);
-              }
               window.__tetapanInlineEmailLoaderToken = null;
             });
         });

@@ -153,22 +153,12 @@
         hidePageLoader(key);
         var pageData = window.EmailTemplatePageData || {};
         var text = message || pageData.loadingProcessingText || pageData.loadingPreviewText || 'Loading...';
-        if (window.AppLoader && typeof window.AppLoader.show === 'function') {
-            emailTemplateLoaderTokens[key] = window.AppLoader.show(text);
-        } else if (window.IQSLoader && typeof window.IQSLoader.show === 'function') {
-            emailTemplateLoaderTokens[key] = window.IQSLoader.show(text);
-        }
+        emailTemplateLoaderTokens[key] = text;
     }
 
     function hidePageLoader(key) {
-        var token = emailTemplateLoaderTokens[key];
-        if (!token) {
+        if (!emailTemplateLoaderTokens[key]) {
             return;
-        }
-        if (window.AppLoader && typeof window.AppLoader.hide === 'function') {
-            window.AppLoader.hide(token);
-        } else if (window.IQSLoader && typeof window.IQSLoader.hide === 'function') {
-            window.IQSLoader.hide(token);
         }
         delete emailTemplateLoaderTokens[key];
     }

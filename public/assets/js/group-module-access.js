@@ -444,21 +444,14 @@ const ModuleAccess = {
 
     let confirmed = false;
     if (window.Swal && typeof Swal.fire === 'function') {
-      const ask = await (window.GroupSwal ? GroupSwal.fire({
+      const ask = await GroupUtils.fireAlert({
         icon: 'warning',
         title: this.T.delete_module_confirm_title || '',
         text: (this.T.delete_module_confirm_text || '').replace('{name}', moduleName),
         showCancelButton: true,
         confirmButtonText: this.T.confirm_yes_delete || '',
         cancelButtonText: this.T.btn_cancel || ''
-      }) : Swal.fire({
-        icon: 'warning',
-        title: this.T.delete_module_confirm_title || '',
-        text: (this.T.delete_module_confirm_text || '').replace('{name}', moduleName),
-        showCancelButton: true,
-        confirmButtonText: this.T.confirm_yes_delete || '',
-        cancelButtonText: this.T.btn_cancel || ''
-      }));
+      });
       confirmed = !!(ask && ask.isConfirmed);
     } else {
       confirmed = window.confirm((this.T.delete_module_confirm_fallback || '').replace('{name}', moduleName));
@@ -479,25 +472,18 @@ const ModuleAccess = {
         return;
       }
 
+      const successAlert = GroupUtils.fireAlert({
+        icon: 'success',
+        title: this.T.success_title || '',
+        text: resp.message || this.T.delete_module_success,
+        confirmButtonText: this.T.btn_ok || ''
+      });
       await this.reloadCurrentAccess();
       if (window.MenuAccess && typeof window.MenuAccess.refreshVisibleGroupTableRows === 'function') {
         await window.MenuAccess.refreshVisibleGroupTableRows();
       }
       this.syncSidebarAfterNavigationChange();
-
-      if (window.Swal && typeof Swal.fire === 'function') {
-        await (window.GroupSwal ? GroupSwal.fire({
-          icon: 'success',
-          title: this.T.success_title || '',
-          text: resp.message || this.T.delete_module_success,
-          confirmButtonText: this.T.btn_ok || ''
-        }) : Swal.fire({
-          icon: 'success',
-          title: this.T.success_title || '',
-          text: resp.message || this.T.delete_module_success,
-          confirmButtonText: this.T.btn_ok || ''
-        }));
-      }
+      await successAlert;
     } catch (e) {
       this.showError(e.message || this.T.delete_module_network_fail);
       setTimeout(() => this.errEl?.classList.add('d-none'), 3000);

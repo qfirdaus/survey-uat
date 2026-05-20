@@ -235,28 +235,19 @@ const MenuAccess = {
           menuAccess: payload.menuAccess
         });
 
-        await this.refreshGroupTableRow(savedGroup.groupID || savedGroup.id || payload.groupID, savedGroup);
         modal.hide();
         this.resetGroupCreateForm();
+        const successAlert = GroupUtils.fireAlert({
+          icon: 'success',
+          title: this.T.done || 'Berjaya',
+          text: groupID > 0
+            ? (this.T.group_update_success || 'Kumpulan berjaya dikemaskini.')
+            : (this.T.group_create_success || 'Kumpulan berjaya ditambah.'),
+          confirmButtonText: this.T.btn_ok || 'OK'
+        });
+        await this.refreshGroupTableRow(savedGroup.groupID || savedGroup.id || payload.groupID, savedGroup);
         await this.syncSidebarForGroup(savedGroup.groupID || savedGroup.id || 0);
-
-        if (window.Swal && typeof Swal.fire === 'function') {
-          await (window.GroupSwal ? GroupSwal.fire({
-            icon: 'success',
-            title: this.T.done || 'Berjaya',
-            text: groupID > 0
-              ? (this.T.group_update_success || 'Kumpulan berjaya dikemaskini.')
-              : (this.T.group_create_success || 'Kumpulan berjaya ditambah.'),
-            confirmButtonText: this.T.btn_ok || 'OK'
-          }) : Swal.fire({
-            icon: 'success',
-            title: this.T.done || 'Berjaya',
-            text: groupID > 0
-              ? (this.T.group_update_success || 'Kumpulan berjaya dikemaskini.')
-              : (this.T.group_create_success || 'Kumpulan berjaya ditambah.'),
-            confirmButtonText: this.T.btn_ok || 'OK'
-          }));
-        }
+        await successAlert;
 
       } catch (err) {
         if (errEl) { errEl.textContent = err.message || this.T.error_network || 'Ralat rangkaian'; errEl.classList.remove('d-none'); }
@@ -300,6 +291,8 @@ const MenuAccess = {
       if (document.getElementById('gc_color')) document.getElementById('gc_color').value = color;
       if (typeof this.syncGroupPreview === 'function') this.syncGroupPreview();
 
+      modal.show();
+
       try {
         if (window.MenuAccess && typeof window.MenuAccess.populateCreateModal === 'function') {
           await window.MenuAccess.populateCreateModal();
@@ -315,7 +308,6 @@ const MenuAccess = {
           await this.populateMenusForModules(menuIDs);
         }
       } catch (_) {}
-      modal.show();
     });
 
     // Delete group handler
@@ -328,21 +320,14 @@ const MenuAccess = {
       const gnam = btn.getAttribute('data-group-nama') || this.T.btn_group_label || 'Kumpulan';
       if (gid <= 0) return;
 
-      const ask = await (window.GroupSwal ? GroupSwal.fire({
+      const ask = await GroupUtils.fireAlert({
         icon: 'warning',
         title: this.T.confirm_title || 'Pengesahan',
         text: (this.T.confirm_delete_group_text || 'Padam kumpulan "{name}"?').replace('{name}', gnam),
         showCancelButton: true,
         confirmButtonText: this.T.confirm_yes_delete || 'Ya, Padam',
         cancelButtonText: this.T.confirm_cancel || 'Batal',
-      }) : Swal.fire({
-        icon: 'warning',
-        title: this.T.confirm_title || 'Pengesahan',
-        text: (this.T.confirm_delete_group_text || 'Padam kumpulan "{name}"?').replace('{name}', gnam),
-        showCancelButton: true,
-        confirmButtonText: this.T.confirm_yes_delete || 'Ya, Padam',
-        cancelButtonText: this.T.confirm_cancel || 'Batal',
-      }));
+      });
       if (!ask.isConfirmed) return;
 
       GroupUtils.showLoader('menuAction', this.T.loading || this.T.confirm_yes_delete || 'Loading...');
@@ -361,41 +346,29 @@ const MenuAccess = {
         const j = await resp.json();
         if (!resp.ok || !j || j.error) {
           const msg = (j && j.message) ? j.message : (this.T.delete_group_fail || 'Gagal memadam kumpulan.');
-          await (window.GroupSwal ? GroupSwal.fire({
+          await GroupUtils.fireAlert({
             icon: 'error',
             title: this.T.not_allowed_title || 'Tidak Dibenarkan',
             text: msg,
-          }) : Swal.fire({
-            icon: 'error',
-            title: this.T.not_allowed_title || 'Tidak Dibenarkan',
-            text: msg,
-          }));
+          });
           return;
         }
 
         this.removeGroupTableRow(gid);
+        const successAlert = GroupUtils.fireAlert({
+          icon: 'success',
+          title: this.T.done || 'Berjaya',
+          text: this.T.delete_group_success || 'Kumpulan berjaya dipadam.',
+          confirmButtonText: this.T.btn_ok || 'OK'
+        });
         await this.syncSidebarForGroup(gid);
-        await (window.GroupSwal ? GroupSwal.fire({
-          icon: 'success',
-          title: this.T.done || 'Berjaya',
-          text: this.T.delete_group_success || 'Kumpulan berjaya dipadam.',
-          confirmButtonText: this.T.btn_ok || 'OK'
-        }) : Swal.fire({
-          icon: 'success',
-          title: this.T.done || 'Berjaya',
-          text: this.T.delete_group_success || 'Kumpulan berjaya dipadam.',
-          confirmButtonText: this.T.btn_ok || 'OK'
-        }));
+        await successAlert;
       } catch (err) {
-        await (window.GroupSwal ? GroupSwal.fire({
+        await GroupUtils.fireAlert({
           icon: 'error',
           title: this.T.not_allowed_title || 'Tidak Dibenarkan',
           text: err && err.message ? err.message : (this.T.delete_group_network_fail || 'Ralat rangkaian semasa memadam kumpulan.'),
-        }) : Swal.fire({
-          icon: 'error',
-          title: this.T.not_allowed_title || 'Tidak Dibenarkan',
-          text: err && err.message ? err.message : (this.T.delete_group_network_fail || 'Ralat rangkaian semasa memadam kumpulan.'),
-        }));
+        });
       } finally {
         GroupUtils.hideLoader('menuAction');
       }
@@ -479,6 +452,10 @@ const MenuAccess = {
       color: String(group.color ?? group.f_color ?? '').trim(),
       priority: String(group.priority ?? group.f_priority ?? '0').trim() || '0',
       mod: String(group.mod ?? group.f_mod ?? '0').trim() || '0',
+      userCount: parseInt(group.userCount ?? group.user_count ?? '0', 10) || 0,
+      canDelete: typeof (group.canDelete ?? group.can_delete) === 'boolean'
+        ? Boolean(group.canDelete ?? group.can_delete)
+        : null,
       modulAccess,
       menuAccess
     };
@@ -514,7 +491,8 @@ const MenuAccess = {
       categoryUser: editBtn?.getAttribute('data-group-category') || categoryChip?.getAttribute('data-category') || getText(3) || 'STAF',
       color: editBtn?.getAttribute('data-group-color') || colorBar?.getAttribute('title') || '',
       priority: editBtn?.getAttribute('data-group-priority') || '0',
-      mod: editBtn?.getAttribute('data-group-mod') || '0'
+      mod: editBtn?.getAttribute('data-group-mod') || '0',
+      canDelete: !!node?.querySelector?.('.btn-delete-group')
     };
   },
 
@@ -529,6 +507,10 @@ const MenuAccess = {
       color: group.color ?? group.f_color ?? existing?.color,
       priority: group.priority ?? group.f_priority ?? existing?.priority,
       mod: group.mod ?? group.f_mod ?? existing?.mod,
+      userCount: group.userCount ?? group.user_count ?? existing?.userCount,
+      canDelete: typeof (group.canDelete ?? group.can_delete) === 'boolean'
+        ? Boolean(group.canDelete ?? group.can_delete)
+        : existing?.canDelete,
       modulAccess: group.modulAccess ?? group.f_modulAccess ?? record.modulAccess,
       menuAccess: group.menuAccess ?? group.f_menuAccess ?? record.menuAccess
     });
@@ -537,8 +519,11 @@ const MenuAccess = {
   buildGroupRowData(group = {}, index = 1) {
     const record = this.normalizeGroupRecord(group);
     const hasAccess = record.modulAccess.length > 0 || record.menuAccess.length > 0;
+    const canOpenModuleAccess = record.id > 0;
     const hasCompleteIdentity = record.id > 0 && (record.kod !== '' || record.nama !== '');
-    const canDeleteGroup = hasCompleteIdentity && !hasAccess;
+    const canDeleteGroup = typeof record.canDelete === 'boolean'
+      ? record.canDelete
+      : (hasCompleteIdentity && !hasAccess);
     const barColor = record.color || '#94a3b8';
     const esc = (value) => GroupUtils.esc(String(value ?? ''));
     const escAttr = (value) => this.escapeAttr(value);
@@ -583,7 +568,7 @@ const MenuAccess = {
         'title="' + escAttr(this.T.userGroup_col_group_access || 'Akses kumpulan') + '">' +
         '<i class="ri-user-settings-line"></i></button>' +
         manageButtons.join(''),
-      hasAccess
+      canOpenModuleAccess
         ? '<button type="button" class="btn btn-sm btn-outline-primary icon-btn view-access" ' +
             'data-group-id="' + escAttr(record.id) + '" ' +
             'data-group-kod="' + escAttr(record.kod) + '" ' +
@@ -611,6 +596,9 @@ const MenuAccess = {
       }
     });
     table.draw(false);
+    if (typeof table.columns === 'function') {
+      table.columns.adjust();
+    }
   },
 
   upsertGroupTableRow(group = {}) {
@@ -657,7 +645,17 @@ const MenuAccess = {
     } catch (err) {
       console.warn('Group row refresh failed, using local fallback:', err);
     }
-    return this.upsertGroupTableRow(Object.assign({}, fallbackGroup, { groupID: targetGroupId }));
+
+    const existing = this.extractGroupRecordFromRow(targetGroupId) || {};
+    const mergedFallback = Object.assign({}, existing, fallbackGroup, { groupID: targetGroupId });
+    const hasIdentity = String(mergedFallback.groupKod || mergedFallback.kod || '').trim() !== ''
+      || String(mergedFallback.groupName || mergedFallback.nama || '').trim() !== '';
+
+    if (!hasIdentity) {
+      return false;
+    }
+
+    return this.upsertGroupTableRow(mergedFallback);
   },
 
   async refreshVisibleGroupTableRows() {
@@ -1266,17 +1264,12 @@ const MenuAccess = {
 
       if (!resolvedGroupID) {
         if (window.Swal && typeof Swal.fire === 'function') {
-          (window.GroupSwal ? GroupSwal.fire({
+          GroupUtils.fireAlert({
             icon: 'warning',
             title: this.T.info_title || 'Makluman',
             text: this.T.info_select_group_first || 'Sila pilih kumpulan dahulu melalui butang Akses Menu.',
             confirmButtonText: this.T.btn_ok || 'OK'
-          }) : Swal.fire({
-            icon: 'warning',
-            title: this.T.info_title || 'Makluman',
-            text: this.T.info_select_group_first || 'Sila pilih kumpulan dahulu melalui butang Akses Menu.',
-            confirmButtonText: this.T.btn_ok || 'OK'
-          }));
+          });
         } else {
           alert(this.T.info_select_group_first || 'Sila pilih kumpulan dahulu melalui butang Akses Menu.');
         }
@@ -1304,17 +1297,21 @@ const MenuAccess = {
     this.$ME('#em_show_staff_only_yes').checked = true;
     this.$ME('#em_flag_on').checked = true;
 
-    this.populateModuls(null).then(() => this.populateSubgroups(this.$ME('#em_modulID')?.value || '', 0)).then(() => {
-      this.editModalEl.dataset.mode = 'create';
-      this.updateEditModalUI('create');
-      if (parentModal && this.modalEl?.classList.contains('show')) {
-        this.restoreParentMenuModal = true;
-        parentModal.hide();
-      } else {
-        this.restoreParentMenuModal = false;
-      }
-      modal.show();
-    });
+    this.editModalEl.dataset.mode = 'create';
+    this.updateEditModalUI('create');
+    if (parentModal && this.modalEl?.classList.contains('show')) {
+      this.restoreParentMenuModal = true;
+      parentModal.hide();
+    } else {
+      this.restoreParentMenuModal = false;
+    }
+    modal.show();
+    this.populateModuls(null)
+      .then(() => this.populateSubgroups(this.$ME('#em_modulID')?.value || '', 0))
+      .catch((e) => {
+        this.editErrorEl.textContent = e.message || this.T.error_network;
+        this.editErrorEl.classList.remove('d-none');
+      });
   },
   
   async openEditMenu(menuID) {
@@ -1322,6 +1319,20 @@ const MenuAccess = {
     if (!modal) return;
     const parentModal = GroupUtils.getModal(this.modalEl);
     this.editErrorEl.classList.add('d-none');
+    this.editModalEl.dataset.mode = 'edit';
+    this.updateEditModalUI('edit');
+    this.$ME('#em_menuID').value = '';
+    this.$ME('#em_path').value = '';
+    this.$ME('#em_name_ms').value = '';
+    this.$ME('#em_name_en').value = '';
+    this.$ME('#em_domain').value = 'SHARED';
+    if (parentModal && this.modalEl?.classList.contains('show')) {
+      this.restoreParentMenuModal = true;
+      parentModal.hide();
+    } else {
+      this.restoreParentMenuModal = false;
+    }
+    modal.show();
     try {
       const j = await GroupUtils.fetchJSONSafe(GroupUtils.apiUrl('menu-get.php', { menuID }));
       if (!j || j.error) {
@@ -1337,15 +1348,6 @@ const MenuAccess = {
       (parseInt(j.menu.f_flag ?? 0, 10) === 1 ? (this.$ME('#em_flag_on').checked = true) : (this.$ME('#em_flag_off').checked = true));
       await this.populateModuls(j.menu.f_modulID);
       await this.populateSubgroups(j.menu.f_modulID, j.menu.f_subgroupID || 0);
-      this.editModalEl.dataset.mode = 'edit';
-      this.updateEditModalUI('edit');
-      if (parentModal && this.modalEl?.classList.contains('show')) {
-        this.restoreParentMenuModal = true;
-        parentModal.hide();
-      } else {
-        this.restoreParentMenuModal = false;
-      }
-      modal.show();
     } catch (e) {
       this.showError(e.message || this.T.error_network);
     }
@@ -1422,17 +1424,11 @@ const MenuAccess = {
       if (document.getElementById('em_groupID')) {
         document.getElementById('em_groupID').value = String(groupID);
       }
-      if (window.Swal && typeof Swal.fire === 'function') {
-        await (window.GroupSwal ? GroupSwal.fire({
-          icon: 'success',
-          title: mode === 'create' ? (this.T.menu_save_success_create || 'Menu berjaya ditambah') : (this.T.menu_save_success_update || 'Menu berjaya dikemaskini'),
-          confirmButtonText: this.T.btn_ok || 'OK'
-        }) : Swal.fire({
-          icon: 'success',
-          title: mode === 'create' ? (this.T.menu_save_success_create || 'Menu berjaya ditambah') : (this.T.menu_save_success_update || 'Menu berjaya dikemaskini'),
-          confirmButtonText: this.T.btn_ok || 'OK'
-        }));
-      }
+      const successAlert = GroupUtils.fireAlert({
+        icon: 'success',
+        title: mode === 'create' ? (this.T.menu_save_success_create || 'Menu berjaya ditambah') : (this.T.menu_save_success_update || 'Menu berjaya dikemaskini'),
+        confirmButtonText: this.T.btn_ok || 'OK'
+      });
       await this.refreshGroupTableRow(groupID, {
         groupID,
         groupKod: GroupState.getLastMenuBtn()?.getAttribute('data-group-kod') || '',
@@ -1450,6 +1446,7 @@ const MenuAccess = {
       this.pendingParentRestoreAfterSave = false;
       await this.openMenuEditor(groupID);
       this.adjustMenuDataTable();
+      await successAlert;
     } catch (e) {
       this.pendingParentRestoreAfterSave = false;
       this.editErrorEl.textContent = e.message || this.T.error_network;
@@ -1567,19 +1564,12 @@ const MenuAccess = {
         this.openMenuEditor(GroupState.getMenuGroupID());
       }
 
-      if (window.Swal && Swal.fire) {
-        (window.GroupSwal ? GroupSwal.fire({
-          icon: 'success',
-          title: MenuAccess.T.deleted_title || 'Dipadam',
-          text: MenuAccess.formatText(MenuAccess.T.delete_menu_cleanup_success || 'Menu "{name}" dibersihkan dari semua kumpulan.', { name: prettyName }),
-          confirmButtonText: MenuAccess.T.btn_ok || 'OK'
-        }) : Swal.fire({
-          icon: 'success',
-          title: MenuAccess.T.deleted_title || 'Dipadam',
-          text: MenuAccess.formatText(MenuAccess.T.delete_menu_cleanup_success || 'Menu "{name}" dibersihkan dari semua kumpulan.', { name: prettyName }),
-          confirmButtonText: MenuAccess.T.btn_ok || 'OK'
-        }));
-      }
+      const successAlert = GroupUtils.fireAlert({
+        icon: 'success',
+        title: MenuAccess.T.deleted_title || 'Dipadam',
+        text: MenuAccess.formatText(MenuAccess.T.delete_menu_cleanup_success || 'Menu "{name}" dibersihkan dari semua kumpulan.', { name: prettyName }),
+        confirmButtonText: MenuAccess.T.btn_ok || 'OK'
+      });
       await this.refreshGroupTableRow(GroupState.getMenuGroupID(), {
         groupID: GroupState.getMenuGroupID(),
         groupKod: GroupState.getLastMenuBtn()?.getAttribute('data-group-kod') || '',
@@ -1587,8 +1577,19 @@ const MenuAccess = {
         modulAccess: GroupState.getModulIDs(),
         menuAccess: GroupState.getMenuIDs().filter((id) => parseInt(id, 10) !== parseInt(menuID, 10)),
       });
+      if (
+        window.ModuleAccess
+        && typeof window.ModuleAccess.reloadCurrentAccess === 'function'
+      ) {
+        const accessGroupId = parseInt(window.ModuleAccess.currentGroup?.id || '0', 10) || 0;
+        const menuGroupId = parseInt(GroupState.getMenuGroupID() || '0', 10) || 0;
+        if (accessGroupId > 0 && accessGroupId === menuGroupId) {
+          await window.ModuleAccess.reloadCurrentAccess();
+        }
+      }
       await this.refreshVisibleGroupTableRows();
       this.syncSidebarAfterNavigationChange();
+      await successAlert;
     } catch (e) {
       if (window.Swal && Swal.fire) {
         (window.GroupSwal ? GroupSwal.fire({
@@ -1849,6 +1850,7 @@ const MenuAccess = {
     const gkod = btn.getAttribute('data-group-kod') || '';
     const gnam = btn.getAttribute('data-group-nama') || '';
 
+    GroupState.setLastMenuBtn(btn);
     GroupState.setMenuGroupID(gid);
     if (this.subEl) this.subEl.textContent = gkod + (gnam ? ' — ' + gnam : '');
 

@@ -1126,10 +1126,6 @@ $version = date('ymdHis');
 
                 const formData = new FormData(uploadForm);
                 setUploadBusy(true);
-                let manualUploadLoaderToken = null;
-                if (window.AppLoader && typeof window.AppLoader.show === 'function') {
-                    manualUploadLoaderToken = window.AppLoader.show(T.uploadLoadingText || T.uploadLoadingTitle);
-                }
 
                 try {
                     const response = await fetch('<?= h(base_url('ajax/manual-upload.php')) ?>', {
@@ -1183,9 +1179,6 @@ $version = date('ymdHis');
                     }
                 } finally {
                     setUploadBusy(false);
-                    if (manualUploadLoaderToken && window.AppLoader && typeof window.AppLoader.hide === 'function') {
-                        window.AppLoader.hide(manualUploadLoaderToken);
-                    }
                 }
             });
 

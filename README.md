@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.7.7`
+- Current version: `1.7.8`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -46,6 +46,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 - Group management page at `public/pages/kumpulan-pengguna.php`.
 - Supports group CRUD, group styling, module access, menu access, module/menu ordering, and sidebar refresh without full page reload.
+- Uses standardized SweetAlert messaging, faster modal-open sequencing, and earlier success feedback for key group, module, and menu transactions.
 - Supports optional sidebar menu subgroups inside parent modules through `tbl_m_menu_subgroup` and `tbl_m_menu.f_subgroupID`.
 - Menu subgroups can be created, edited, ordered, assigned to menus, and protected from deletion while menus are still assigned.
 - Sidebar rendering remains backward-compatible: modules can still use direct menus without subgroups, while selected modules can group menus under subgroup headings.
@@ -165,7 +166,14 @@ Do not hardcode DSN, username, or password inside page/controller code.
 - User personal theme preference is applied before the global fallback theme where available to avoid visible theme switching during navigation.
 - Sidebar branding supports the configured sidebar image under the main logo.
 - Frontend assets include Bootstrap-style components, DataTables usage, SweetAlert workflows, Remix Icon icons, and page-specific JavaScript/CSS files.
+- Global full-page loader is now reserved for sidebar navigation transitions, while in-page transactions rely on local loading states and silent background refreshes.
 - Tailwind/PostCSS tooling exists in `package.json` for frontend build support, although the main application is PHP-rendered.
+
+### Update Distribution Tooling
+
+- `sync-updates.sh` distributes collected updates to the registered downstream project list, including `e-prestasi`.
+- `sync-updates.sh` and `update-files.sh` support `.sync-update-ignore` so selected files can be excluded from `updates/` and project sync flows.
+- `public/lang/custom/*` remains protected from overwrite during update distribution.
 
 ## Current Page Inventory
 
