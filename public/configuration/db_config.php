@@ -143,40 +143,53 @@ return [
         'driver' => 'mysql',
         'dsn'    => sprintf(
             'mysql:host=%s;port=%s;dbname=%s;charset=%s',
-            db_env_first(['DB_MYSQL_MAIN_PROD_HOST', 'DB_MYSQL_HOST'], '172.16.2.141'),
-            db_env_first(['DB_MYSQL_MAIN_PROD_PORT', 'DB_MYSQL_PORT'], '3306'),
-            db_env_first(['DB_MYSQL_MAIN_PROD_NAME', 'DB_MYSQL_NAME'], 'ebasedb'),
-            db_env_first(['DB_MYSQL_MAIN_PROD_CHARSET', 'DB_MYSQL_CHARSET'], 'utf8mb4')
+            db_env_required('DB_MYSQL_MAIN_PROD_HOST'),
+            db_env('DB_MYSQL_MAIN_PROD_PORT', '3306'),
+            db_env_required('DB_MYSQL_MAIN_PROD_NAME'),
+            db_env('DB_MYSQL_MAIN_PROD_CHARSET', 'utf8mb4')
         ),
-        'user'   => db_env_required_first(['DB_MYSQL_MAIN_PROD_USER', 'DB_MYSQL_USER']),
-        'pass'   => db_env_required_first(['DB_MYSQL_MAIN_PROD_PASS', 'DB_MYSQL_PASS']),
+        'user'   => db_env_required('DB_MYSQL_MAIN_PROD_USER'),
+        'pass'   => db_env_required('DB_MYSQL_MAIN_PROD_PASS'),
     ],
 
     'mysql_dev' => [
         'driver' => 'mysql',
         'dsn'    => sprintf(
             'mysql:host=%s;port=%s;dbname=%s;charset=%s',
-            db_env_first(['DB_MYSQL_MAIN_DEV_HOST', 'DB_MYSQL_MAIN_PROD_HOST', 'DB_MYSQL_HOST'], '172.16.2.141'),
-            db_env_first(['DB_MYSQL_MAIN_DEV_PORT', 'DB_MYSQL_MAIN_PROD_PORT', 'DB_MYSQL_PORT'], '3306'),
-            db_env_first(['DB_MYSQL_MAIN_DEV_NAME', 'DB_MYSQL_MAIN_PROD_NAME', 'DB_MYSQL_NAME'], 'ebasedb'),
-            db_env_first(['DB_MYSQL_MAIN_DEV_CHARSET', 'DB_MYSQL_MAIN_PROD_CHARSET', 'DB_MYSQL_CHARSET'], 'utf8mb4')
+            db_env_required('DB_MYSQL_MAIN_DEV_HOST'),
+            db_env('DB_MYSQL_MAIN_DEV_PORT', '3306'),
+            db_env_required('DB_MYSQL_MAIN_DEV_NAME'),
+            db_env('DB_MYSQL_MAIN_DEV_CHARSET', 'utf8mb4')
         ),
-        'user'   => db_env_required_first(['DB_MYSQL_MAIN_DEV_USER', 'DB_MYSQL_MAIN_PROD_USER', 'DB_MYSQL_USER']),
-        'pass'   => db_env_required_first(['DB_MYSQL_MAIN_DEV_PASS', 'DB_MYSQL_MAIN_PROD_PASS', 'DB_MYSQL_PASS']),
+        'user'   => db_env_required('DB_MYSQL_MAIN_DEV_USER'),
+        'pass'   => db_env_required('DB_MYSQL_MAIN_DEV_PASS'),
     ],
 
-    'mysql' => [
-        'driver' => 'mysql',
-        'dsn'    => sprintf(
-            'mysql:host=%s;port=%s;dbname=%s;charset=%s',
-            db_env_first(['DB_MYSQL_MAIN_PROD_HOST', 'DB_MYSQL_HOST'], '172.16.2.141'),
-            db_env_first(['DB_MYSQL_MAIN_PROD_PORT', 'DB_MYSQL_PORT'], '3306'),
-            db_env_first(['DB_MYSQL_MAIN_PROD_NAME', 'DB_MYSQL_NAME'], 'ebasedb'),
-            db_env_first(['DB_MYSQL_MAIN_PROD_CHARSET', 'DB_MYSQL_CHARSET'], 'utf8mb4')
-        ),
-        'user'   => db_env_required_first(['DB_MYSQL_MAIN_PROD_USER', 'DB_MYSQL_USER']),
-        'pass'   => db_env_required_first(['DB_MYSQL_MAIN_PROD_PASS', 'DB_MYSQL_PASS']),
-    ],
+    'mysql' => strtolower((string) db_env('MAIN_DB_ENVIRONMENT', 'production')) === 'development'
+        ? [
+            'driver' => 'mysql',
+            'dsn'    => sprintf(
+                'mysql:host=%s;port=%s;dbname=%s;charset=%s',
+                db_env_required('DB_MYSQL_MAIN_DEV_HOST'),
+                db_env('DB_MYSQL_MAIN_DEV_PORT', '3306'),
+                db_env_required('DB_MYSQL_MAIN_DEV_NAME'),
+                db_env('DB_MYSQL_MAIN_DEV_CHARSET', 'utf8mb4')
+            ),
+            'user'   => db_env_required('DB_MYSQL_MAIN_DEV_USER'),
+            'pass'   => db_env_required('DB_MYSQL_MAIN_DEV_PASS'),
+        ]
+        : [
+            'driver' => 'mysql',
+            'dsn'    => sprintf(
+                'mysql:host=%s;port=%s;dbname=%s;charset=%s',
+                db_env_required('DB_MYSQL_MAIN_PROD_HOST'),
+                db_env('DB_MYSQL_MAIN_PROD_PORT', '3306'),
+                db_env_required('DB_MYSQL_MAIN_PROD_NAME'),
+                db_env('DB_MYSQL_MAIN_PROD_CHARSET', 'utf8mb4')
+            ),
+            'user'   => db_env_required('DB_MYSQL_MAIN_PROD_USER'),
+            'pass'   => db_env_required('DB_MYSQL_MAIN_PROD_PASS'),
+        ],
 
     // ===================================================
     // ✅ Sybase Domain Registry
