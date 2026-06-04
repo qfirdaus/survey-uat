@@ -1,5 +1,12 @@
 <?php
-// ======================================
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */// ======================================
 // ✅ AJAX: Group Access (modules + menus + flags)
 // Pulangkan senarai modul (ikut f_modulAccess kumpulan) dan menu di bawahnya,
 // termasuk status ON/OFF dari tbl_m_menu.f_flag. Jika f_menuAccess ditetapkan,

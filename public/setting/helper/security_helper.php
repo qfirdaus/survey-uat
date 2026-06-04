@@ -1,5 +1,12 @@
 <?php
-function get_client_ip() {
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */function get_client_ip() {
     return $_SERVER['HTTP_CLIENT_IP']     ?? 
            $_SERVER['HTTP_X_FORWARDED_FOR'] ?? 
            $_SERVER['REMOTE_ADDR']         ?? 'UNKNOWN';

@@ -1,5 +1,12 @@
 <?php
-// Standalone migration - no init.php, no session, no redirect
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */// Standalone migration - no init.php, no session, no redirect
 try {
     $pdo = new PDO(
         'mysql:host=172.16.2.141;dbname=upnm30db;charset=utf8mb4',

@@ -1,4 +1,9 @@
 <head>
+<!--
+  IQS FRAMEWORK CORE FILE
+  READ ONLY for downstream project programmers.
+  Do not modify this file directly in template or cloned projects.
+-->
 <?php
   // Core init & settings
   require_once __DIR__ . '/init.php';

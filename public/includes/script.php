@@ -1,5 +1,12 @@
 <?php
-$version = time();
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */$version = time();
 $currentPage = $currentPage ?? basename(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH));
 $idleTimeoutMinutes = (int)app_config('session.idle_timeout_minutes', 30);
 if ($idleTimeoutMinutes <= 0) {

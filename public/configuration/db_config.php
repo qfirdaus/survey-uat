@@ -1,5 +1,12 @@
 <?php
-
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */
 if (!function_exists('db_config_load_env_once')) {
     /**
      * Load .env values into $_ENV/$_SERVER/getenv once for config usage.

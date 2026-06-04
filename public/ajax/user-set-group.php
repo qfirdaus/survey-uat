@@ -1,5 +1,12 @@
 <?php
-// ajax/user-set-group.php
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */// ajax/user-set-group.php
 declare(strict_types=1);
 
 error_reporting(E_ALL);

@@ -1,5 +1,12 @@
 <?php
-if (defined('ALERT_HELPER_INCLUDED')) return;
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */if (defined('ALERT_HELPER_INCLUDED')) return;
 define('ALERT_HELPER_INCLUDED', true);
 
 if (session_status() === PHP_SESSION_NONE) session_start();

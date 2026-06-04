@@ -1,5 +1,12 @@
 <?php
-declare(strict_types=1);
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */declare(strict_types=1);
 
 @ini_set('display_errors', '0');
 error_reporting(E_ALL);

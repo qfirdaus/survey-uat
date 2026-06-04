@@ -6,6 +6,32 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+## [1.7.9] - 2026-06-04
+
+### Added
+- Added admin-only System Cache maintenance page at `public/pages/system-cache.php` for discovering and clearing standard project cache locations.
+- Added dynamic cache discovery for `app/cache`, `public/cache`, and `storage/cache`, including file count, total size, and last-modified summary.
+- Added cache-clearing AJAX endpoint with CSRF validation, admin permission enforcement, OPcache/APCu best-effort clearing, and audit logging.
+- Added `upnm30` to the registered downstream project list for `sync-updates.sh`.
+- Added core file protection standard and protected files registry documentation for downstream project governance.
+- Added `tools/core-file-protection-audit.php` to validate protected core markers before release or update collection.
+
+### Changed
+- Changed System Cache clearing feedback to use the existing global loader and update the page in place without forcing a page refresh.
+- Changed active framework pages to include a protected core read-only header for downstream programmers.
+- Changed active framework controllers to include a protected core read-only header for downstream programmers.
+- Changed framework AJAX endpoints and shared AJAX helpers to include a protected core read-only header for downstream programmers.
+- Changed framework classes and services to include a protected core read-only header for downstream programmers.
+- Changed bootstrap/includes, setting helpers/constants, configuration, root public entry files, root language wrappers, and core language files to include a protected core marker for downstream programmers.
+- Changed page/template generator output so generated page, controller, and CSS files are marked as project-generated and safe to customize.
+- Changed update collection scripts to include core file protection docs and audit tooling in framework update packages.
+- Changed developer guidance and sync-ignore notes to include final core protection release checks for downstream programmers.
+- Changed Developer Guide references and handover checklist to point programmers to core protection standards, protected file registry, and audit validation.
+- Changed project release metadata to lock the application version at `1.7.9`.
+
+### Fixed
+- Preserved cache directory structure, `.gitkeep`, `.htaccess`, and active user sessions during cache-clearing operations.
+
 ## [1.7.8] - 2026-05-20
 
 ### Added

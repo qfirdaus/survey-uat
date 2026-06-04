@@ -1,5 +1,13 @@
 <?php
 /**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */
+/**
  * SidebarController
  * 
  * Handles business logic for sidebar navigation component.

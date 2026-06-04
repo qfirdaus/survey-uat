@@ -1,5 +1,12 @@
 <?php
-$lang = $lang ?? ($_SESSION['lang'] ?? $_SESSION['user.lang'] ?? 'ms');
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */$lang = $lang ?? ($_SESSION['lang'] ?? $_SESSION['user.lang'] ?? 'ms');
 $version = (string)($version ?? ($_ENV['APP_ASSET_VER'] ?? time()));
 $PAGE_TITLE = $PAGE_TITLE ?? tr('icares_title', 'iCareS');
 ?>

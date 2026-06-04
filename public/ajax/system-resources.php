@@ -1,5 +1,12 @@
 <?php
-// ajax/system-resources.php
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */// ajax/system-resources.php
 // Read-only system resources snapshot (admin-only)
 declare(strict_types=1);
 

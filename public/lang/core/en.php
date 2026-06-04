@@ -1,5 +1,12 @@
 <?php
-return [
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */return [
 
 /* =====================================================
  * DASHBOARD (dash_)
@@ -2723,5 +2730,37 @@ return [
 'notification_template_action_restore' => 'Restore',
 'notification_template_action_delete' => 'Delete',
 'notification_template_delete_confirm' => 'Delete this notification template?',
+'systemCache_page_title' => 'System Cache',
+'systemCache_breadcrumb_active' => 'Clear Cache',
+'systemCache_forbidden' => 'You do not have permission to manage system cache.',
+'systemCache_stat_locations' => 'Cache Locations',
+'systemCache_stat_files' => 'Cache Files',
+'systemCache_stat_size' => 'Cache Size',
+'systemCache_stat_opcache' => 'OPcache',
+'systemCache_stat_apcu' => 'APCu',
+'systemCache_table_title' => 'Discovered Cache Locations',
+'systemCache_table_subtitle' => 'Only cache files inside standard project cache folders are listed. Directory structure is preserved.',
+'systemCache_action_clear_selected' => 'Clear Selected',
+'systemCache_action_clear_all' => 'Clear All Cache',
+'systemCache_col_location' => 'Location',
+'systemCache_col_files' => 'Files',
+'systemCache_col_size' => 'Size',
+'systemCache_col_modified' => 'Last Modified',
+'systemCache_empty' => 'No standard cache locations were found.',
+'systemCache_confirm_title' => 'Clear System Cache?',
+'systemCache_confirm_text' => 'This action will remove discovered cache files and reset PHP cache.',
+'systemCache_confirm_cancel' => 'Cancel',
+'systemCache_confirm_clear' => 'Clear Cache',
+'systemCache_success_title' => 'Cache Cleared',
+'systemCache_success_message' => 'System cache cleared successfully.',
+'systemCache_success_note' => 'Users do not need to logout/login after clearing cache. A page refresh is normally sufficient.',
+'systemCache_result_files' => 'Files removed',
+'systemCache_result_size' => 'Size freed',
+'systemCache_result_locations' => 'Locations cleared',
+'systemCache_loading' => 'Clearing cache...',
+'systemCache_error_invalid_method' => 'Invalid request method.',
+'systemCache_error_invalid_action' => 'Invalid cache action.',
+'systemCache_error_no_selection' => 'Select at least one cache location.',
+'systemCache_error_generic' => 'Unable to clear system cache.',
 
 ];

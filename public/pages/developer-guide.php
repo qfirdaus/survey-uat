@@ -1,4 +1,12 @@
 <?php
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */
 declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/init.php';
@@ -49,9 +57,12 @@ $docLinks = [
     ['icon' => 'ri-translate-2', 'title' => 'Language Core/Custom', 'path' => 'docs/language-core-custom-split-audit-2026-05-02.md'],
     ['icon' => 'ri-menu-2-line', 'title' => 'Sidebar Subgroup', 'path' => 'docs/sidebar-menu-subgroup-blueprint-2026-05-06.md'],
     ['icon' => 'ri-layout-grid-line', 'title' => 'Page Generator Roadmap', 'path' => 'docs/page-template-generator-roadmap-2026-03-27.md'],
+    ['icon' => 'ri-shield-check-line', 'title' => 'Core File Protection', 'path' => 'docs/core-file-protection-standard-2026-06-04.md'],
+    ['icon' => 'ri-file-shield-2-line', 'title' => 'Protected Files Registry', 'path' => 'docs/core-protected-files.md'],
 ];
 
 $coreBoundaries = [
+    ['area' => 'Core file protection', 'core' => 'IQS FRAMEWORK CORE FILE marker', 'use' => 'Read for reference only. Put project changes in generated/custom files or approved extension points.'],
     ['area' => 'Runtime bootstrap', 'core' => 'public/includes/init.php', 'use' => 'Call require_login(), __(), base_url(), and shared helpers.'],
     ['area' => 'Sidebar/topbar', 'core' => 'public/includes/sidebar.php, public/includes/topbar.php', 'use' => 'Register menus and access through kumpulan-pengguna.php.'],
     ['area' => 'Database runtime', 'core' => 'public/classes/Database*.php', 'use' => 'Call Database::pdoAdditional(), pdoSybaseStaff(), or main MySQL helper.'],
@@ -1095,6 +1106,7 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
                                                 <ul class="dg-list">
                                                     <li>Run PHP syntax checks.</li>
                                                     <li>Validate language split.</li>
+                                                    <li>Run `php tools/core-file-protection-audit.php --strict` before collecting framework updates.</li>
                                                     <li>Register menu/access in UI.</li>
                                                     <li>Test unauthorized direct URL and AJAX access.</li>
                                                 </ul>

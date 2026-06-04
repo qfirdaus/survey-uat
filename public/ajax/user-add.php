@@ -1,5 +1,12 @@
 <?php
-// ajax/user-add.php
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */// ajax/user-add.php
 // Staff-only add flow from Sybase data into tbl_m_user
 declare(strict_types=1);
 

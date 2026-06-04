@@ -1,5 +1,12 @@
 <?php
-// classes/AuditLogger.php
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */// classes/AuditLogger.php
 declare(strict_types=1);
 
 // GOVERNANCE CRITICAL – DO NOT MODIFY: central audit writer

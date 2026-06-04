@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.7.8`
+- Current version: `1.7.9`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -97,6 +97,14 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Settings are handled by `TetapanSistemController.php`, `Config.php`, `SystemConfigConstants.php`, and page-specific JavaScript/CSS assets.
 - General > Limits includes the `View As Timeout (Minutes)` setting for the Super Admin impersonation workflow.
 
+### System Cache Maintenance
+
+- Admin-only system cache maintenance page exists at `public/pages/system-cache.php`.
+- Discovers standard project cache locations dynamically from `app/cache`, `public/cache`, and `storage/cache` when those folders exist.
+- Displays cache location count, file count, total size, OPcache status, APCu status, and per-location last modified date.
+- Supports clearing selected cache locations or all discovered cache locations while preserving directory structure, `.gitkeep`, `.htaccess`, active sessions, and login tokens.
+- Cache clearing is handled through `public/ajax/system-cache-action.php`, uses CSRF validation and admin permission enforcement, resets OPcache/APCu where available, logs the operation through the central audit mechanism, and updates the page in place using the global loader.
+
 ### Language Architecture
 
 - Core framework translations are stored in `public/lang/core/`.
@@ -140,6 +148,15 @@ Do not hardcode DSN, username, or password inside page/controller code.
 - Template generator page exists at `public/pages/template-generator.php`.
 - Supported by `TemplateGeneratorController.php`, `SystemTemplateController.php`, and classes under `public/classes/SystemTemplate*.php`.
 - Used to generate or manage system page/template scaffolding from controlled template definitions.
+- Generated page, controller, and CSS files are marked as `PROJECT GENERATED FILE` so downstream programmers can distinguish customizable generated artifacts from protected core files.
+
+### Core File Protection
+
+- Active framework pages, controllers, AJAX endpoints, classes/services, bootstrap/includes, setting helpers/constants, configuration, root entry files, and core language files include an `IQS FRAMEWORK CORE FILE` marker to identify read-only protected core files for downstream project programmers.
+- `public/lang/custom/*` remains the supported language customization area and is not marked as protected core.
+- Protection guidance is documented in `docs/core-file-protection-standard-2026-06-04.md`.
+- Protected page inventory and framework-managed areas are listed in `docs/core-protected-files.md`.
+- Core marker validation can be run with `php tools/core-file-protection-audit.php`.
 
 ### Developer Guide
 
@@ -171,8 +188,9 @@ Do not hardcode DSN, username, or password inside page/controller code.
 
 ### Update Distribution Tooling
 
-- `sync-updates.sh` distributes collected updates to the registered downstream project list, including `e-prestasi`.
+- `sync-updates.sh` distributes collected updates to the registered downstream project list, including `e-prestasi` and `upnm30`.
 - `sync-updates.sh` and `update-files.sh` support `.sync-update-ignore` so selected files can be excluded from `updates/` and project sync flows.
+- Core file protection docs and `tools/core-file-protection-audit.php` are included in framework update collection.
 - `public/lang/custom/*` remains protected from overwrite during update distribution.
 
 ## Current Page Inventory
@@ -191,6 +209,7 @@ The active page files under `public/pages` are:
 - `profile.php`
 - `senarai-pengguna.php`
 - `soalan-lazim.php`
+- `system-cache.php`
 - `template-emel.php`
 - `template-generator.php`
 - `tetapan-sistem.php`
@@ -212,6 +231,7 @@ Current controller files under `public/controllers` include:
 - `ProfileController.php`
 - `SidebarController.php`
 - `SystemTemplateController.php`
+- `SystemCacheMaintenanceController.php`
 - `TemplateGeneratorController.php`
 - `TetapanSistemController.php`
 - `UserListController.php`
@@ -295,6 +315,8 @@ iqs-framework/
 - Follow `docs/notification-developer-standard-2026-05-04.md` when adding notifications to new modules so admin, event, and workflow notifications remain consistent across projects.
 - Configure sidebar modules, menus, menu access, and optional menu subgroups through `kumpulan-pengguna.php`; project programmers should not hardcode sidebar structure inside `public/includes/sidebar.php`.
 - Refer to `docs/sidebar-menu-subgroup-blueprint-2026-05-06.md` before enabling subgroup schema or adding grouped sidebar menus in a project deployment.
+- Treat files marked `IQS FRAMEWORK CORE FILE` as read-only in downstream project clones. Use generated/custom project files for project behavior changes.
+- Run `php tools/core-file-protection-audit.php --strict` before framework release or update collection.
 - Do not hardcode database DSN, username, or password in pages/controllers.
 - Keep access checks aligned with group, module, and menu governance.
 - Record sensitive administrative changes through the audit helper/logger pattern already used in the system.

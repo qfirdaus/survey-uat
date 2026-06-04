@@ -1,4 +1,10 @@
 <script>
+/*
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ */
 function checkFileSize(input) {
   const maxFileSize = 5 * 1024 * 1024;
   if (!input || !input.files || !input.files[0]) {

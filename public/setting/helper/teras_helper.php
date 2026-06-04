@@ -1,5 +1,12 @@
 <?php
 /**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ *//**
  * Helper Functions for Teras Strategik Color Coding
  * 
  * This file provides centralized color mapping for teras strategik kod (TS-01, TS-02, etc.)

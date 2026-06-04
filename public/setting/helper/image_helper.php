@@ -1,5 +1,12 @@
 <?php
-// Semak jika fail gambar wujud dan valid
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */// Semak jika fail gambar wujud dan valid
 function is_valid_image($path) {
     return file_exists($path) && exif_imagetype($path) !== false;
 }

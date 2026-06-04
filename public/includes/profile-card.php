@@ -1,5 +1,12 @@
 <?php
-$avatarUrl = $avatarUrl ?? ($profileView['avatar_url'] ?? base_url('assets/images/no-image.jpg'));
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */$avatarUrl = $avatarUrl ?? ($profileView['avatar_url'] ?? base_url('assets/images/no-image.jpg'));
 $namaPenuh = $namaPenuh ?? ($profileView['nama_penuh'] ?? '');
 $jawatan = $jawatan ?? ($profileView['jawatan'] ?? '');
 $gred = $gred ?? ($profileView['gred'] ?? '');

@@ -1,5 +1,12 @@
 <?php
-function bulanToText(string $kodBulan, string $lang = 'ms'): string
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */function bulanToText(string $kodBulan, string $lang = 'ms'): string
 {
     // ✅ Normalize input bulan (contoh: '7' atau ' 07 ') kepada '07'
     $kodBulan = str_pad(trim((string)(int)$kodBulan), 2, '0', STR_PAD_LEFT);

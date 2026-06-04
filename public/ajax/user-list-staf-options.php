@@ -1,5 +1,12 @@
 <?php
-// ajax/user-list-staf-options.php
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */// ajax/user-list-staf-options.php
 // Return HTML options for staf dropdown (for refresh after delete/add)
 // With caching (5 min TTL) and rate limiting
 declare(strict_types=1);

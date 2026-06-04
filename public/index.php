@@ -1,5 +1,12 @@
 <?php
-$__ssoDebugLog = static function (string $message, array $context = []): void {
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */$__ssoDebugLog = static function (string $message, array $context = []): void {
     $enabled = $_ENV['SSO_DEBUG_LOG_ENABLED'] ?? getenv('SSO_DEBUG_LOG_ENABLED');
     if (!is_string($enabled) || !in_array(strtolower(trim($enabled)), ['1', 'true', 'yes', 'on'], true)) {
         return;

@@ -1,5 +1,12 @@
 <?php
-
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */
 return [
     // Maklumat asas laman:
     // - title: nama sistem untuk title browser / fallback paparan umum
@@ -37,7 +44,7 @@ return [
     // - support: emel sokongan global
     'system' => [
         'name'        => 'Base System',
-        'version'     => '1.7.7',
+        'version'     => '1.7.9',
         'author'      => 'Sistem Induk',
         'meta_author' => 'Base System',
         'support'     => 'support@example.com',

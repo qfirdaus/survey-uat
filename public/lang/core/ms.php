@@ -1,5 +1,12 @@
 <?php
-return [
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */return [
 
 /* =====================================================
  * DASHBOARD (dash_)
@@ -2728,5 +2735,37 @@ return [
 'notification_template_action_restore' => 'Aktifkan',
 'notification_template_action_delete' => 'Padam',
 'notification_template_delete_confirm' => 'Padam template notifikasi ini?',
+'systemCache_page_title' => 'Cache Sistem',
+'systemCache_breadcrumb_active' => 'Clear Cache',
+'systemCache_forbidden' => 'Anda tidak mempunyai kebenaran untuk mengurus cache sistem.',
+'systemCache_stat_locations' => 'Lokasi Cache',
+'systemCache_stat_files' => 'Fail Cache',
+'systemCache_stat_size' => 'Saiz Cache',
+'systemCache_stat_opcache' => 'OPcache',
+'systemCache_stat_apcu' => 'APCu',
+'systemCache_table_title' => 'Lokasi Cache Ditemui',
+'systemCache_table_subtitle' => 'Hanya fail cache dalam folder cache standard projek disenaraikan. Struktur direktori dikekalkan.',
+'systemCache_action_clear_selected' => 'Clear Selected',
+'systemCache_action_clear_all' => 'Clear All Cache',
+'systemCache_col_location' => 'Lokasi',
+'systemCache_col_files' => 'Fail',
+'systemCache_col_size' => 'Saiz',
+'systemCache_col_modified' => 'Terakhir Diubah',
+'systemCache_empty' => 'Tiada lokasi cache standard ditemui.',
+'systemCache_confirm_title' => 'Clear System Cache?',
+'systemCache_confirm_text' => 'Tindakan ini akan membuang fail cache yang ditemui dan reset cache PHP.',
+'systemCache_confirm_cancel' => 'Batal',
+'systemCache_confirm_clear' => 'Clear Cache',
+'systemCache_success_title' => 'Cache Dibersihkan',
+'systemCache_success_message' => 'Cache sistem berjaya dibersihkan.',
+'systemCache_success_note' => 'Pengguna tidak perlu logout/login selepas cache dibersihkan. Refresh halaman biasanya mencukupi.',
+'systemCache_result_files' => 'Fail dibuang',
+'systemCache_result_size' => 'Saiz dibebaskan',
+'systemCache_result_locations' => 'Lokasi dibersihkan',
+'systemCache_loading' => 'Sedang membersihkan cache...',
+'systemCache_error_invalid_method' => 'Kaedah request tidak sah.',
+'systemCache_error_invalid_action' => 'Tindakan cache tidak sah.',
+'systemCache_error_no_selection' => 'Pilih sekurang-kurangnya satu lokasi cache.',
+'systemCache_error_generic' => 'Gagal membersihkan cache sistem.',
 
 ];

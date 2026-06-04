@@ -1,5 +1,12 @@
 <?php
-// ajax/role-switch.php
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */// ajax/role-switch.php
 // Switch active role for current session (group_active_id)
 declare(strict_types=1);
 

@@ -1,5 +1,12 @@
 <?php
 /**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ *//**
  * Constants for Prestasi (Performance Appraisal) Module
  * 
  * This file contains all constants used across the prestasi module to avoid

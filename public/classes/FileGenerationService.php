@@ -1,5 +1,12 @@
 <?php
-declare(strict_types=1);
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */declare(strict_types=1);
 
 require_once __DIR__ . '/TemplateResolverService.php';
 
@@ -98,9 +105,18 @@ final class FileGenerationService
             '__PAGE_ICON__' => $normalized['page_icon'],
         ];
 
-        $pageContent = $this->renderStub((string)$template['paths']['page_stub'], $replacements);
-        $controllerContent = $this->renderStub((string)$template['paths']['controller_stub'], $replacements);
-        $cssContent = $this->renderStub((string)$template['paths']['css_stub'], $replacements);
+        $pageContent = $this->addGeneratedFileHeader(
+            $this->renderStub((string)$template['paths']['page_stub'], $replacements),
+            'php'
+        );
+        $controllerContent = $this->addGeneratedFileHeader(
+            $this->renderStub((string)$template['paths']['controller_stub'], $replacements),
+            'php'
+        );
+        $cssContent = $this->addGeneratedFileHeader(
+            $this->renderStub((string)$template['paths']['css_stub'], $replacements),
+            'css'
+        );
 
         $this->writeFile($outputPaths['page'], $pageContent);
         $this->writeFile($outputPaths['controller'], $controllerContent);
@@ -297,6 +313,44 @@ final class FileGenerationService
         if (file_put_contents($path, $content) === false) {
             throw new RuntimeException("Failed to write generated file: {$path}");
         }
+    }
+
+    private function addGeneratedFileHeader(string $content, string $type): string
+    {
+        if (str_contains($content, 'PROJECT GENERATED FILE')) {
+            return $content;
+        }
+
+        if ($type === 'php') {
+            $header = "/**\n"
+                . " * PROJECT GENERATED FILE\n"
+                . " *\n"
+                . " * Safe to customize for this downstream project.\n"
+                . " * Generated from an IQS Framework template.\n"
+                . " */\n";
+
+            if (str_starts_with($content, "<?php\n")) {
+                return "<?php\n" . $header . substr($content, 6);
+            }
+
+            if (str_starts_with($content, "<?php\r\n")) {
+                return "<?php\r\n" . str_replace("\n", "\r\n", $header) . substr($content, 7);
+            }
+
+            return "<?php\n" . $header . preg_replace('/^<\?php\s*/', '', $content);
+        }
+
+        if ($type === 'css') {
+            return "/*\n"
+                . " * PROJECT GENERATED FILE\n"
+                . " *\n"
+                . " * Safe to customize for this downstream project.\n"
+                . " * Generated from an IQS Framework template.\n"
+                . " */\n"
+                . $content;
+        }
+
+        return $content;
     }
 
     /**

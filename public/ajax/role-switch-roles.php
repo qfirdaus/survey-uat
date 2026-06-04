@@ -1,5 +1,12 @@
 <?php
-// ajax/role-switch-roles.php
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */// ajax/role-switch-roles.php
 // Return latest allowed roles for role switcher modal
 declare(strict_types=1);
 

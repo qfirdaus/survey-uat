@@ -1,5 +1,12 @@
 <?php
-// ajax/profile-kill-session.php
+/**
+ * IQS FRAMEWORK CORE FILE
+ *
+ * READ ONLY for downstream project programmers.
+ * Do not modify this file directly in template or cloned projects.
+ * Custom changes must be implemented in project-specific files
+ * or approved extension points.
+ */// ajax/profile-kill-session.php
 // Kill/end a user session from audit_session table
 declare(strict_types=1);
 
