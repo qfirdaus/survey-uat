@@ -984,6 +984,8 @@
 'userGroup_subgroup_save_success'   => 'Subgroup berjaya disimpan.',
 'userGroup_subgroup_delete_success' => 'Subgroup berjaya dipadam.',
 'userGroup_subgroup_confirm_delete' => 'Padam subgroup ini?',
+'userGroup_subgroup_confirm_delete_title' => 'Padam subgroup "{name}"?',
+'userGroup_subgroup_confirm_delete_text' => 'Subgroup "{name}" akan dipadam jika tiada menu yang menggunakan subgroup ini.',
 'userGroup_subgroup_load_fail'      => 'Gagal memuat senarai subgroup.',
 'userGroup_btn_reset'               => 'Reset',
 'userGroup_field_color'             => 'Warna',

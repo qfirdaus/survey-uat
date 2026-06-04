@@ -183,6 +183,7 @@ const MenuAccess = {
       const row = this.subgroupRows[parseInt(tr.getAttribute('data-index') || '-1', 10)];
       if (!row) return;
       if (e.target.closest('.sg-edit')) this.resetSubgroupForm(row);
+      if (e.target.closest('.sg-delete-blocked')) this.showSubgroupInUseAlert(row);
       if (e.target.closest('.sg-delete')) this.deleteSubgroup(row);
     });
     // Group create modal save handler (global page)
@@ -1727,6 +1728,42 @@ const MenuAccess = {
     document.getElementById('menuSubgroupError')?.classList.add('d-none');
   },
 
+  async showSubgroupAlert(options = {}) {
+    return GroupUtils.fireAlert(Object.assign({
+      confirmButtonText: this.T.ok || 'OK'
+    }, options));
+  },
+
+  async showSubgroupInUseAlert(row) {
+    const name = String(row?.name || row?.name_ms || this.T.field_subgroup || 'Subgroup');
+    const count = parseInt(row?.menuCount || '0', 10) || 0;
+    await this.showSubgroupAlert({
+      icon: 'info',
+      title: this.T.not_allowed_title || 'Tidak Dibenarkan',
+      html: '<div class="text-start">' +
+        '<p class="mb-2">' + GroupUtils.esc(this.T.subgroup_in_use || 'Subgroup ini sedang digunakan oleh menu. Pindahkan menu dahulu sebelum padam.') + '</p>' +
+        '<div class="small text-muted">' + GroupUtils.esc(name + (count > 0 ? (' · ' + count + ' menu') : '')) + '</div>' +
+        '</div>'
+    });
+  },
+
+  async confirmSubgroupDelete(row) {
+    const name = String(row?.name || row?.name_ms || this.T.field_subgroup || 'Subgroup');
+    const title = MenuAccess.formatText(this.T.subgroup_confirm_delete_title || this.T.subgroup_confirm_delete || 'Padam subgroup "{name}"?', { name });
+    const text = MenuAccess.formatText(this.T.subgroup_confirm_delete_text || 'Subgroup "{name}" akan dipadam jika tiada menu yang menggunakan subgroup ini.', { name });
+    const result = await GroupUtils.fireAlert({
+      icon: 'warning',
+      title,
+      text,
+      showCancelButton: true,
+      confirmButtonText: this.T.confirm_yes_delete || this.T.confirm_yes || 'Ya, Padam',
+      cancelButtonText: this.T.confirm_cancel || 'Batal',
+      reverseButtons: true,
+      focusCancel: true
+    });
+    return !!(result && result.isConfirmed);
+  },
+
   async openSubgroupManager() {
     if (!this.subgroupModalEl) return;
     const parentModal = GroupUtils.getModal(this.modalEl);
@@ -1754,7 +1791,7 @@ const MenuAccess = {
     const modulID = parseInt(document.getElementById('sg_modulID')?.value || '0', 10) || 0;
     GroupUtils.showLoader('menuAction', this.T.loading || 'Loading...');
     try {
-      const j = await GroupUtils.fetchJSONSafe(GroupUtils.apiUrl('menu-subgroup-list.php', { modulID, active: 0 }));
+      const j = await GroupUtils.fetchJSONSafe(GroupUtils.apiUrl('menu-subgroup-list.php', { modulID, active: 1 }));
       const rows = Array.isArray(j?.subgroups) ? j.subgroups : [];
       this.subgroupRows = rows;
       const editingID = parseInt(document.getElementById('sg_subgroupID')?.value || '0', 10) || 0;
@@ -1769,8 +1806,8 @@ const MenuAccess = {
         const safeName = GroupUtils.esc(r.name || r.name_ms || '-');
         const menuCount = parseInt(r.menuCount || '0', 10) || 0;
         const deleteBtn = menuCount > 0
-          ? ''
-          : ' <button type="button" class="btn btn-sm btn-outline-danger sg-delete"><i class="ri-delete-bin-line"></i></button>';
+          ? ' <button type="button" class="btn btn-sm btn-outline-secondary sg-delete-blocked" title="' + GroupUtils.esc(this.T.subgroup_in_use || 'Subgroup ini sedang digunakan oleh menu.') + '"><i class="ri-lock-line"></i></button>'
+          : ' <button type="button" class="btn btn-sm btn-outline-danger sg-delete" title="' + GroupUtils.esc(this.T.delete || 'Delete') + '"><i class="ri-delete-bin-line"></i></button>';
         return '<tr data-index="' + idx + '">' +
           '<td class="align-top">' + GroupUtils.esc(r.modulName || ('Modul ' + r.modulID)) + '</td>' +
           '<td class="align-top"><div class="fw-semibold"><i class="' + GroupUtils.esc(r.icon || 'ri-folder-2-line') + ' me-1"></i>' + safeName + '</div><div class="small text-muted">' + GroupUtils.esc(r.code || '-') + (menuCount > 0 ? ' · ' + GroupUtils.esc(menuCount + ' menu') : '') + '</div></td>' +
@@ -1799,7 +1836,11 @@ const MenuAccess = {
       status: parseInt(document.getElementById('sg_status')?.value || '1', 10) === 1 ? 1 : 0
     };
     if (!payload.modulID || !payload.name_ms) {
-      if (errEl) { errEl.textContent = this.T.subgroup_required || 'Sila pilih modul dan isi nama subgroup.'; errEl.classList.remove('d-none'); }
+      await this.showSubgroupAlert({
+        icon: 'error',
+        title: this.T.error || 'Ralat',
+        text: this.T.subgroup_required || 'Sila pilih modul dan isi nama subgroup.'
+      });
       return;
     }
     GroupUtils.showLoader('menuAction', this.T.loading || this.T.btn_save || 'Loading...');
@@ -1814,8 +1855,18 @@ const MenuAccess = {
       await this.loadSubgroupsForManager();
       await this.populateSubgroups(this.$ME('#em_modulID')?.value || '', this.$ME('#em_subgroupID')?.value || 0);
       this.syncSidebarAfterNavigationChange();
+      await this.showSubgroupAlert({
+        icon: 'success',
+        title: this.T.success_title || 'Berjaya',
+        text: (j && j.message) || this.T.subgroup_save_success || 'Subgroup berjaya disimpan.'
+      });
     } catch (e) {
-      if (errEl) { errEl.textContent = e.message || this.T.error_network; errEl.classList.remove('d-none'); }
+      if (errEl) errEl.classList.add('d-none');
+      await this.showSubgroupAlert({
+        icon: 'error',
+        title: this.T.error || 'Ralat',
+        text: e.message || this.T.error_network
+      });
     } finally {
       GroupUtils.hideLoader('menuAction');
     }
@@ -1823,7 +1874,11 @@ const MenuAccess = {
 
   async deleteSubgroup(row) {
     if (!row || !row.id) return;
-    const ok = window.confirm(this.T.subgroup_confirm_delete || 'Padam subgroup ini?');
+    if ((parseInt(row.menuCount || '0', 10) || 0) > 0) {
+      await this.showSubgroupInUseAlert(row);
+      return;
+    }
+    const ok = await this.confirmSubgroupDelete(row);
     if (!ok) return;
     GroupUtils.showLoader('menuAction', this.T.loading || this.T.confirm_yes_delete || 'Loading...');
     try {
@@ -1836,9 +1891,19 @@ const MenuAccess = {
       await this.loadSubgroupsForManager();
       await this.populateSubgroups(this.$ME('#em_modulID')?.value || '', 0);
       this.syncSidebarAfterNavigationChange();
+      await this.showSubgroupAlert({
+        icon: 'success',
+        title: this.T.deleted_title || this.T.success_title || 'Dipadam',
+        text: (j && j.message) || this.T.subgroup_delete_success || 'Subgroup berjaya dipadam.'
+      });
     } catch (e) {
       const errEl = document.getElementById('menuSubgroupError');
-      if (errEl) { errEl.textContent = e.message || this.T.error_network; errEl.classList.remove('d-none'); }
+      if (errEl) errEl.classList.add('d-none');
+      await this.showSubgroupAlert({
+        icon: 'error',
+        title: this.T.delete_failed_title || this.T.error || 'Gagal',
+        text: e.message || this.T.error_network
+      });
     } finally {
       GroupUtils.hideLoader('menuAction');
     }

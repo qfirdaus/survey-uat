@@ -984,6 +984,8 @@
 'userGroup_subgroup_save_success'   => 'Subgroup saved successfully.',
 'userGroup_subgroup_delete_success' => 'Subgroup deleted successfully.',
 'userGroup_subgroup_confirm_delete' => 'Delete this subgroup?',
+'userGroup_subgroup_confirm_delete_title' => 'Delete subgroup "{name}"?',
+'userGroup_subgroup_confirm_delete_text' => 'Subgroup "{name}" will be deleted if no menu is using it.',
 'userGroup_subgroup_load_fail'      => 'Failed to load subgroup list.',
 'userGroup_btn_reset'               => 'Reset',
 'userGroup_field_color'             => 'Color',
