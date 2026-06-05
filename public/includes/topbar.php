@@ -570,14 +570,19 @@ if ($roleSwitchFlash !== null) {
     box-shadow: 0 2px 5px rgba(239, 68, 68, 0.25);
   }
   .topbar-notification-menu {
+    display: flex;
+    flex-direction: column;
     width: 380px;
     max-width: calc(100vw - 1rem);
+    max-height: min(520px, calc(100vh - 5rem));
     border: 1px solid rgba(148, 163, 184, 0.18);
     border-radius: 10px;
+    background: #fff;
     overflow: hidden;
     box-shadow: 0 14px 34px rgba(15, 23, 42, 0.14);
   }
   .topbar-notification-header {
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -613,7 +618,9 @@ if ($roleSwitchFlash !== null) {
     text-decoration: underline;
   }
   .topbar-notification-list {
-    max-height: 345px;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
     background: #fff;
   }
   .topbar-notification-item {
@@ -678,19 +685,22 @@ if ($roleSwitchFlash !== null) {
     padding: 0.18rem 0.32rem;
   }
   .topbar-notification-view-all {
+    flex: 0 0 auto;
     display: block;
+    position: relative;
+    z-index: 2;
     padding: 0.7rem 1rem;
     border-top: 1px solid rgba(148, 163, 184, 0.18);
-    background: #fff;
-    color: #2563eb;
+    background: #fff !important;
+    color: #2563eb !important;
     font-size: 0.76rem;
     font-weight: 800;
     text-align: center;
     text-decoration: none;
   }
   .topbar-notification-view-all:hover {
-    background: rgba(37, 99, 235, 0.04);
-    color: #1d4ed8;
+    background: rgba(37, 99, 235, 0.04) !important;
+    color: #1d4ed8 !important;
   }
 
   /* Role Switcher Modal - align with themed modals in kumpulan-pengguna */
