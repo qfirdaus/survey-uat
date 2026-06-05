@@ -20,6 +20,74 @@ if (!function_exists('prestasi_normalize_group_code')) {
     }
 }
 
+if (!function_exists('prestasi_load_project_policy')) {
+    function prestasi_load_project_policy(string $policyName): void {
+        $policyName = preg_replace('/[^a-zA-Z0-9_-]+/', '', $policyName) ?? '';
+        if ($policyName === '') {
+            return;
+        }
+
+        $candidates = [
+            __DIR__ . '/../../project/policies/' . $policyName . '_policy.php',
+            __DIR__ . '/../../custom/policies/' . $policyName . '_policy.php',
+        ];
+
+        foreach ($candidates as $path) {
+            if (is_file($path)) {
+                require_once $path;
+            }
+        }
+    }
+}
+
+if (!function_exists('prestasi_project_userlist_policy_decision')) {
+    function prestasi_project_userlist_policy_decision(string $hook, bool $default, array $args = []): bool {
+        prestasi_load_project_policy('userlist');
+        if (!function_exists($hook)) {
+            return $default;
+        }
+
+        try {
+            return (bool)$hook(...$args);
+        } catch (Throwable $e) {
+            error_log('[prestasi_project_userlist_policy_decision] ' . $hook . ': ' . $e->getMessage());
+            return $default;
+        }
+    }
+}
+
+if (!function_exists('prestasi_is_userlist_page_path')) {
+    function prestasi_is_userlist_page_path(string $path): bool {
+        $path = prestasi_normalize_menu_path($path);
+        return $path === 'pages/senarai-pengguna.php' || basename($path) === 'senarai-pengguna.php';
+    }
+}
+
+if (!function_exists('prestasi_is_userlist_ajax_path')) {
+    function prestasi_is_userlist_ajax_path(string $path): bool {
+        $path = prestasi_normalize_menu_path($path);
+        $basename = basename($path);
+        return str_starts_with($path, 'ajax/')
+            && in_array($basename, [
+                'user-add-public.php',
+                'user-add-student.php',
+                'user-add.php',
+                'user-delete.php',
+                'user-extra-roles.php',
+                'user-list-rows.php',
+                'user-list-staf-options.php',
+                'user-list-student-options.php',
+                'user-search-pelajar.php',
+                'user-search-staf.php',
+                'user-set-group.php',
+                'user-student-detail.php',
+                'user-sync-student.php',
+                'user-sync-sybase.php',
+                'user-update-public.php',
+            ], true);
+    }
+}
+
 if (!function_exists('prestasi_group_code_equals')) {
     function prestasi_group_code_equals(?string $left, ?string $right): bool {
         $a = prestasi_normalize_group_code($left);
@@ -525,6 +593,13 @@ if (!function_exists('prestasi_user_can_access_current_page')) {
 
         $isSuperAdmin = $pdo instanceof PDO && is_user_super_admin($profile, $pdo);
         if ($policy === 'super_admin_only') {
+            if (prestasi_is_userlist_page_path($currentPath)) {
+                return prestasi_project_userlist_policy_decision(
+                    'project_userlist_can_access_page',
+                    $isSuperAdmin,
+                    [$profile, $pdo, $currentPath, $isSuperAdmin]
+                );
+            }
             return $isSuperAdmin;
         }
 
@@ -581,6 +656,20 @@ if (!function_exists('prestasi_user_can_access_current_request')) {
         }
 
         if ($policy === 'super_admin_only') {
+            if (prestasi_is_userlist_page_path($currentPath)) {
+                return prestasi_project_userlist_policy_decision(
+                    'project_userlist_can_access_page',
+                    $isSuperAdmin,
+                    [$profile, $pdo, $currentPath, $isSuperAdmin]
+                );
+            }
+            if (prestasi_is_userlist_ajax_path($currentPath)) {
+                return prestasi_project_userlist_policy_decision(
+                    'project_userlist_can_access_ajax',
+                    $isSuperAdmin,
+                    [$profile, $pdo, $currentPath, $isSuperAdmin]
+                );
+            }
             return $isSuperAdmin;
         }
 
@@ -676,6 +765,13 @@ if (!function_exists('prestasi_user_can_access_page_path')) {
 
         $isSuperAdmin = $pdo instanceof PDO && is_user_super_admin($profile, $pdo);
         if ($policy === 'super_admin_only') {
+            if (prestasi_is_userlist_page_path($pagePath)) {
+                return prestasi_project_userlist_policy_decision(
+                    'project_userlist_can_access_page',
+                    $isSuperAdmin,
+                    [$profile, $pdo, $pagePath, $isSuperAdmin]
+                );
+            }
             return $isSuperAdmin;
         }
 

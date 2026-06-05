@@ -268,6 +268,20 @@ function hasGroupManagePermission(PDO $pdo): bool {
         if (function_exists('is_user_super_admin') && is_user_super_admin($profile, $pdo)) {
             return true;
         }
+
+        if (function_exists('prestasi_current_request_relative_path')) {
+            $currentPath = prestasi_current_request_relative_path();
+            if (
+                (function_exists('prestasi_is_userlist_page_path') && prestasi_is_userlist_page_path($currentPath))
+                || (function_exists('prestasi_is_userlist_ajax_path') && prestasi_is_userlist_ajax_path($currentPath))
+            ) {
+                return userListProjectPolicyDecision(
+                    'project_userlist_can_access_admin',
+                    false,
+                    [$profile, $pdo, $currentPath, false]
+                );
+            }
+        }
         
         // Boleh tambah group lain yang ada permission di sini
         // Contoh: Admin HR boleh manage kumpulan HR sahaja
@@ -277,6 +291,172 @@ function hasGroupManagePermission(PDO $pdo): bool {
         error_log('[hasGroupManagePermission] Error: ' . $e->getMessage());
         return false;
     }
+}
+
+function userListLoadProjectPolicy(): void {
+    if (function_exists('prestasi_load_project_policy')) {
+        prestasi_load_project_policy('userlist');
+        return;
+    }
+
+    foreach ([
+        __DIR__ . '/../project/policies/userlist_policy.php',
+        __DIR__ . '/../custom/policies/userlist_policy.php',
+    ] as $path) {
+        if (is_file($path)) {
+            require_once $path;
+        }
+    }
+}
+
+function userListProjectPolicyDecision(string $hook, bool $default, array $args = []): bool {
+    userListLoadProjectPolicy();
+    if (!function_exists($hook)) {
+        return $default;
+    }
+
+    try {
+        return (bool)$hook(...$args);
+    } catch (Throwable $e) {
+        error_log('[userListProjectPolicyDecision] ' . $hook . ': ' . $e->getMessage());
+        return $default;
+    }
+}
+
+function userListResolveCurrentProfile(PDO $pdo): array {
+    try {
+        require_once __DIR__ . '/../classes/User.php';
+        $userModel = new User($pdo);
+        $loginID = trim((string)($_SESSION['f_loginID'] ?? $_SESSION['user']['f_loginID'] ?? ''));
+        if ($loginID !== '') {
+            $profile = $userModel->getProfileByLoginID($loginID);
+            if (is_array($profile) && $profile) {
+                return $profile;
+            }
+        }
+
+        $stafID = trim((string)($_SESSION['f_stafID'] ?? $_SESSION['user']['f_stafID'] ?? ''));
+        if ($stafID !== '') {
+            $profile = $userModel->getProfile($stafID);
+            if (is_array($profile) && $profile) {
+                return $profile;
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('[userListResolveCurrentProfile] Error: ' . $e->getMessage());
+    }
+
+    return [];
+}
+
+function userListCurrentUserIsSuperAdmin(PDO $pdo, ?array $profile = null): bool {
+    $profile = $profile ?? userListResolveCurrentProfile($pdo);
+    return $profile && function_exists('is_user_super_admin') && is_user_super_admin($profile, $pdo);
+}
+
+function userListNormalizeGroupCode(?string $groupKod): string {
+    $groupKod = strtoupper(trim((string)$groupKod));
+    return preg_replace('/[^A-Z0-9]+/', '', $groupKod) ?? '';
+}
+
+function userListIsSuperAdminGroupCode(?string $groupKod): bool {
+    $normalized = userListNormalizeGroupCode($groupKod);
+    if ($normalized === '') {
+        return false;
+    }
+
+    $superAdminCode = defined('PRESTASI_ROLE_KOD_ADM_SA')
+        ? (string)PRESTASI_ROLE_KOD_ADM_SA
+        : (defined('PRESTASI_ROLE_ADM_SA') ? (string)PRESTASI_ROLE_ADM_SA : 'ADM-SA');
+
+    return $normalized === userListNormalizeGroupCode($superAdminCode);
+}
+
+function userListCanAddUsers(PDO $pdo, ?array $profile = null): bool {
+    $profile = $profile ?? userListResolveCurrentProfile($pdo);
+    $default = userListCurrentUserIsSuperAdmin($pdo, $profile);
+    return userListProjectPolicyDecision('project_userlist_can_add_user', $default, [$profile, $pdo, $default]);
+}
+
+function userListCanEditTargetUser(PDO $pdo, array $targetUser = [], ?array $profile = null): bool {
+    $profile = $profile ?? userListResolveCurrentProfile($pdo);
+    $default = userListCurrentUserIsSuperAdmin($pdo, $profile);
+    return userListProjectPolicyDecision('project_userlist_can_edit_user', $default, [$profile, $targetUser, $pdo, $default]);
+}
+
+function userListCanDeleteTargetUser(PDO $pdo, array $targetUser = [], ?array $profile = null): bool {
+    $profile = $profile ?? userListResolveCurrentProfile($pdo);
+    $default = userListCurrentUserIsSuperAdmin($pdo, $profile);
+    return userListProjectPolicyDecision('project_userlist_can_delete_user', $default, [$profile, $targetUser, $pdo, $default]);
+}
+
+function userListCanAssignGroup(PDO $pdo, array $targetGroup = [], ?array $profile = null): bool {
+    $profile = $profile ?? userListResolveCurrentProfile($pdo);
+    $default = userListCurrentUserIsSuperAdmin($pdo, $profile);
+    return userListProjectPolicyDecision('project_userlist_can_assign_group', $default, [$profile, $targetGroup, $pdo, $default]);
+}
+
+function userListEnsureAssignableGroup(PDO $pdo, int|array $group): array {
+    if (is_array($group)) {
+        $groupRow = $group;
+    } else {
+        if ($group <= 0) {
+            jsonErrorResponse('Kumpulan pengguna tidak sah atau tidak wujud dalam sistem.', 400);
+        }
+
+        $stmt = $pdo->prepare('SELECT f_groupID, f_groupKod, f_groupName, f_categoryUser FROM tbl_m_group WHERE f_groupID = :groupID LIMIT 1');
+        $stmt->execute([':groupID' => $group]);
+        $groupRow = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    if (!$groupRow) {
+        jsonErrorResponse('Kumpulan pengguna tidak sah atau tidak wujud dalam sistem.', 400);
+    }
+
+    if (!userListCanAssignGroup($pdo, $groupRow)) {
+        jsonErrorResponse('Anda tidak dibenarkan menetapkan pengguna kepada kumpulan ini.', 403);
+    }
+
+    return $groupRow;
+}
+
+function userListEnsureTargetUserEditable(PDO $pdo, int|array $user): array {
+    if (is_array($user)) {
+        $userRow = $user;
+    } else {
+        if ($user <= 0) {
+            jsonErrorResponse((string)__('userList_ajax_invalid_user_id'), 400);
+        }
+
+        $stmt = $pdo->prepare(
+            "SELECT u.f_userID, u.f_loginID, u.f_stafID, u.f_nopekerja, u.f_nama, u.f_groupID,
+                    COALESCE(NULLIF(TRIM(u.f_groupKod), ''), NULLIF(TRIM(g.f_groupKod), '')) AS f_groupKod
+             FROM tbl_m_user u
+             LEFT JOIN tbl_m_group g ON g.f_groupID = u.f_groupID
+             WHERE u.f_userID = :userID
+             LIMIT 1"
+        );
+        $stmt->execute([':userID' => $user]);
+        $userRow = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    if (!$userRow) {
+        jsonErrorResponse((string)__('userList_ajax_user_not_found'), 404);
+    }
+
+    if (!userListCanEditTargetUser($pdo, $userRow)) {
+        jsonErrorResponse('Anda tidak dibenarkan mengemaskini pengguna ini.', 403);
+    }
+
+    return $userRow;
+}
+
+function userListEnsureTargetUserDeletable(PDO $pdo, int|array $user): array {
+    $userRow = is_array($user) ? $user : userListEnsureTargetUserEditable($pdo, $user);
+    if (!userListCanDeleteTargetUser($pdo, $userRow)) {
+        jsonErrorResponse((string)__('userList_ajax_delete_permission_superadmin'), 403);
+    }
+    return $userRow;
 }
 
 /**

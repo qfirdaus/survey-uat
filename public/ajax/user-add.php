@@ -336,6 +336,7 @@ try {
     $flag = $payload['flag'];
 
     $group = $resolveGroup($pdo, $groupID);
+    userListEnsureAssignableGroup($pdo, $groupID);
     $groupID = $group['groupID'];
     $groupKod = $group['groupKod'];
 

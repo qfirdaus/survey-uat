@@ -338,6 +338,7 @@ try {
     $payload = $readPayload();
     $matrik = $payload['matrik'];
     $group = $resolveGroup($pdo, $payload['groupID']);
+    userListEnsureAssignableGroup($pdo, (int)$payload['groupID']);
     $ensureUserNotExists($pdo, $matrik);
     $student = $fetchStudent($matrik);
 

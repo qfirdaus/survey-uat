@@ -496,6 +496,7 @@ try {
     $hasGroupKod = $schema['hasGroupKod'];
 
     $userContext = fetchUserGroupContext($db, $userID, $hasGroupID, $hasGroupKod);
+    userListEnsureTargetUserEditable($db, $userID);
     if (($userContext['userCategory'] ?? '') === 'PELAJAR' && function_exists('is_student_mode_enabled') && !is_student_mode_enabled()) {
         json_fail((string)__('studentSearch_mode_disabled'), 403);
     }
@@ -531,6 +532,9 @@ try {
     $oldFlag = $userContext['oldFlag'];
 
     $targetGroup = resolveTargetGroup($db, $hasGroup, $groupID, $oldID, $oldKod, $oldName);
+    if ($hasGroup) {
+        userListEnsureAssignableGroup($db, $groupID);
+    }
     $gid = $targetGroup['gid'];
     $gkod = $targetGroup['gkod'];
     $gnam = $targetGroup['gnam'];

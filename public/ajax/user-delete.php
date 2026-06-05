@@ -44,9 +44,6 @@ try {
     $currentProfile = $userModel->getProfile($currentStafID);
     
     $isSuperAdmin = $currentProfile && function_exists('is_user_super_admin') && is_user_super_admin($currentProfile, $pdo);
-    if (!$isSuperAdmin) {
-        jsonErrorResponse((string)__('userList_ajax_delete_permission_superadmin'), 403);
-    }
 
     $normalizeIdentity = static function (?string $value): string {
         return str_replace('-', '', trim((string)$value));
@@ -223,6 +220,7 @@ try {
     $payload = $readPayload();
     $userID = $payload['userID'];
     $userData = $fetchTargetUser($pdo, $userID);
+    userListEnsureTargetUserDeletable($pdo, $userData);
     if (strtoupper(trim((string)($userData['f_categoryUser'] ?? ''))) === 'PELAJAR' && function_exists('is_student_mode_enabled') && !is_student_mode_enabled()) {
         jsonErrorResponse((string)__('studentSearch_mode_disabled'), 403);
     }

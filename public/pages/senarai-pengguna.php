@@ -189,12 +189,19 @@ $roleAdminSaKod = defined('PRESTASI_ROLE_KOD_ADM_SA') ? (string)PRESTASI_ROLE_KO
 $roleAdminHrKod = defined('PRESTASI_ROLE_ADM_HR') ? (string)PRESTASI_ROLE_ADM_HR : 'ADM-HR';
 $roleAdminKeKod = defined('PRESTASI_ROLE_ADM_KE') ? (string)PRESTASI_ROLE_ADM_KE : 'ADM-KE';
 $isSuperAdmin = function_exists('is_user_super_admin') ? is_user_super_admin($profile, $dbMySQL) : ($roleAdminSaId > 0 && (int)($profile['f_groupID'] ?? 0) === $roleAdminSaId);
+$canAddUsers = function_exists('userListCanAddUsers') ? userListCanAddUsers($dbMySQL, $profile) : $isSuperAdmin;
+$canEditUsers = function_exists('userListCanEditTargetUser') ? userListCanEditTargetUser($dbMySQL, [], $profile) : $isSuperAdmin;
+$canDeleteUsers = function_exists('userListCanDeleteTargetUser') ? userListCanDeleteTargetUser($dbMySQL, [], $profile) : $isSuperAdmin;
 
 // ======================= Load Group List (fresh DB for style consistency) =======================
 $senaraiGroup = [];
 $senaraiGroupStaf = [];
 $senaraiGroupPelajar = [];
 $senaraiGroupUmum = [];
+$assignableGroup = [];
+$assignableGroupStaf = [];
+$assignableGroupPelajar = [];
+$assignableGroupUmum = [];
 try {
     $groupSelect = [
       'f_groupID',
@@ -220,12 +227,23 @@ try {
       $senaraiGroup,
       static fn($row) => is_array($row) && group_category_matches_scope((string)($row['f_categoryUser'] ?? ''), 'public')
     ));
+    $canAssignGroup = static function ($row) use ($dbMySQL, $profile): bool {
+      return is_array($row) && (!function_exists('userListCanAssignGroup') || userListCanAssignGroup($dbMySQL, $row, $profile));
+    };
+    $assignableGroup = array_values(array_filter($senaraiGroup, $canAssignGroup));
+    $assignableGroupStaf = array_values(array_filter($senaraiGroupStaf, $canAssignGroup));
+    $assignableGroupPelajar = array_values(array_filter($senaraiGroupPelajar, $canAssignGroup));
+    $assignableGroupUmum = array_values(array_filter($senaraiGroupUmum, $canAssignGroup));
 } catch (Throwable $e) {
     error_log('[senarai-pengguna] Error loading groups: ' . $e->getMessage());
     $senaraiGroup = [];
     $senaraiGroupStaf = [];
     $senaraiGroupPelajar = [];
     $senaraiGroupUmum = [];
+    $assignableGroup = [];
+    $assignableGroupStaf = [];
+    $assignableGroupPelajar = [];
+    $assignableGroupUmum = [];
 }
 
 // ======================= Data-Driven UI Style Map (Group) =======================
@@ -436,6 +454,8 @@ function render_user_access_table(
   string $currentUserStafIDNormalized,
   string $currentUserNoPekerjaNormalized,
   bool $isSuperAdmin,
+  PDO $policyPdo,
+  array $policyProfile,
   string $scope = 'staff',
   ?string $nameColumnLabel = null,
   ?string $departmentColumnLabel = null,
@@ -496,6 +516,12 @@ function render_user_access_table(
                         ($currentUserNoPekerjaNormalized !== '' && str_replace('-', '', $f_nopekerja) === $currentUserNoPekerjaNormalized);
                       $canManageProtectedSelf = can_self_manage_protected_staff_account_local($stafID, $currentUserStafIDNormalized);
                       $isTargetSuperAdmin = strtoupper(trim($gKod)) === 'ADM-SA';
+                      $canEditThisUser = function_exists('userListCanEditTargetUser')
+                        ? userListCanEditTargetUser($policyPdo, $u, $policyProfile)
+                        : ($isSuperAdmin && (!$isProtectedAccount || $canManageProtectedSelf));
+                      $canDeleteThisUser = function_exists('userListCanDeleteTargetUser')
+                        ? (userListCanDeleteTargetUser($policyPdo, $u, $policyProfile) && !$isCurrentLoggedInUser && !$isProtectedAccount)
+                        : ($isSuperAdmin && !$isCurrentLoggedInUser && !$isProtectedAccount);
                       $canViewAsUser = $isSuperAdmin && !$isCurrentLoggedInUser && !$isProtectedAccount && !$isTargetSuperAdmin && $f_flag === 1 && $loginID !== '';
                     ?>
                     <?php
@@ -544,7 +570,7 @@ function render_user_access_table(
                         <?php endif; ?>
                       </td>
                       <td class="col-actions">
-                        <?php if ($isSuperAdmin && (!$isProtectedAccount || $canManageProtectedSelf)): ?>
+                        <?php if ($canEditThisUser || $canDeleteThisUser || $canViewAsUser): ?>
                           <?php if ($canViewAsUser): ?>
                             <button type="button"
                               class="btn btn-outline-warning btn-sm icon-btn btn-view-as-user"
@@ -555,6 +581,7 @@ function render_user_access_table(
                               <i class="ri-eye-line"></i>
                             </button>
                           <?php endif; ?>
+                          <?php if ($canEditThisUser): ?>
                           <button type="button"
                             class="btn btn-outline-primary btn-sm icon-btn btn-edit-group<?= $canViewAsUser ? ' ms-1' : '' ?>"
                             title="<?= h(__('userList_action_change_group')) ?>"
@@ -578,7 +605,8 @@ function render_user_access_table(
                             data-flag="<?= h((string)$f_flag) ?>">
                             <i class="ri-pencil-line"></i>
                           </button>
-                          <?php if (!$isCurrentLoggedInUser && !$isProtectedAccount): ?>
+                          <?php endif; ?>
+                          <?php if ($canDeleteThisUser): ?>
                             <button type="button"
                               class="btn btn-outline-danger btn-sm icon-btn btn-delete-user ms-1"
                               title="<?= h(__('userList_action_delete_user')) ?>"
@@ -2409,6 +2437,8 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
               $currentUserStafIDNormalized,
               $currentUserNoPekerjaNormalized,
               $isSuperAdmin,
+              $dbMySQL,
+              $profile,
               'staff',
               (string)__('userList_col_name_staffid'),
               (string)__('userList_col_department'),
@@ -2443,6 +2473,8 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
               $currentUserStafIDNormalized,
               $currentUserNoPekerjaNormalized,
               $isSuperAdmin,
+              $dbMySQL,
+              $profile,
               'student',
               (string)__('userList_col_name_matric'),
               (string)__('userList_col_faculty'),
@@ -2477,6 +2509,8 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
               $currentUserStafIDNormalized,
               $currentUserNoPekerjaNormalized,
               $isSuperAdmin,
+              $dbMySQL,
+              $profile,
               'public',
               (string)__('userList_col_name_login'),
               (string)__('userList_col_university'),
@@ -2932,7 +2966,7 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
                   </label>
                   <select class="form-select big-select" id="au_groupKod" required>
                     <option value=""><?= __('userList_modal_placeholder_select_group') ?></option>
-                    <?php foreach ($senaraiGroup as $g): ?>
+                    <?php foreach ($assignableGroup as $g): ?>
                       <option value="<?= h((string)($g['f_groupID'] ?? '')) ?>"><?= h($g['f_groupName']) ?></option>
                     <?php endforeach; ?>
                   </select>
@@ -2990,19 +3024,19 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
         'kod' => (string)($g['f_groupKod'] ?? ''),
         'nama' => (string)($g['f_groupName'] ?? ''),
         'categoryUser' => (string)($g['f_categoryUser'] ?? ''),
-      ], $senaraiGroupStaf), JSON_UNESCAPED_UNICODE) ?>,
+      ], $assignableGroupStaf), JSON_UNESCAPED_UNICODE) ?>,
       student: <?= json_encode(array_map(static fn($g) => [
         'id' => (int)($g['f_groupID'] ?? 0),
         'kod' => (string)($g['f_groupKod'] ?? ''),
         'nama' => (string)($g['f_groupName'] ?? ''),
         'categoryUser' => (string)($g['f_categoryUser'] ?? ''),
-      ], $senaraiGroupPelajar), JSON_UNESCAPED_UNICODE) ?>,
+      ], $assignableGroupPelajar), JSON_UNESCAPED_UNICODE) ?>,
       public: <?= json_encode(array_map(static fn($g) => [
         'id' => (int)($g['f_groupID'] ?? 0),
         'kod' => (string)($g['f_groupKod'] ?? ''),
         'nama' => (string)($g['f_groupName'] ?? ''),
         'categoryUser' => (string)($g['f_categoryUser'] ?? ''),
-      ], $senaraiGroupUmum), JSON_UNESCAPED_UNICODE) ?>
+      ], $assignableGroupUmum), JSON_UNESCAPED_UNICODE) ?>
     },
     COLORS: {
       GROUP_ADM_SA: '#ffe8e8',
@@ -3028,6 +3062,9 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
     nopekerja: '<?= h($currentUserNoPekerjaNormalized) ?>'
   };
   const isSuperAdmin = <?= $isSuperAdmin ? 'true' : 'false' ?>;
+  const canAddUsers = <?= $canAddUsers ? 'true' : 'false' ?>;
+  const canEditUsers = <?= $canEditUsers ? 'true' : 'false' ?>;
+  const canDeleteUsers = <?= $canDeleteUsers ? 'true' : 'false' ?>;
   const protectedStaffIds = <?= json_encode(array_values(defined('PRESTASI_PROTECTED_STAFF_IDS') && is_array(PRESTASI_PROTECTED_STAFF_IDS) ? PRESTASI_PROTECTED_STAFF_IDS : []), JSON_UNESCAPED_UNICODE) ?>;
 
   // ==================== HELPER FUNCTIONS ====================
@@ -3418,7 +3455,7 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
     }
     
     // Update button data attributes if needed
-    if (isSuperAdmin) {
+    if (canEditUsers) {
       if (newData.name !== undefined || newData.loginID !== undefined || newData.email !== undefined) {
         const currentName = String(newData.name !== undefined ? newData.name : ($row.find('.btn-edit-group').attr('data-nama') || ''));
         const currentLoginID = String(newData.loginID !== undefined ? newData.loginID : ($row.find('.btn-edit-group').attr('data-loginid') || ''));
@@ -3521,7 +3558,7 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
       : isProtectedStaffAccountClient(stafID);
     const canEditGroup = (typeof r.can_edit_group !== 'undefined')
       ? !!r.can_edit_group
-      : ((typeof r.canEditGroup !== 'undefined') ? !!r.canEditGroup : isSuperAdmin);
+      : ((typeof r.canEditGroup !== 'undefined') ? !!r.canEditGroup : canEditUsers);
     const canDeleteUser = (typeof r.can_delete_user !== 'undefined')
       ? !!r.can_delete_user
       : ((typeof r.canDeleteUser !== 'undefined')
@@ -4157,7 +4194,7 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
     }
     
     // Button Tambah Pengguna (Super Admin sahaja)
-    if (isSuperAdmin && !document.getElementById('btnAddUser')) {
+    if (canAddUsers && !document.getElementById('btnAddUser')) {
       const $addBtn = $('<button type="button" id="btnAddUser" class="btn btn-success" onclick="return window.userListOpenAdd ? window.userListOpenAdd(\'staff\') : false;">' +
           '<i class="ri-user-add-line me-1"></i> <?= h(__('userList_add_button')) ?>' +
         '</button>');
@@ -4460,7 +4497,7 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
       });
     }
 
-    if (isSuperAdmin && !document.getElementById(meta.addButtonId)) {
+    if (canAddUsers && !document.getElementById(meta.addButtonId)) {
       const $addBtn = $(`<button type="button" id="${meta.addButtonId}" class="btn btn-success" onclick="return window.userListOpenAdd ? window.userListOpenAdd('${meta.scope}') : false;"><i class="ri-user-add-line me-1"></i> ${addLabel}</button>`);
       $addBtn.attr('data-modal-bound', '1');
       $topRight.append($addBtn);
@@ -4892,7 +4929,7 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
         const viewAsBtn = e.target.closest('.btn-view-as-user');
         if (viewAsBtn) {
           e.preventDefault();
-          if (!isSuperAdmin) {
+          if (!canDeleteUsers) {
             await fireSwal({
               icon: 'info',
               title: '<?= h(__('userList_error_title')) ?>',
@@ -4990,7 +5027,7 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
         const deleteBtn = e.target.closest('.btn-delete-user');
         if (deleteBtn) {
           e.preventDefault();
-          if (!isSuperAdmin) {
+          if (!canDeleteUsers) {
             await fireSwal({
               icon: 'info',
               title: '<?= h(__('userList_error_title')) ?>',
@@ -5150,7 +5187,7 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
         // Handle edit button click
         const btn = e.target.closest('.btn-edit-group'); 
         if (!btn || !modal) return;
-        if (!isSuperAdmin) {
+        if (!canEditUsers) {
           await fireSwal({
             icon: 'info',
             title: '<?= h(__('userList_error_title')) ?>',

@@ -146,9 +146,13 @@ try {
             );
             $isProtectedAccount = isProtectedStaffAccount($stafID);
             $canManageProtectedSelf = canSelfManageProtectedStaffAccount($stafID);
-            $canEditGroup = $isADM_SA && (!$isProtectedAccount || $canManageProtectedSelf);
-            $canDeleteUser = $isADM_SA && !$isCurrentLoggedInUser && !$isProtectedAccount;
             $isTargetSuperAdmin = strtoupper(trim($gKod)) === 'ADM-SA';
+            $canEditGroup = function_exists('userListCanEditTargetUser')
+                ? userListCanEditTargetUser($pdo, $u, $currentProfile)
+                : ($isADM_SA && (!$isProtectedAccount || $canManageProtectedSelf));
+            $canDeleteUser = (function_exists('userListCanDeleteTargetUser')
+                ? userListCanDeleteTargetUser($pdo, $u, $currentProfile)
+                : $isADM_SA) && !$isCurrentLoggedInUser && !$isProtectedAccount;
             $canViewAsUser = $isADM_SA && !$isCurrentLoggedInUser && !$isProtectedAccount && !$isTargetSuperAdmin && $f_flag === 1 && $loginID !== '';
             
             $style = prestasi_group_ui_resolve($groupUiMaps, $gId, $gKod);

@@ -84,6 +84,7 @@ try {
     if (!$userRow) {
         jsonErrorResponse((string)__('userList_ajax_user_not_found'), 404);
     }
+    userListEnsureTargetUserEditable($pdo, $userID);
     $targetProtectedStaffId = (string)($userRow['f_stafID'] ?? '');
     if (isProtectedStaffAccount($targetProtectedStaffId) && !canSelfManageProtectedStaffAccount($targetProtectedStaffId)) {
         try {
@@ -126,6 +127,7 @@ try {
     if (!$groupRow) {
         jsonErrorResponse((string)__('userList_ajax_invalid_group'), 400);
     }
+    userListEnsureAssignableGroup($pdo, $groupID);
     if (strtoupper(trim((string)($groupRow['f_categoryUser'] ?? ''))) !== 'UMUM') {
         jsonErrorResponse((string)__('userList_ajax_invalid_public_group'), 400);
     }

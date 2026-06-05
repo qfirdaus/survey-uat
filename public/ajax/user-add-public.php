@@ -290,6 +290,7 @@ try {
 
     $payload = $readPayload();
     $group = $resolveGroup($pdo, $payload['groupID']);
+    userListEnsureAssignableGroup($pdo, (int)$payload['groupID']);
     $ensureUserNotExists($pdo, $payload['email']);
 
     $loggedInStafID = $_SESSION['f_stafID'] ?? null;
