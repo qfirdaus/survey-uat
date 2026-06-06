@@ -37,6 +37,59 @@ if ($namaMs === '' || $path === '' || $kategoriID <= 0) {
     jsonErrorResponse((string) __('formList_error_required_fields'), 422);
 }
 
+function borangSaveAudit(string $eventType, int $borangId, string $namaMs, array $meta = [], ?array $oldValues = null, array $newValues = []): void
+{
+    try {
+        if (!function_exists('audit_event')) {
+            return;
+        }
+
+        $actorLabel = function_exists('audit_format_actor_label')
+            ? audit_format_actor_label()
+            : ($_SESSION['user']['f_nama'] ?? $_SESSION['f_nama'] ?? null);
+
+        $eventId = audit_event([
+            'event_type' => $eventType,
+            'severity' => 'INFO',
+            'outcome' => 'SUCCESS',
+            'target_type' => 'form',
+            'target_id' => (string)$borangId,
+            'target_label' => $namaMs,
+            'message' => function_exists('audit_format_message')
+                ? audit_format_message($eventType === 'CREATE' ? 'Form created' : 'Form updated', $actorLabel)
+                : ($eventType === 'CREATE' ? 'Form created' : 'Form updated'),
+            'actor_label' => $actorLabel,
+            'meta' => $meta,
+        ]);
+
+        if (!$eventId || !function_exists('audit_begin_change') || !function_exists('audit_change')) {
+            return;
+        }
+
+        $changeSetId = audit_begin_change($eventId, 'form', (string)$borangId, $eventType === 'CREATE' ? 'Form creation' : 'Form update', [
+            'source' => 'borang-save',
+        ]);
+        if (!$changeSetId) {
+            return;
+        }
+
+        $fieldTypes = [
+            'f_kategoriID' => 'integer',
+            'f_flag' => 'integer',
+            'f_order' => 'integer',
+        ];
+        foreach ($newValues as $field => $newValue) {
+            $oldValue = $oldValues[$field] ?? null;
+            if ($eventType !== 'CREATE' && (string)$oldValue === (string)$newValue) {
+                continue;
+            }
+            audit_change($changeSetId, (string)$field, $oldValue, $newValue, $fieldTypes[$field] ?? 'string', false);
+        }
+    } catch (Throwable $auditError) {
+        error_log('[borang-save] Audit logging failed: ' . $auditError->getMessage());
+    }
+}
+
 try {
     $dupSql = "
         SELECT 1
@@ -78,12 +131,34 @@ try {
             ':order' => max(1, $nextOrder),
         ]);
 
+        $newId = (int)$pdo->lastInsertId();
+        $newValues = [
+            'f_nama_ms' => $namaMs,
+            'f_nama_en' => $namaEn !== '' ? $namaEn : null,
+            'f_kategoriID' => $kategoriID,
+            'f_path' => $path,
+            'f_icon' => $icon,
+            'f_flag' => $flag,
+            'f_order' => max(1, $nextOrder),
+        ];
+        borangSaveAudit('CREATE', $newId, $namaMs, [
+            'borang_id' => $newId,
+            'name_ms' => $namaMs,
+            'name_en' => $namaEn,
+            'kategori_id' => $kategoriID,
+            'path' => $path,
+            'icon' => $icon,
+            'flag' => $flag,
+            'order' => max(1, $nextOrder),
+        ], null, $newValues);
+
         jsonSuccessResponse(['message' => (string) __('formList_success_created')]);
     }
 
-    $currentStmt = $pdo->prepare('SELECT f_order FROM tbl_m_borang WHERE f_borangID = :id LIMIT 1');
+    $currentStmt = $pdo->prepare('SELECT f_nama_ms, f_nama_en, f_kategoriID, f_path, f_icon, f_flag, f_order FROM tbl_m_borang WHERE f_borangID = :id LIMIT 1');
     $currentStmt->execute([':id' => $id]);
-    $currentOrder = (int) ($currentStmt->fetchColumn() ?: 1);
+    $currentRow = $currentStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    $currentOrder = (int)($currentRow['f_order'] ?? 1);
 
     $stmt = $pdo->prepare(
         "
@@ -110,6 +185,26 @@ try {
         ':order' => max(1, $currentOrder),
         ':id' => $id,
     ]);
+
+    $newValues = [
+        'f_nama_ms' => $namaMs,
+        'f_nama_en' => $namaEn !== '' ? $namaEn : null,
+        'f_kategoriID' => $kategoriID,
+        'f_path' => $path,
+        'f_icon' => $icon,
+        'f_flag' => $flag,
+        'f_order' => max(1, $currentOrder),
+    ];
+    borangSaveAudit('UPDATE', $id, $namaMs, [
+        'borang_id' => $id,
+        'name_ms' => $namaMs,
+        'name_en' => $namaEn,
+        'kategori_id' => $kategoriID,
+        'path' => $path,
+        'icon' => $icon,
+        'flag' => $flag,
+        'order' => max(1, $currentOrder),
+    ], $currentRow, $newValues);
 
     jsonSuccessResponse(['message' => (string) __('formList_success_updated')]);
 } catch (Throwable $e) {

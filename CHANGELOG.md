@@ -6,6 +6,25 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-06-06
+
+### Added
+- Added audit trail coverage for core mutation flows including form save, module creation, notification template actions, student sync, manual management, and system template generation.
+- Added field-level audit change-set logging for supported create, update, sync, upload, duplicate, archive, restore, and delete flows.
+- Added topbar notification language keys and core fallback translations identified during the public-page language audit.
+- Added a governance checklist to the system template generator for language keys, audit hooks, and access control.
+
+### Changed
+- Changed framework translation updates to use `public/lang/core/*.php` for core project keys.
+- Changed application modal markup so dialogs are top-aligned consistently across audited public pages.
+- Changed module creation in `kumpulan-pengguna.php` so the legacy inline POST write path no longer bypasses the audited AJAX endpoint.
+- Changed additional database sample-code blocks so SQL write examples are explicitly marked as sample-only for audit scanning.
+- Changed project release metadata to lock the application version at `1.8.0`.
+
+### Fixed
+- Fixed missing core translation coverage found across active public pages during the language-key audit.
+- Fixed audit blind spots on critical page actions by adding non-blocking audit events and change details.
+
 ## [1.7.9] - 2026-06-04
 
 ### Added

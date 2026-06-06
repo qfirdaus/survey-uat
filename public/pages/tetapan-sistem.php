@@ -1957,6 +1957,8 @@ if (isset($translationBundlesJs[$lang])) {
           + "        }\n"
           + "    }\n"
           + "}\n";
+        // audit-scan-sample-code: begin
+        // The following SQL write statements are rendered as developer examples only.
         var transactionSample = "<" + "?php\n"
           + "require_once __DIR__ . '/../classes/Database.php';\n\n"
           + "$pdo = Database::pdoAdditional('" + code + "', '" + environment + "');\n\n"
@@ -2085,6 +2087,7 @@ if (isset($translationBundlesJs[$lang])) {
           + "    $local->rollBack();\n"
           + "    throw $e;\n"
           + "}\n";
+        // audit-scan-sample-code: end
         var samples = [
           {
             id: 'service',

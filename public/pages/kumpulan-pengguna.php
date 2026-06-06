@@ -258,7 +258,7 @@ if ($remainingModuleIcons !== []) {
   ];
 }
 
-// Add Module (POST, non-AJAX)
+// Add Module (AJAX only; audited through public/ajax/module-create.php)
 $moduleFormData = [
   'modulNameMs' => '',
   'modulNameEn' => '',
@@ -290,136 +290,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') ==
   $moduleFormData['icon'] = trim((string)($_POST['icon'] ?? ''));
   $moduleFormData['order'] = trim((string)($_POST['order'] ?? ''));
 
-  $postedCsrf = (string)($_POST['csrf_token'] ?? '');
-  if ($postedCsrf === '' || !hash_equals((string)($_SESSION['csrf_token'] ?? ''), $postedCsrf)) {
-    $moduleSwal = [
-      'icon' => 'error',
-      'title' => (string)__('modul_ralat_title'),
-      'text' => (string)__('userGroup_error_unknown'),
-    ];
-  } elseif (!$canManageGroups) {
-    $moduleSwal = [
-      'icon' => 'error',
-      'title' => (string)__('modul_ralat_title'),
-      'text' => (string)__('userList_err_no_permission'),
-    ];
-  } elseif ($moduleFormData['modulNameMs'] === '') {
-    $moduleSwal = [
-      'icon' => 'warning',
-      'title' => (string)__('modul_ralat_title'),
-      'text' => (string)__('modul_ralat_wajib'),
-    ];
-  } else {
-    try {
-      $pdo = Database::getInstance('mysql')->getConnection();
-      $nameMs = $moduleFormData['modulNameMs'];
-      $nameEn = $moduleFormData['modulNameEn'];
-      $iconVal = in_array($moduleFormData['icon'], $moduleIconOptions, true)
-        ? $moduleFormData['icon']
-        : $defaultModuleIcon;
-
-      $dupSql = "
-        SELECT 1
-        FROM tbl_m_modul
-        WHERE LOWER(TRIM(f_modulName_ms)) = LOWER(TRIM(:name_ms_1))
-           OR LOWER(TRIM(f_modulName_en)) = LOWER(TRIM(:name_ms_2))
-      ";
-      $dupParams = [
-        ':name_ms_1' => $nameMs,
-        ':name_ms_2' => $nameMs,
-      ];
-      if ($nameEn !== '') {
-        $dupSql .= "
-           OR LOWER(TRIM(f_modulName_ms)) = LOWER(TRIM(:name_en_1))
-           OR LOWER(TRIM(f_modulName_en)) = LOWER(TRIM(:name_en_2))
-        ";
-        $dupParams[':name_en_1'] = $nameEn;
-        $dupParams[':name_en_2'] = $nameEn;
-      }
-      $dupSql .= " LIMIT 1";
-
-      $dupStmt = $pdo->prepare($dupSql);
-      $dupStmt->execute($dupParams);
-      $isDuplicate = (bool)$dupStmt->fetchColumn();
-
-      if ($isDuplicate) {
-        $moduleSwal = [
-          'icon' => 'error',
-          'title' => (string)__('modul_ralat_title'),
-          'text' => (string)__('modul_ralat_duplikat'),
-        ];
-      } else {
-        $pdo->beginTransaction();
-        $orderStmt = $pdo->query("SELECT COALESCE(MAX(f_order), 0) + 1 AS next_order FROM tbl_m_modul");
-        $orderVal = (int)($orderStmt->fetchColumn() ?: 1);
-        if ($orderVal <= 0) {
-          $orderVal = 1;
-        }
-
-        $ins = $pdo->prepare("
-          INSERT INTO tbl_m_modul (f_modulName_ms, f_modulName_en, f_icon, f_order)
-          VALUES (:name_ms, :name_en, :icon, :f_order)
-        ");
-        $ins->execute([
-          ':name_ms' => $nameMs,
-          ':name_en' => ($nameEn !== '' ? $nameEn : null),
-          ':icon' => $iconVal,
-          ':f_order' => $orderVal,
-        ]);
-        $newModuleId = (int)$pdo->lastInsertId();
-
-        if ($newModuleId > 0) {
-          $groups = $pdo->query("SELECT f_groupID, COALESCE(f_modulAccess, '') AS f_modulAccess FROM tbl_m_group FOR UPDATE")
-            ->fetchAll(PDO::FETCH_ASSOC) ?: [];
-          $updateGroupAccess = $pdo->prepare("UPDATE tbl_m_group SET f_modulAccess = :access WHERE f_groupID = :gid");
-
-          foreach ($groups as $groupRow) {
-            $groupId = (int)($groupRow['f_groupID'] ?? 0);
-            if ($groupId <= 0) {
-              continue;
-            }
-
-            $ids = array_values(array_filter(array_map(static function ($value): ?int {
-              $value = trim((string)$value);
-              return ctype_digit($value) ? (int)$value : null;
-            }, explode(',', (string)($groupRow['f_modulAccess'] ?? ''))), static fn($value) => $value !== null));
-
-            if (!in_array($newModuleId, $ids, true)) {
-              $ids[] = $newModuleId;
-            }
-
-            $updateGroupAccess->execute([
-              ':access' => implode(',', array_values(array_unique($ids))),
-              ':gid' => $groupId,
-            ]);
-          }
-        }
-
-        $pdo->commit();
-        clearGroupUiCaches();
-        GroupDataCache::clear('modul_list_');
-        clearSidebarNavigationCaches();
-
-        $_SESSION['module_add_flash'] = [
-          'icon' => 'success',
-          'title' => (string)__('modul_berjaya_title'),
-          'text' => (string)__('modul_berjaya_msg'),
-        ];
-        header('Location: ' . base_url('pages/kumpulan-pengguna.php'));
-        exit;
-      }
-    } catch (Throwable $e) {
-      if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
-        $pdo->rollBack();
-      }
-      error_log('[kumpulan-pengguna:add-module] ' . $e->getMessage());
-      $moduleSwal = [
-        'icon' => 'error',
-        'title' => (string)__('modul_ralat_title'),
-        'text' => (string)__('userGroup_error_unknown'),
-      ];
-    }
-  }
+  $moduleSwal = [
+    'icon' => 'error',
+    'title' => (string)__('modul_ralat_title'),
+    'text' => (string)__('modul_ajax_only_guard'),
+  ];
 }
 ?>
 <!DOCTYPE html>

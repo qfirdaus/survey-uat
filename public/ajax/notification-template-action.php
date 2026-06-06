@@ -11,6 +11,90 @@
 ob_start();
 header('Content-Type: application/json; charset=utf-8');
 
+function notificationTemplateActionAudit(string $action, int $templateId, array $data, ?array $oldRecord = null, ?array $newRecord = null): void
+{
+    try {
+        if (!function_exists('audit_event')) {
+            return;
+        }
+
+        $eventMap = [
+            'save' => 'UPDATE',
+            'duplicate' => 'CREATE',
+            'archive' => 'UPDATE',
+            'restore' => 'UPDATE',
+            'delete' => 'DELETE',
+        ];
+        $eventType = $eventMap[$action] ?? 'UPDATE';
+        $actorLabel = function_exists('audit_format_actor_label')
+            ? audit_format_actor_label()
+            : ($_SESSION['user']['f_nama'] ?? $_SESSION['f_nama'] ?? null);
+        $targetLabel = trim((string)($newRecord['f_templateCode'] ?? $oldRecord['f_templateCode'] ?? $data['template_code'] ?? $data['name'] ?? $data['template_name'] ?? 'Notification Template'));
+
+        $eventId = audit_event([
+            'event_type' => $eventType,
+            'severity' => $action === 'delete' ? 'WARN' : 'INFO',
+            'outcome' => 'SUCCESS',
+            'target_type' => 'notification_template',
+            'target_id' => (string)$templateId,
+            'target_label' => $targetLabel,
+            'message' => function_exists('audit_format_message')
+                ? audit_format_message('Notification template ' . $action, $actorLabel)
+                : 'Notification template ' . $action,
+            'actor_label' => $actorLabel,
+            'meta' => [
+                'action' => $action,
+                'template_id' => $templateId,
+                'source_template_id' => isset($data['template_id']) ? (int)$data['template_id'] : null,
+                'event_code' => $data['event_code'] ?? null,
+                'status' => $data['status'] ?? null,
+            ],
+        ]);
+
+        if (!$eventId || !function_exists('audit_begin_change') || !function_exists('audit_change')) {
+            return;
+        }
+
+        $changeSetId = audit_begin_change($eventId, 'notification_template', (string)$templateId, 'Notification template ' . $action, [
+            'source' => 'notification-template-action',
+            'action' => $action,
+        ]);
+        if (!$changeSetId) {
+            return;
+        }
+
+        $fields = [
+            'f_templateCode' => 'string',
+            'f_eventCode' => 'string',
+            'f_moduleCode' => 'string',
+            'f_type' => 'string',
+            'f_category' => 'string',
+            'f_severity' => 'string',
+            'f_priority' => 'string',
+            'f_title_ms' => 'string',
+            'f_title_en' => 'string',
+            'f_body_ms' => 'string',
+            'f_body_en' => 'string',
+            'f_actionLabel_ms' => 'string',
+            'f_actionLabel_en' => 'string',
+            'f_icon' => 'string',
+            'f_requiresAction' => 'integer',
+            'f_placeholders' => 'json',
+            'f_status' => 'integer',
+        ];
+        foreach ($fields as $field => $type) {
+            $oldValue = $oldRecord[$field] ?? null;
+            $newValue = $newRecord[$field] ?? null;
+            if ((string)$oldValue === (string)$newValue) {
+                continue;
+            }
+            audit_change($changeSetId, $field, $oldValue, $newValue, $type, false);
+        }
+    } catch (Throwable $auditError) {
+        error_log('[notification-template-action] Audit logging failed: ' . $auditError->getMessage());
+    }
+}
+
 try {
     require_once __DIR__ . '/../includes/init.php';
     require_login();
@@ -39,6 +123,8 @@ try {
     $service = new NotificationTemplateService($pdo);
     $updateBy = (string)($_SESSION['f_loginID'] ?? $_SESSION['f_stafID'] ?? 'admin');
     $message = '';
+    $sourceTemplateId = (int)($data['template_id'] ?? $data['f_templateID'] ?? 0);
+    $beforeTemplate = $sourceTemplateId > 0 ? $service->findById($sourceTemplateId) : null;
 
     if ($action === 'save') {
         $templateId = $service->save($data, $updateBy);
@@ -61,6 +147,9 @@ try {
     } else {
         jsonErrorResponse((string)(__('notification_template_invalid_action') ?: 'Invalid template action.'), 422);
     }
+
+    $afterTemplate = $action === 'delete' ? null : $service->findById((int)($templateId ?? 0));
+    notificationTemplateActionAudit($action, (int)($templateId ?? 0), $data, $beforeTemplate, $afterTemplate);
 
     jsonSuccessResponse([
         'message' => $message,

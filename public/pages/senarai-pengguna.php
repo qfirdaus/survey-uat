@@ -1027,7 +1027,6 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
       }
       .modal,
       .modal-dialog,
-      .modal-dialog-centered,
       .modal-content,
       .modal-content::before,
       .modal-content::after {
@@ -2759,7 +2758,7 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
 
 <!-- MODAL: Peranan Tambahan -->
 <div class="modal fade" id="roleExtraModal" tabindex="-1" aria-hidden="true" aria-labelledby="roleExtraTitle" data-bs-backdrop="static">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="roleExtraTitle">

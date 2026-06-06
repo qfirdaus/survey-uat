@@ -420,7 +420,6 @@ $version = date('ymdHis');
         }
         #uploadModal,
         #uploadModal .modal-dialog,
-        #uploadModal .modal-dialog-centered,
         #uploadModal .modal-content,
         #uploadModal .modal-content::before,
         #uploadModal .modal-content::after,
@@ -741,7 +740,7 @@ $version = date('ymdHis');
     
     <!-- Upload Modal -->
     <div class="modal fade modal-themed" id="uploadModal" tabindex="-1" aria-hidden="true" aria-labelledby="uploadModalTitle">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <form action="" method="POST" enctype="multipart/form-data" id="uploadForm">
                     <input type="hidden" name="action" value="upload">

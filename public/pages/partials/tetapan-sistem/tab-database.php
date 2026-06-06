@@ -641,7 +641,7 @@
               </div>
 
               <div class="modal fade" id="db-additional-view-modal" tabindex="-1" aria-hidden="true" aria-labelledby="db-additional-view-modal-title">
-                <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
                   <div class="modal-content">
                     <div class="modal-header db-additional-view-header">
                       <div class="db-additional-modal-heading">
@@ -664,7 +664,7 @@
               </div>
 
               <div class="modal fade" id="db-additional-child-view-modal" tabindex="-1" aria-hidden="true" aria-labelledby="db-additional-child-view-modal-title">
-                <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
                   <div class="modal-content">
                     <div class="modal-header db-additional-view-header">
                       <div class="db-additional-modal-heading">

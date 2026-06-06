@@ -275,6 +275,15 @@ $shouldOpenModal = (($previewResult !== null || $errorMessage !== null) && !($ge
                                 <div class="tg-required-note mb-3">
                                     <i class="ri-information-line me-1"></i><?= h(t('pageTemplateGenerator_required_note', 'Fields marked with * are required.')) ?>
                                 </div>
+                                <div class="alert alert-info py-2 mb-3">
+                                    <div class="fw-semibold mb-1"><i class="ri-shield-check-line me-1"></i><?= h(t('pageTemplateGenerator_governance_title', 'Governance Checklist')) ?></div>
+                                    <div class="small"><?= h(t('pageTemplateGenerator_governance_text', 'Generated pages must keep language keys, access registration, and audit hooks aligned before production use.')) ?></div>
+                                    <div class="d-flex flex-wrap gap-2 mt-2">
+                                        <span class="badge bg-info-subtle text-info-emphasis"><?= h(t('pageTemplateGenerator_governance_language', 'Language keys')) ?></span>
+                                        <span class="badge bg-info-subtle text-info-emphasis"><?= h(t('pageTemplateGenerator_governance_audit', 'Audit hooks')) ?></span>
+                                        <span class="badge bg-info-subtle text-info-emphasis"><?= h(t('pageTemplateGenerator_governance_access', 'Access control')) ?></span>
+                                    </div>
+                                </div>
                                 <ul class="nav nav-pills tg-form-tabs mb-3" id="templateGeneratorCreateTabs" role="tablist">
                                     <li class="nav-item" role="presentation">
                                         <button class="nav-link active" id="template-generator-form-tab" data-bs-toggle="tab" data-bs-target="#template-generator-form-pane" type="button" role="tab" aria-controls="template-generator-form-pane" aria-selected="true"><?= h(t('pageTemplateGenerator_tab_form', 'Template Form')) ?></button>
@@ -434,7 +443,7 @@ $shouldOpenModal = (($previewResult !== null || $errorMessage !== null) && !($ge
 </div>
 
 <div class="modal fade" id="templateDetailModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content tg-detail-shell">
             <div class="modal-header tg-detail-header">
                 <div>

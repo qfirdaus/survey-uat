@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.7.9`
+- Current version: `1.8.0`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -64,6 +64,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 - Audit workspace at `public/pages/audit-center.php`.
 - Supports audit panels for events, requests, sessions, changes, security views, metadata, and export actions.
+- Core mutation flows for forms, module creation, notification templates, student sync, manual management, and system template generation record audit events with field-level change details where applicable.
 - AJAX endpoints include `audit-center-action.php`, `audit-center-export.php`, `audit-center-meta.php`, and `audit-center-panel.php`.
 - Audit services are supported by `AuditCenterController.php`, `AuditLogger.php`, and audit helper functions.
 
@@ -113,6 +114,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Project custom translations override core translations without requiring changes to existing `__()` calls.
 - JavaScript translation bundles and generated page language entries use the same merged language source.
 - Generated project language keys are written to `public/lang/custom/` so core language updates do not overwrite project-specific translations.
+- Framework/core project translation keys must be maintained in `public/lang/core/`.
 
 ### Database Runtime Configuration
 
@@ -149,6 +151,7 @@ Do not hardcode DSN, username, or password inside page/controller code.
 - Supported by `TemplateGeneratorController.php`, `SystemTemplateController.php`, and classes under `public/classes/SystemTemplate*.php`.
 - Used to generate or manage system page/template scaffolding from controlled template definitions.
 - Generated page, controller, and CSS files are marked as `PROJECT GENERATED FILE` so downstream programmers can distinguish customizable generated artifacts from protected core files.
+- Template generation records audit events and displays a governance checklist for language keys, access registration, and audit hooks before production use.
 
 ### Core File Protection
 
@@ -183,6 +186,7 @@ Do not hardcode DSN, username, or password inside page/controller code.
 - User personal theme preference is applied before the global fallback theme where available to avoid visible theme switching during navigation.
 - Sidebar branding supports the configured sidebar image under the main logo.
 - Frontend assets include Bootstrap-style components, DataTables usage, SweetAlert workflows, Remix Icon icons, and page-specific JavaScript/CSS files.
+- Application modals are standardized to top-aligned Bootstrap dialogs unless a future page-specific exception is explicitly documented.
 - Global full-page loader is now reserved for sidebar navigation transitions, while in-page transactions rely on local loading states and silent background refreshes.
 - Tailwind/PostCSS tooling exists in `package.json` for frontend build support, although the main application is PHP-rendered.
 

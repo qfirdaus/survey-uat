@@ -92,7 +92,6 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
     }
     #notificationTemplateModal,
     #notificationTemplateModal .modal-dialog,
-    #notificationTemplateModal .modal-dialog-centered,
     #notificationTemplateModal .modal-content,
     #notificationTemplateModal .modal-content::before,
     #notificationTemplateModal .modal-content::after {

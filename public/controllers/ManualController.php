@@ -68,6 +68,67 @@ class ManualController
         return __DIR__ . '/../' . ltrim(str_replace(['..\\', '../'], '', $relativePath), '/\\');
     }
 
+    private function logManualAudit(string $eventType, string $action, int $groupId, string $outcome = 'SUCCESS', array $meta = [], array $changes = []): void
+    {
+        try {
+            if (!function_exists('audit_event')) {
+                return;
+            }
+
+            $actorLabel = function_exists('audit_format_actor_label')
+                ? audit_format_actor_label()
+                : ($_SESSION['user']['f_nama'] ?? $_SESSION['f_nama'] ?? null);
+
+            $eventId = audit_event([
+                'event_type' => $eventType,
+                'severity' => $eventType === 'DELETE' ? 'WARN' : 'INFO',
+                'outcome' => $outcome,
+                'target_type' => 'user_manual',
+                'target_id' => (string)$groupId,
+                'target_label' => 'Manual Group ' . $groupId,
+                'message' => function_exists('audit_format_message')
+                    ? audit_format_message($action, $actorLabel)
+                    : $action,
+                'actor_label' => $actorLabel,
+                'meta' => array_merge([
+                    'group_id' => $groupId,
+                ], $meta),
+            ]);
+
+            if (!$eventId || !function_exists('audit_begin_change') || !function_exists('audit_change')) {
+                return;
+            }
+
+            $changeSetId = audit_begin_change($eventId, 'user_manual', (string)$groupId, $action, [
+                'source' => 'ManualController',
+            ]);
+            if (!$changeSetId) {
+                return;
+            }
+
+            foreach ($changes as $field => $change) {
+                if (!is_array($change)) {
+                    continue;
+                }
+                $oldValue = $change['old'] ?? null;
+                $newValue = $change['new'] ?? null;
+                if ((string)$oldValue === (string)$newValue) {
+                    continue;
+                }
+                audit_change(
+                    $changeSetId,
+                    (string)$field,
+                    $oldValue,
+                    $newValue,
+                    (string)($change['type'] ?? 'string'),
+                    (bool)($change['sensitive'] ?? false)
+                );
+            }
+        } catch (Throwable $auditError) {
+            error_log('[ManualController] Audit logging failed: ' . $auditError->getMessage());
+        }
+    }
+
     /**
      * Get manual for a specific group ID
      */
@@ -154,6 +215,16 @@ class ManualController
             }
 
             $this->db->commit();
+
+            $this->logManualAudit('UPDATE', 'Manual groups synced', 0, 'SUCCESS', [
+                'inserted' => $inserted,
+                'updated' => $updated,
+                'total_groups' => count($groups),
+            ], [
+                'inserted' => ['old' => null, 'new' => $inserted, 'type' => 'integer'],
+                'updated' => ['old' => null, 'new' => $updated, 'type' => 'integer'],
+                'total_groups' => ['old' => null, 'new' => count($groups), 'type' => 'integer'],
+            ]);
 
             return [
                 'success' => true,
@@ -274,6 +345,17 @@ class ManualController
                 @unlink($oldPath);
             }
 
+            $this->logManualAudit($exists ? 'UPDATE' : 'CREATE', 'Manual uploaded', $groupId, 'SUCCESS', [
+                'file_path' => $relativePath,
+                'old_file_path' => (string)($oldManual['f_file_path'] ?? ''),
+                'file_name' => $newFilename,
+                'file_size' => (int)($file['size'] ?? 0),
+            ], [
+                'f_file_path' => ['old' => (string)($oldManual['f_file_path'] ?? ''), 'new' => $relativePath],
+                'file_name' => ['old' => null, 'new' => $newFilename],
+                'file_size' => ['old' => null, 'new' => (int)($file['size'] ?? 0), 'type' => 'integer'],
+            ]);
+
             return ['success' => true, 'message' => (string)__('manual_upload_success')];
         }
 
@@ -311,6 +393,12 @@ class ManualController
             if ($oldPath && file_exists($oldPath)) {
                 @unlink($oldPath);
             }
+
+            $this->logManualAudit('DELETE', 'Manual deleted', $groupId, 'SUCCESS', [
+                'file_path' => (string)($oldManual['f_file_path'] ?? ''),
+            ], [
+                'f_file_path' => ['old' => (string)($oldManual['f_file_path'] ?? ''), 'new' => null],
+            ]);
 
             return ['success' => true, 'message' => (string)__('manual_delete_success')];
         }

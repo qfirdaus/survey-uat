@@ -380,7 +380,7 @@ if ($roleSwitchFlash !== null) {
 
 <!-- ========== Role Switcher Modal (Topbar) ========== -->
 <div class="modal fade modal-themed" id="switchRoleModal" tabindex="-1" aria-hidden="true" aria-labelledby="switchRoleTitle">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="switchRoleTitle">
@@ -712,7 +712,6 @@ if ($roleSwitchFlash !== null) {
   }
   #switchRoleModal,
   #switchRoleModal .modal-dialog,
-  #switchRoleModal .modal-dialog-centered,
   #switchRoleModal .modal-content,
   #switchRoleModal .modal-content::before,
   #switchRoleModal .modal-content::after {

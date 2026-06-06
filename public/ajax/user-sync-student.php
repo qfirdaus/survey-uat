@@ -13,6 +13,68 @@ error_reporting(E_ALL);
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 
+function userSyncStudentAudit(int $inserted, int $updated, int $skipped, int $errors, int $total, int $groupID, string $groupKod): void
+{
+    try {
+        if (!function_exists('audit_event')) {
+            return;
+        }
+
+        $actorLabel = function_exists('audit_format_actor_label')
+            ? audit_format_actor_label()
+            : ($_SESSION['user']['f_nama'] ?? $_SESSION['f_nama'] ?? null);
+
+        $eventId = audit_event([
+            'event_type' => 'UPDATE',
+            'severity' => 'INFO',
+            'outcome' => $errors > 0 ? 'PARTIAL' : 'SUCCESS',
+            'target_type' => 'user_sync',
+            'target_id' => 'student',
+            'target_label' => 'Student Sync',
+            'message' => function_exists('audit_format_message')
+                ? audit_format_message('Student users synced', $actorLabel)
+                : 'Student users synced',
+            'actor_label' => $actorLabel,
+            'meta' => [
+                'source' => 'sybase.v210',
+                'category' => 'PELAJAR',
+                'group_id' => $groupID,
+                'group_code' => $groupKod,
+                'inserted' => $inserted,
+                'updated' => $updated,
+                'skipped' => $skipped,
+                'errors' => $errors,
+                'total' => $total,
+            ],
+        ]);
+
+        if (!$eventId || !function_exists('audit_begin_change') || !function_exists('audit_change')) {
+            return;
+        }
+
+        $changeSetId = audit_begin_change($eventId, 'user_sync', 'student', 'Student sync summary', [
+            'source' => 'user-sync-student',
+        ]);
+        if (!$changeSetId) {
+            return;
+        }
+
+        foreach ([
+            'inserted' => $inserted,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'errors' => $errors,
+            'total' => $total,
+        ] as $field => $value) {
+            audit_change($changeSetId, $field, null, $value, 'integer', false);
+        }
+        audit_change($changeSetId, 'group_id', null, $groupID, 'integer', false);
+        audit_change($changeSetId, 'group_code', null, $groupKod, 'string', false);
+    } catch (Throwable $auditError) {
+        error_log('[user-sync-student] Audit logging failed: ' . $auditError->getMessage());
+    }
+}
+
 try {
     ob_start();
     require_once __DIR__ . '/../includes/init.php';
@@ -263,6 +325,8 @@ try {
             }
         }
     }
+
+    userSyncStudentAudit($inserted, $updated, $skipped, $errors, count($students), $groupID, $groupKod);
 
     jsonSuccessResponse([
         'message' => sprintf((string)__('userList_sync_student_result_message'), $inserted, $updated, $skipped, $errors),
