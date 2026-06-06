@@ -1962,6 +1962,11 @@
  * ========================= */
 'config_js_loading'              => 'Memuat…',
 'config_js_memproses'            => 'Memproses…',
+'globalLoader_loading'           => 'Memuat…',
+'globalLoader_saving'            => 'Menyimpan...',
+'globalLoader_submitting'        => 'Menghantar...',
+'globalLoader_navigation'        => 'Memuat halaman...',
+'globalLoader_logout'            => 'Log Keluar...',
 
 'config_js_confirm_emel'         => 'Anda pasti mahu simpan tetapan emel?',
 'config_js_confirm_general'      => 'Anda pasti mahu simpan tetapan umum?',

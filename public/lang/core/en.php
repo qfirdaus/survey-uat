@@ -1969,6 +1969,11 @@
  * ========================= */
 'config_js_loading'              => 'Loading…',
 'config_js_memproses'            => 'Processing…',
+'globalLoader_loading'           => 'Loading…',
+'globalLoader_saving'            => 'Saving...',
+'globalLoader_submitting'        => 'Submitting...',
+'globalLoader_navigation'        => 'Loading page...',
+'globalLoader_logout'            => 'Logging out...',
 
 'config_js_confirm_emel'         => 'Are you sure you want to save email settings?',
 'config_js_confirm_general'      => 'Are you sure you want to save general settings?',

@@ -12,6 +12,7 @@ This changelog follows a release-style summary based on major project milestones
 - Added audit trail coverage for core mutation flows including form save, module creation, notification template actions, student sync, manual management, and system template generation.
 - Added field-level audit change-set logging for supported create, update, sync, upload, duplicate, archive, restore, and delete flows.
 - Added topbar notification language keys and core fallback translations identified during the public-page language audit.
+- Added dedicated global loader translation keys for loading, saving, submitting, navigation, and logout states.
 - Added a governance checklist to the system template generator for language keys, audit hooks, and access control.
 
 ### Changed

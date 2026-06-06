@@ -61,11 +61,11 @@ if (str_ends_with($currentPage, 'dashboard.php') && strpos($_SERVER['REQUEST_URI
 <!-- Loader JS (tanpa defer, biar dia hijack fetch/klik awal-awal) -->
 <script>
   window.IQS_LOADER_I18N = {
-    defaultMessage: <?= json_encode(__('config_js_loading') ?: 'Memuat...', JSON_UNESCAPED_UNICODE) ?>,
-    saving: <?= json_encode(__('config_js_btn_loading_save') ?: 'Menyimpan...', JSON_UNESCAPED_UNICODE) ?>,
-    submitting: <?= json_encode(__('config_js_btn_loading_save') ?: 'Menghantar...', JSON_UNESCAPED_UNICODE) ?>,
-    navigation: <?= json_encode(__('config_js_loading') ?: 'Memuat halaman...', JSON_UNESCAPED_UNICODE) ?>,
-    logout: <?= json_encode(__('logout_alert_title') ?: 'Log Keluar...', JSON_UNESCAPED_UNICODE) ?>,
+    defaultMessage: <?= json_encode(__('globalLoader_loading') ?: 'Memuat...', JSON_UNESCAPED_UNICODE) ?>,
+    saving: <?= json_encode(__('globalLoader_saving') ?: 'Menyimpan...', JSON_UNESCAPED_UNICODE) ?>,
+    submitting: <?= json_encode(__('globalLoader_submitting') ?: 'Menghantar...', JSON_UNESCAPED_UNICODE) ?>,
+    navigation: <?= json_encode(__('globalLoader_navigation') ?: 'Memuat halaman...', JSON_UNESCAPED_UNICODE) ?>,
+    logout: <?= json_encode(__('globalLoader_logout') ?: 'Log Keluar...', JSON_UNESCAPED_UNICODE) ?>,
     impersonationStart: <?= json_encode(__('impersonation_loading_start') ?: 'Menyediakan paparan View As...', JSON_UNESCAPED_UNICODE) ?>,
     impersonationStop: <?= json_encode(__('impersonation_loading_stop') ?: 'Memulihkan akaun asal...', JSON_UNESCAPED_UNICODE) ?>
   };
