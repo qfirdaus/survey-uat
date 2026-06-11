@@ -286,8 +286,8 @@ $aiProviderDefaults = [
   var baseUrlEl = document.getElementById('ai_chatbot_base_url');
   var apiKeyEl = document.getElementById('ai_chatbot_api_key');
   var statusEl = document.getElementById('ai_chatbot_model_status');
-  var modelEndpoint = ((window.tetapanSistemConfig && window.tetapanSistemConfig.baseUrl) || '') + 'ajax/ai-chatbot-models.php';
-  var csrfToken = (window.tetapanSistemConfig && window.tetapanSistemConfig.csrfToken) || '';
+  var modelEndpoint = <?= json_encode(base_url('ajax/ai-chatbot-models.php'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+  var csrfToken = (window.tetapanSistemConfig && window.tetapanSistemConfig.csrfToken) || window.csrfToken || <?= json_encode($csrfToken, JSON_UNESCAPED_UNICODE) ?>;
   var lastRequestId = 0;
   if (!providerEl || !modelEl || !baseUrlEl) return;
 
@@ -366,13 +366,19 @@ $aiProviderDefaults = [
         'X-Requested-With': 'XMLHttpRequest',
         'X-No-Loader': '1'
       },
+      credentials: 'same-origin',
       body: JSON.stringify(payload),
       noLoader: true
     })
       .then(function (response) {
-        return response.json().catch(function () { return null; }).then(function (json) {
+        return response.text().then(function (text) {
+          var json = null;
+          try {
+            json = text ? JSON.parse(text) : null;
+          } catch (ignore) {}
+
           if (!response.ok || !json || json.success !== true) {
-            throw new Error((json && json.message) || 'Gagal fetch model list.');
+            throw new Error((json && json.message) || ('Gagal fetch model list. HTTP ' + response.status));
           }
           return json;
         });
