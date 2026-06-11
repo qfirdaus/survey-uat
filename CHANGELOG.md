@@ -6,6 +6,24 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-06-11
+
+### Added
+- Added the core AI Chatbot module with a floating widget, dedicated page, AJAX message endpoint, provider registry, and provider service layer.
+- Added AI Chatbot provider support for local/free-first testing through Ollama and compatible provider abstractions for future hosted APIs.
+- Added AI Chatbot runtime configuration under System Settings > AI Chatbot, stored in `tbl_m_config` using the `ai_chatbot` group.
+- Added AI Chatbot database script documentation for chat sessions, messages, and usage tracking tables.
+- Added AI Chatbot implementation blueprint and production runbook documentation.
+
+### Changed
+- Changed AI Chatbot runtime settings to use `tbl_m_config` only, removing AI Chatbot setting fallback from `.env`.
+- Changed System Settings to include an AI Chatbot tab after Language with subtabs for Overview, Provider, Limits, Character, and Storage.
+- Changed AI Chatbot widget positioning and panel presentation to avoid footer overlap and improve visual separation.
+- Changed project release metadata to lock the application version at `1.8.1`.
+
+### Fixed
+- Fixed missing AI Chatbot tab icon by switching to a Remix Icon class available in the project asset set.
+
 ## [1.8.0] - 2026-06-06
 
 ### Added

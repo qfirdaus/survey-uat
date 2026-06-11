@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.8.0`
+- Current version: `1.8.1`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -95,8 +95,20 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
   - Database
   - Theme
   - Language
+  - AI Chatbot
 - Settings are handled by `TetapanSistemController.php`, `Config.php`, `SystemConfigConstants.php`, and page-specific JavaScript/CSS assets.
 - General > Limits includes the `View As Timeout (Minutes)` setting for the Super Admin impersonation workflow.
+
+### AI Chatbot Core
+
+- Core AI Chatbot page exists at `public/pages/ai-chatbot.php`.
+- Floating AI Chatbot widget is included through `public/includes/ai-chatbot-widget.php` and uses `public/assets/js/ai-chatbot-widget.js` plus `public/assets/css/ai-chatbot-widget.css`.
+- Chat requests are handled by `public/ajax/ai-chatbot-message.php`, with widget event tracking through `public/ajax/ai-chatbot-event.php`.
+- Provider integration is handled through `AiChatbotService.php`, `AiChatbotProviderRegistry.php`, and provider classes under `public/classes/AiChatbotProviders/`.
+- Runtime settings are managed from System Settings > AI Chatbot and stored in `tbl_m_config` under the `ai_chatbot` group.
+- The AI Chatbot settings UI is split into Overview, Provider, Limits, Character, and Storage subtabs.
+- Usage/session/message persistence is supported through `tbl_ai_chat_session`, `tbl_ai_chat_message`, and `tbl_ai_chat_usage` when the table script in `docs/ai-chatbot-tables-2026-06-11.sql` has been applied.
+- Implementation guidance is documented in `docs/ai-chatbot-core-blueprint-2026-06-11.md` and `docs/ai-chatbot-production-runbook-2026-06-11.md`.
 
 ### System Cache Maintenance
 
@@ -202,6 +214,7 @@ Do not hardcode DSN, username, or password inside page/controller code.
 The active page files under `public/pages` are:
 
 - `access-matrix.php`
+- `ai-chatbot.php`
 - `audit-center.php`
 - `dashboard.php`
 - `developer-guide.php`
