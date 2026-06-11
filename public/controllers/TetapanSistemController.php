@@ -20,6 +20,7 @@ require_once __DIR__ . '/../classes/SystemConfigConstants.php';
 require_once __DIR__ . '/../classes/DatabaseConnectionRepository.php';
 require_once __DIR__ . '/../classes/DatabaseConnectionValidator.php';
 require_once __DIR__ . '/../classes/DatabaseConnectionFactory.php';
+require_once __DIR__ . '/../classes/AiChatbotService.php';
 require_once __DIR__ . '/../setting/constants/prestasi_constants.php';
 require_once __DIR__ . '/../setting/helper/config_helper.php';
 require_once __DIR__ . '/../includes/functions-db.php';
@@ -99,6 +100,8 @@ class TetapanSistemController {
       $this->handleLanguageUpdate();
     } elseif ($formType === 'theme_settings') {
       $this->handleThemeUpdate();
+    } elseif ($formType === 'ai_chatbot_settings') {
+      $this->handleAiChatbotUpdate();
     }
   }
 
@@ -142,6 +145,8 @@ class TetapanSistemController {
         $response = $this->processLanguageUpdate();
       } elseif ($formType === 'theme_settings') {
         $response = $this->processThemeUpdate();
+      } elseif ($formType === 'ai_chatbot_settings') {
+        $response = $this->processAiChatbotUpdate();
       } elseif ($formType === 'db_additional_list') {
         $response = $this->processAdditionalConnectionList();
       } elseif ($formType === 'db_additional_create') {
@@ -678,6 +683,99 @@ class TetapanSistemController {
     }
   }
 
+  private function handleAiChatbotUpdate(): void {
+    $response = $this->processAiChatbotUpdate();
+
+    set_alert([
+      'title' => $response['title'] ?? ($response['success'] ? 'Berjaya' : 'Ralat'),
+      'text' => $response['message'] ?? '',
+      'icon' => !empty($response['success']) ? 'success' : 'error',
+      'confirm' => true,
+      'confirmText' => 'config_js_btn_tutup'
+    ]);
+
+    header('Location: tetapan-sistem.php?tab=ai-chatbot');
+    exit;
+  }
+
+  private function processAiChatbotUpdate(): array {
+    $this->checkAuthorization();
+    $this->validateCSRF();
+    $this->ensureSession();
+
+    $data = [];
+    $existingSettings = $this->configModel->getGroup(SystemConfigConstants::CONFIG_GROUP_AI_CHATBOT);
+    foreach ($this->getAiChatbotSettingsWhitelist() as $key => $meta) {
+      $field = (string)($meta['field'] ?? '');
+      if (($meta['type'] ?? 'string') === 'bool') {
+        $data[$key] = !empty($_POST[$field]) ? '1' : '0';
+        continue;
+      }
+      $data[$key] = trim((string)($_POST[$field] ?? ''));
+    }
+    if ($data['api_key'] === '') {
+      $data['api_key'] = (string)($existingSettings['api_key'] ?? '');
+    }
+
+    $validationErrors = $this->validateAiChatbotSettings($data);
+    if (!empty($validationErrors)) {
+      return [
+        'success' => false,
+        'status' => 422,
+        'tab' => 'ai-chatbot',
+        'title' => $this->tr('config_ai_chatbot_validation_title', 'Ralat Validasi'),
+        'message' => implode("\n", $validationErrors),
+        'errors' => $validationErrors,
+      ];
+    }
+
+    try {
+      $oldSettings = $this->getAiChatbotSettings();
+      $result = $this->saveAiChatbotSettings($data);
+      if ($result) {
+        $this->invalidateTsCache('ai-chatbot');
+        $newSettings = $this->getAiChatbotSettings();
+        $this->auditAiChatbotUpdate($oldSettings, $newSettings);
+        $summaryLabels = $this->getAiChatbotChangeSummary($oldSettings, $newSettings);
+        $summaryText = !empty($summaryLabels)
+          ? sprintf(
+              $this->tr('config_ai_chatbot_success_text_summary', 'Tetapan AI Chatbot berjaya disimpan. Perubahan: %s.'),
+              implode(', ', $summaryLabels)
+            )
+          : $this->tr('config_ai_chatbot_success_text', 'Tetapan AI Chatbot berjaya disimpan.');
+
+        return [
+          'success' => true,
+          'tab' => 'ai-chatbot',
+          'title' => $this->tr('config_ai_chatbot_success_title', 'Berjaya'),
+          'message' => $summaryText,
+          'data' => [
+            'aiChatbotSettings' => $newSettings,
+          ],
+        ];
+      }
+
+      return [
+        'success' => false,
+        'status' => 500,
+        'tab' => 'ai-chatbot',
+        'title' => $this->tr('config_ai_chatbot_save_error_title', 'Ralat Menyimpan'),
+        'message' => $this->tr('config_ai_chatbot_save_error_text', 'Gagal menyimpan tetapan AI Chatbot. Sila cuba lagi atau hubungi pentadbir sistem.'),
+        'errors' => [$this->tr('config_ai_chatbot_save_error_text', 'Gagal menyimpan tetapan AI Chatbot. Sila cuba lagi atau hubungi pentadbir sistem.')],
+      ];
+    } catch (\Throwable $e) {
+      error_log('[TetapanSistem] Save AI chatbot settings failed: ' . $e->getMessage());
+      return [
+        'success' => false,
+        'status' => 500,
+        'tab' => 'ai-chatbot',
+        'title' => $this->tr('config_ai_chatbot_system_error_title', 'Ralat Sistem'),
+        'message' => $this->tr('config_ai_chatbot_system_error_text', 'Ralat berlaku semasa menyimpan tetapan AI Chatbot. Sila semak log sistem untuk maklumat lanjut.'),
+        'errors' => [$this->tr('config_ai_chatbot_system_error_text', 'Ralat berlaku semasa menyimpan tetapan AI Chatbot. Sila semak log sistem untuk maklumat lanjut.')],
+      ];
+    }
+  }
+
   /** Pastikan sesi terbuka sebelum tulis $_SESSION / set_alert */
   private function ensureSession(): void {
     if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -958,6 +1056,22 @@ class TetapanSistemController {
     ];
   }
 
+  public function getAiChatbotSettings(): array {
+    $settings = AiChatbotService::loadConfig();
+    $dbSettings = $this->configModel->getGroup(SystemConfigConstants::CONFIG_GROUP_AI_CHATBOT);
+
+    $settings['api_key_configured'] = trim((string)($settings['api_key'] ?? '')) !== '';
+    $settings['config_source'] = $dbSettings !== []
+      ? 'database'
+      : 'defaults';
+
+    return $settings;
+  }
+
+  public function saveAiChatbotSettings(array $data): bool {
+    return $this->configModel->saveGroup(SystemConfigConstants::CONFIG_GROUP_AI_CHATBOT, $data);
+  }
+
   public function getDatabaseRuntimeViewModel(): array {
     $environment = $this->getSelectedEnvironment();
     $operationalMode = $this->getSelectedOperationalMode();
@@ -1068,6 +1182,12 @@ class TetapanSistemController {
       fn(): array => $this->getThemeSettings()
     );
 
+    $aiChatbotSettings = $this->getCachedValue(
+      'ai-chatbot',
+      SystemConfigConstants::CACHE_TTL_DB_CONFIG,
+      fn(): array => $this->getAiChatbotSettings()
+    );
+
     $sidebarSmallImages = $this->getSidebarSmallImageOptions();
 
     return [
@@ -1080,6 +1200,7 @@ class TetapanSistemController {
       'dbRuntime' => $dbRuntime,
       'additionalConnections' => $additionalConnections,
       'themeSettings' => $themeSettings,
+      'aiChatbotSettings' => $aiChatbotSettings,
       'sidebarSmallImages' => $sidebarSmallImages,
     ];
   }
@@ -2444,6 +2565,58 @@ class TetapanSistemController {
     ];
   }
 
+  private function validateAiChatbotSettings(array $data): array {
+    $errors = [];
+    $labels = $this->getAiChatbotFieldLabels();
+    $allowedProviders = ['ollama', 'groq', 'openrouter', 'openai_compatible'];
+    $allowedAccessModes = ['super_admin_only', 'selected_groups', 'all_authenticated'];
+
+    if (!in_array((string)($data['provider'] ?? ''), $allowedProviders, true)) {
+      $errors[] = sprintf('%s tidak sah.', $labels['provider'] ?? 'Provider');
+    }
+
+    if (!in_array((string)($data['access_mode'] ?? ''), $allowedAccessModes, true)) {
+      $errors[] = sprintf('%s tidak sah.', $labels['access_mode'] ?? 'Access mode');
+    }
+
+    foreach ($this->getAiChatbotSettingsWhitelist() as $key => $meta) {
+      $value = trim((string)($data[$key] ?? ''));
+      $type = (string)($meta['type'] ?? 'string');
+      $label = $labels[$key] ?? $key;
+
+      if ($type === 'string' && isset($meta['max']) && mb_strlen($value) > (int)$meta['max']) {
+        $errors[] = sprintf('%s terlalu panjang. Maksimum %d aksara.', $label, (int)$meta['max']);
+      }
+
+      if ($type === 'int') {
+        if ($value === '' || !ctype_digit($value)) {
+          $errors[] = sprintf('%s mesti nombor positif.', $label);
+          continue;
+        }
+
+        $number = (int)$value;
+        if (isset($meta['min']) && $number < (int)$meta['min']) {
+          $errors[] = sprintf('%s mesti sekurang-kurangnya %d.', $label, (int)$meta['min']);
+        }
+        if (isset($meta['max']) && $number > (int)$meta['max']) {
+          $errors[] = sprintf('%s tidak boleh melebihi %d.', $label, (int)$meta['max']);
+        }
+      }
+    }
+
+    $baseUrl = trim((string)($data['base_url'] ?? ''));
+    if ($baseUrl !== '' && !filter_var($baseUrl, FILTER_VALIDATE_URL)) {
+      $errors[] = sprintf('%s mesti URL yang sah.', $labels['base_url'] ?? 'Provider base URL');
+    }
+
+    $appUrl = trim((string)($data['app_url'] ?? ''));
+    if ($appUrl !== '' && !filter_var($appUrl, FILTER_VALIDATE_URL)) {
+      $errors[] = sprintf('%s mesti URL yang sah.', $labels['app_url'] ?? 'App URL');
+    }
+
+    return $errors;
+  }
+
   // ---------------------------
   // Emel / Bahasa / Tema / Umum
   // ---------------------------
@@ -2510,6 +2683,32 @@ class TetapanSistemController {
       'auth.sso_hybrid_staf' => ['field' => 'auth_sso_hybrid_staf', 'type' => 'enum', 'allowed' => ['SSO', 'MANUAL']],
       'auth.sso_hybrid_pelajar' => ['field' => 'auth_sso_hybrid_pelajar', 'type' => 'enum', 'allowed' => ['SSO', 'MANUAL']],
       'auth.sso_hybrid_umum' => ['field' => 'auth_sso_hybrid_umum', 'type' => 'enum', 'allowed' => ['SSO', 'MANUAL']],
+    ];
+  }
+
+  public function getAiChatbotSettingsWhitelist(): array {
+    return [
+      'enabled' => ['field' => 'ai_chatbot_enabled', 'type' => 'bool'],
+      'access_mode' => ['field' => 'ai_chatbot_access_mode', 'type' => 'string', 'max' => 64],
+      'allowed_groups' => ['field' => 'ai_chatbot_allowed_groups', 'type' => 'string', 'max' => 255],
+      'provider' => ['field' => 'ai_chatbot_provider', 'type' => 'string', 'max' => 64],
+      'model' => ['field' => 'ai_chatbot_model', 'type' => 'string', 'max' => 191],
+      'base_url' => ['field' => 'ai_chatbot_base_url', 'type' => 'string', 'max' => 255],
+      'api_key' => ['field' => 'ai_chatbot_api_key', 'type' => 'string', 'max' => 1000],
+      'timeout_seconds' => ['field' => 'ai_chatbot_timeout_seconds', 'type' => 'int', 'min' => 1, 'max' => 120],
+      'max_input_chars' => ['field' => 'ai_chatbot_max_input_chars', 'type' => 'int', 'min' => 100, 'max' => 20000],
+      'max_output_tokens' => ['field' => 'ai_chatbot_max_output_tokens', 'type' => 'int', 'min' => 64, 'max' => 8192],
+      'rate_limit_per_minute' => ['field' => 'ai_chatbot_rate_limit_per_minute', 'type' => 'int', 'min' => 1, 'max' => 120],
+      'user_daily_request_limit' => ['field' => 'ai_chatbot_user_daily_request_limit', 'type' => 'int', 'min' => 0, 'max' => 10000],
+      'global_daily_request_limit' => ['field' => 'ai_chatbot_global_daily_request_limit', 'type' => 'int', 'min' => 0, 'max' => 100000],
+      'persist_usage' => ['field' => 'ai_chatbot_persist_usage', 'type' => 'bool'],
+      'store_conversations' => ['field' => 'ai_chatbot_store_conversations', 'type' => 'bool'],
+      'log_message_content' => ['field' => 'ai_chatbot_log_message_content', 'type' => 'bool'],
+      'character_name' => ['field' => 'ai_chatbot_character_name', 'type' => 'string', 'max' => 100],
+      'character_avatar' => ['field' => 'ai_chatbot_character_avatar', 'type' => 'string', 'max' => 255],
+      'welcome_message' => ['field' => 'ai_chatbot_welcome_message', 'type' => 'string', 'max' => 500],
+      'app_url' => ['field' => 'ai_chatbot_app_url', 'type' => 'string', 'max' => 255],
+      'app_title' => ['field' => 'ai_chatbot_app_title', 'type' => 'string', 'max' => 150],
     ];
   }
 
@@ -2598,6 +2797,32 @@ class TetapanSistemController {
     ];
   }
 
+  private function getAiChatbotFieldLabels(): array {
+    return [
+      'enabled' => 'Status aktif',
+      'access_mode' => 'Access mode',
+      'allowed_groups' => 'Allowed groups',
+      'provider' => 'Provider',
+      'model' => 'Model',
+      'base_url' => 'Provider base URL',
+      'api_key' => 'API key',
+      'timeout_seconds' => 'Timeout',
+      'max_input_chars' => 'Max input chars',
+      'max_output_tokens' => 'Max output tokens',
+      'rate_limit_per_minute' => 'Rate limit per minute',
+      'user_daily_request_limit' => 'User daily limit',
+      'global_daily_request_limit' => 'Global daily limit',
+      'persist_usage' => 'Persist usage',
+      'store_conversations' => 'Store conversations',
+      'log_message_content' => 'Log message content',
+      'character_name' => 'Character name',
+      'character_avatar' => 'Character avatar',
+      'welcome_message' => 'Welcome message',
+      'app_url' => 'App URL',
+      'app_title' => 'App title',
+    ];
+  }
+
   private function getEmailChangeSummary(array $oldSettings, array $newSettings): array {
     $labels = [];
     $fieldLabels = $this->getEmailFieldLabels();
@@ -2635,6 +2860,59 @@ class TetapanSistemController {
     }
 
     return $labels;
+  }
+
+  private function getAiChatbotChangeSummary(array $oldSettings, array $newSettings): array {
+    $labels = [];
+    $fieldLabels = $this->getAiChatbotFieldLabels();
+
+    foreach ($this->getAiChatbotSettingsWhitelist() as $key => $_meta) {
+      if ((string)($oldSettings[$key] ?? '') !== (string)($newSettings[$key] ?? '')) {
+        $labels[] = $fieldLabels[$key] ?? $key;
+      }
+    }
+
+    return $labels;
+  }
+
+  private function auditAiChatbotUpdate(array $oldSettings, array $newSettings): void {
+    if (!function_exists('audit_event')) return;
+
+    try {
+      $changedFieldLabels = $this->getAiChatbotChangeSummary($oldSettings, $newSettings);
+      $summary = !empty($changedFieldLabels)
+        ? implode(', ', $changedFieldLabels)
+        : 'tiada perubahan medan';
+
+      $nama = $this->profile['f_nama'] ?? null;
+      $nostaf = $this->profile['f_nopekerja'] ?? $_SESSION['f_nopekerja'] ?? null;
+      $actorLabel = function_exists('audit_format_actor_label')
+        ? audit_format_actor_label($nama, $nostaf)
+        : $nama;
+
+      $message = function_exists('audit_format_message')
+        ? audit_format_message(sprintf('Tetapan AI Chatbot dikemas kini (%d medan): %s', count($changedFieldLabels), $summary), $actorLabel)
+        : sprintf('Tetapan AI Chatbot dikemas kini (%d medan): %s', count($changedFieldLabels), $summary);
+
+      audit_event([
+        'event_type' => SystemConfigConstants::AUDIT_EVENT_AI_CHATBOT_UPDATE,
+        'severity' => 'WARN',
+        'outcome' => 'SUCCESS',
+        'target_type' => SystemConfigConstants::AUDIT_TARGET_AI_CHATBOT,
+        'target_id' => SystemConfigConstants::CONFIG_GROUP_AI_CHATBOT,
+        'target_label' => 'AI Chatbot Settings',
+        'message' => $message,
+        'user_id' => $_SESSION['user']['f_userID'] ?? $_SESSION['f_userID'] ?? $_SESSION['f_stafID'] ?? null,
+        'actor_label' => $actorLabel,
+        'meta' => [
+          'changed_field_labels' => $changedFieldLabels,
+          'changed_count' => count($changedFieldLabels),
+          'change_summary' => $summary,
+        ],
+      ]);
+    } catch (Throwable $e) {
+      error_log('[TetapanSistem] AI chatbot audit logging failed: ' . $e->getMessage());
+    }
   }
 
   private function auditAdditionalConnectionAction(string $action, string $code, array $meta = []): void {

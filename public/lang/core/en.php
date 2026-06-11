@@ -19,6 +19,35 @@
 /* Site title (used in <title>) */
 'title' => 'UPNM | Project Management System - UPNM30',
 
+/* =====================================================
+ * AI CHATBOT (aiChatbot_)
+ * ===================================================== */
+
+'aiChatbot_page_title'          => 'AI Chatbot Prototype',
+'aiChatbot_open_label'          => 'Open AI Chatbot',
+'aiChatbot_close_label'         => 'Close AI Chatbot',
+'aiChatbot_panel_label'         => 'AI Chatbot panel',
+'aiChatbot_send_label'          => 'Send',
+'aiChatbot_input_placeholder'   => 'Type a message...',
+'aiChatbot_status_ready'        => 'Prototype active',
+'aiChatbot_status_busy'         => 'Answering...',
+'aiChatbot_status_disabled'     => 'Not active',
+'aiChatbot_error_generic'       => 'AI Chatbot cannot answer right now.',
+'aiChatbot_error_forbidden'     => 'You are not allowed to use the AI Chatbot prototype.',
+'aiChatbot_error_disabled'      => 'AI Chatbot is not enabled.',
+'aiChatbot_error_invalid_method'=> 'Invalid request method.',
+'aiChatbot_error_invalid_action'=> 'Invalid chatbot action.',
+'aiChatbot_error_empty_message' => 'Please enter a message.',
+'aiChatbot_error_long_message'  => 'Message is too long.',
+'aiChatbot_error_rate_limit'    => 'Too many requests. Please try again shortly.',
+'aiChatbot_phase_label'         => 'Phase 4 framework integration',
+'aiChatbot_intro'               => 'The chatbot widget is now rendered globally when the feature is enabled and the user has access.',
+'aiChatbot_active_status'       => 'AI Chatbot is active.',
+'aiChatbot_inactive_status'     => 'AI Chatbot is not active. To test, enable AI Chatbot and choose a provider in System Settings.',
+'aiChatbot_current_config'      => 'Current Prototype Config',
+'config_tab_ai_chatbot'         => 'AI Chatbot',
+'config_ai_chatbot_title'       => 'AI Chatbot',
+'config_ai_chatbot_subtitle'    => 'Runtime settings for the core framework AI Chatbot widget.',
 
 
 /* =====================================================

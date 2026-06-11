@@ -51,6 +51,7 @@ $languageData = is_array($viewData['languageData'] ?? null) ? $viewData['languag
 $dbRuntime = is_array($viewData['dbRuntime'] ?? null) ? $viewData['dbRuntime'] : [];
 $additionalConnections = is_array($viewData['additionalConnections'] ?? null) ? $viewData['additionalConnections'] : [];
 $themeSettings = is_array($viewData['themeSettings'] ?? null) ? $viewData['themeSettings'] : [];
+$aiChatbotSettings = is_array($viewData['aiChatbotSettings'] ?? null) ? $viewData['aiChatbotSettings'] : [];
 $sidebarSmallImages = is_array($viewData['sidebarSmallImages'] ?? null) ? $viewData['sidebarSmallImages'] : [];
 $systemVersion = app_current_version();
 
@@ -314,6 +315,11 @@ if (isset($translationBundlesJs[$lang])) {
                   <i class="ri-translate-2 me-1"></i> <?= __('config_tab_bahasa') ?? 'Bahasa' ?>
                 </a>
               </li>
+              <li class="nav-item">
+                <a class="nav-link <?= ($_GET['tab'] ?? '') === 'ai-chatbot' ? 'active' : '' ?>" data-bs-toggle="tab" href="#ai-chatbot-tab" role="tab" aria-selected="<?= ($_GET['tab'] ?? '') === 'ai-chatbot' ? 'true' : 'false' ?>">
+                  <i class="ri-chat-3-line me-1"></i> <?= __('config_tab_ai_chatbot') ?? 'AI Chatbot' ?>
+                </a>
+              </li>
             </ul>
             <div class="ms-auto">
               <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle fw-semibold"><?= h(app_current_version_label()) ?></span>
@@ -334,6 +340,8 @@ if (isset($translationBundlesJs[$lang])) {
             <?php include __DIR__ . '/partials/tetapan-sistem/tab-theme.php'; ?>
 
             <?php include __DIR__ . '/partials/tetapan-sistem/tab-language.php'; ?>
+
+            <?php include __DIR__ . '/partials/tetapan-sistem/tab-ai-chatbot.php'; ?>
 
           </div><!-- /tab-content -->
         </div>

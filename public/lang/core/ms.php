@@ -19,6 +19,35 @@
 /* Site title (used in <title>) */
 'title' => 'UPNM | Sistem Pengurusan Projek - UPNM30',
 
+/* =====================================================
+ * AI CHATBOT (aiChatbot_)
+ * ===================================================== */
+
+'aiChatbot_page_title'          => 'AI Chatbot Prototype',
+'aiChatbot_open_label'          => 'Buka AI Chatbot',
+'aiChatbot_close_label'         => 'Tutup AI Chatbot',
+'aiChatbot_panel_label'         => 'Panel AI Chatbot',
+'aiChatbot_send_label'          => 'Hantar',
+'aiChatbot_input_placeholder'   => 'Tulis mesej...',
+'aiChatbot_status_ready'        => 'Prototype aktif',
+'aiChatbot_status_busy'         => 'Sedang menjawab...',
+'aiChatbot_status_disabled'     => 'Belum aktif',
+'aiChatbot_error_generic'       => 'AI Chatbot tidak dapat menjawab buat masa ini.',
+'aiChatbot_error_forbidden'     => 'Anda tidak dibenarkan menggunakan AI Chatbot prototype.',
+'aiChatbot_error_disabled'      => 'AI Chatbot belum diaktifkan.',
+'aiChatbot_error_invalid_method'=> 'Kaedah permintaan tidak sah.',
+'aiChatbot_error_invalid_action'=> 'Tindakan chatbot tidak sah.',
+'aiChatbot_error_empty_message' => 'Sila masukkan mesej.',
+'aiChatbot_error_long_message'  => 'Mesej terlalu panjang.',
+'aiChatbot_error_rate_limit'    => 'Terlalu banyak permintaan. Sila cuba semula sebentar lagi.',
+'aiChatbot_phase_label'         => 'Phase 4 framework integration',
+'aiChatbot_intro'               => 'Widget chatbot kini dirender secara global apabila feature aktif dan pengguna mempunyai akses.',
+'aiChatbot_active_status'       => 'AI Chatbot aktif.',
+'aiChatbot_inactive_status'     => 'AI Chatbot belum aktif. Untuk test, aktifkan AI Chatbot dan pilih provider dalam Tetapan Sistem.',
+'aiChatbot_current_config'      => 'Konfigurasi Prototype Semasa',
+'config_tab_ai_chatbot'         => 'AI Chatbot',
+'config_ai_chatbot_title'       => 'AI Chatbot',
+'config_ai_chatbot_subtitle'    => 'Tetapan runtime untuk widget AI Chatbot core framework.',
 
 
 /* =====================================================

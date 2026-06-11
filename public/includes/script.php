@@ -216,6 +216,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+<?php
+if (file_exists(__DIR__ . '/ai-chatbot-widget.php')) {
+  include __DIR__ . '/ai-chatbot-widget.php';
+}
+?>
+
 <!-- ========== Session Idle Guard ========== -->
 <?php
 $isLoggedIn = !empty($_SESSION['f_stafID']);
