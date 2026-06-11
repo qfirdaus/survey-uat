@@ -11,7 +11,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../AiChatbotProviderInterface.php';
 
-final class OllamaProvider implements AiChatbotProviderInterface
+final class GeminiProvider implements AiChatbotProviderInterface
 {
     /** @var array<string,mixed> */
     private array $config;
@@ -29,44 +29,83 @@ final class OllamaProvider implements AiChatbotProviderInterface
         $started = microtime(true);
         $baseUrlValue = trim((string)($this->config['base_url'] ?? ''));
         $modelValue = trim((string)($this->config['model'] ?? ''));
-        $baseUrl = rtrim($baseUrlValue !== '' ? $baseUrlValue : 'http://127.0.0.1:11434', '/');
-        $model = $modelValue !== '' ? $modelValue : 'llama3.2:3b';
+        $baseUrl = rtrim($baseUrlValue !== '' ? $baseUrlValue : 'https://generativelanguage.googleapis.com', '/');
+        $model = $modelValue !== '' ? $modelValue : 'gemini-1.5-flash';
+        $apiKey = trim((string)($this->config['api_key'] ?? ''));
         $timeout = max(1, (int)($this->config['timeout_seconds'] ?? 30));
         $maxTokens = max(64, (int)($this->config['max_output_tokens'] ?? 800));
 
         if ($model === '') {
-            throw new InvalidArgumentException('Ollama model is not configured.');
+            throw new InvalidArgumentException('Gemini model is not configured.');
         }
 
-        $endpoint = str_ends_with($baseUrl, '/v1')
-            ? $baseUrl . '/chat/completions'
-            : $baseUrl . '/v1/chat/completions';
+        if ($apiKey === '') {
+            throw new InvalidArgumentException('Gemini API key is not configured.');
+        }
+
+        $systemText = '';
+        $contents = [];
+        foreach ($messages as $message) {
+            $role = (string)($message['role'] ?? '');
+            $content = (string)($message['content'] ?? '');
+            if ($content === '') {
+                continue;
+            }
+            if ($role === 'system') {
+                $systemText = trim($systemText . "\n" . $content);
+                continue;
+            }
+            $contents[] = [
+                'role' => $role === 'assistant' ? 'model' : 'user',
+                'parts' => [
+                    ['text' => $content],
+                ],
+            ];
+        }
 
         $payload = [
-            'model' => $model,
-            'messages' => $messages,
-            'stream' => false,
-            'max_tokens' => $maxTokens,
-            'temperature' => (float)($options['temperature'] ?? 0.3),
+            'contents' => $contents,
+            'generationConfig' => [
+                'maxOutputTokens' => $maxTokens,
+                'temperature' => (float)($options['temperature'] ?? 0.3),
+            ],
         ];
+        if ($systemText !== '') {
+            $payload['systemInstruction'] = [
+                'parts' => [
+                    ['text' => $systemText],
+                ],
+            ];
+        }
 
+        $endpoint = $this->generateContentEndpoint($baseUrl, $model, $apiKey);
         $response = $this->postJson($endpoint, $payload, $timeout);
-        $content = trim((string)($response['choices'][0]['message']['content'] ?? ''));
-
+        $content = $this->extractText($response);
         if ($content === '') {
-            throw new RuntimeException('Ollama returned an empty response.');
+            throw new RuntimeException('Gemini returned an empty response.');
         }
 
         return [
             'success' => true,
-            'provider' => 'ollama',
+            'provider' => 'gemini',
             'model' => $model,
             'message' => $content,
             'latency_ms' => (int)round((microtime(true) - $started) * 1000),
-            'usage' => is_array($response['usage'] ?? null) ? $response['usage'] : [],
+            'usage' => is_array($response['usageMetadata'] ?? null) ? $response['usageMetadata'] : [],
             'error_code' => null,
             'error_message' => null,
         ];
+    }
+
+    private function generateContentEndpoint(string $baseUrl, string $model, string $apiKey): string
+    {
+        $encodedModel = rawurlencode($model);
+        if (str_contains($baseUrl, ':generateContent')) {
+            $separator = str_contains($baseUrl, '?') ? '&' : '?';
+            return $baseUrl . $separator . 'key=' . rawurlencode($apiKey);
+        }
+
+        return $baseUrl . '/v1beta/models/' . $encodedModel . ':generateContent?key=' . rawurlencode($apiKey);
     }
 
     /**
@@ -77,7 +116,7 @@ final class OllamaProvider implements AiChatbotProviderInterface
     {
         $body = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if (!is_string($body)) {
-            throw new RuntimeException('Unable to encode Ollama request payload.');
+            throw new RuntimeException('Unable to encode Gemini request payload.');
         }
 
         if (function_exists('curl_init')) {
@@ -101,7 +140,7 @@ final class OllamaProvider implements AiChatbotProviderInterface
             curl_close($ch);
 
             if (!is_string($raw)) {
-                throw new RuntimeException($error !== '' ? $error : 'Ollama request failed.');
+                throw new RuntimeException($error !== '' ? $error : 'Gemini request failed.');
             }
 
             return $this->decodeResponse($raw, $status);
@@ -129,7 +168,7 @@ final class OllamaProvider implements AiChatbotProviderInterface
         }
 
         if (!is_string($raw)) {
-            throw new RuntimeException('Ollama request failed.');
+            throw new RuntimeException('Gemini request failed.');
         }
 
         return $this->decodeResponse($raw, $status);
@@ -142,14 +181,37 @@ final class OllamaProvider implements AiChatbotProviderInterface
     {
         $decoded = json_decode($raw, true);
         if (!is_array($decoded)) {
-            throw new RuntimeException('Ollama returned invalid JSON.');
+            throw new RuntimeException('Gemini returned invalid JSON.');
         }
 
         if ($status >= 400) {
-            $message = (string)($decoded['error']['message'] ?? $decoded['error'] ?? 'Ollama provider error.');
+            $message = (string)($decoded['error']['message'] ?? $decoded['error'] ?? 'Gemini provider error.');
             throw new RuntimeException($message);
         }
 
         return $decoded;
+    }
+
+    /**
+     * @param array<string,mixed> $response
+     */
+    private function extractText(array $response): string
+    {
+        $parts = [];
+        foreach ((array)($response['candidates'] ?? []) as $candidate) {
+            if (!is_array($candidate)) {
+                continue;
+            }
+            foreach ((array)($candidate['content']['parts'] ?? []) as $part) {
+                if (is_array($part)) {
+                    $text = trim((string)($part['text'] ?? ''));
+                    if ($text !== '') {
+                        $parts[] = $text;
+                    }
+                }
+            }
+        }
+
+        return trim(implode("\n", $parts));
     }
 }

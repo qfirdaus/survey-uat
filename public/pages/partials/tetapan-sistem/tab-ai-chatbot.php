@@ -20,6 +20,15 @@ $aiEnabled = !empty($ai['enabled']);
 $aiProvider = $aiRaw('provider', 'ollama');
 $aiModel = $aiRaw('model', 'llama3.2:3b');
 $aiAccessMode = $aiRaw('access_mode', 'super_admin_only');
+$aiProviderPresets = [
+    'ollama' => ['model' => 'llama3.2:3b', 'base_url' => 'http://127.0.0.1:11434'],
+    'openai' => ['model' => 'gpt-4o-mini', 'base_url' => 'https://api.openai.com/v1'],
+    'gemini' => ['model' => 'gemini-1.5-flash', 'base_url' => 'https://generativelanguage.googleapis.com'],
+    'grok' => ['model' => 'grok-3-mini', 'base_url' => 'https://api.x.ai/v1'],
+    'anthropic' => ['model' => 'claude-3-5-haiku-latest', 'base_url' => 'https://api.anthropic.com'],
+    'openrouter' => ['model' => 'openrouter/free', 'base_url' => 'https://openrouter.ai/api/v1'],
+    'openai_compatible' => ['model' => 'gpt-4o-mini', 'base_url' => 'https://api.openai.com/v1'],
+];
 ?>
 
 <div class="tab-pane fade <?= ($_GET['tab'] ?? '') === 'ai-chatbot' ? 'show active' : '' ?>" id="ai-chatbot-tab" role="tabpanel">
@@ -142,9 +151,12 @@ $aiAccessMode = $aiRaw('access_mode', 'super_admin_only');
                   <label class="form-label fw-semibold" for="ai_chatbot_provider">Provider</label>
                   <select class="form-select" id="ai_chatbot_provider" name="ai_chatbot_provider">
                     <option value="ollama" <?= $aiSelected('provider', 'ollama', 'ollama') ?>>Ollama</option>
-                    <option value="groq" <?= $aiSelected('provider', 'groq') ?>>Groq</option>
+                    <option value="openai" <?= $aiSelected('provider', 'openai') ?>>OpenAI</option>
+                    <option value="gemini" <?= $aiSelected('provider', 'gemini') ?>>Gemini</option>
+                    <option value="grok" <?= $aiSelected('provider', 'grok') ?>>Grok</option>
+                    <option value="anthropic" <?= $aiSelected('provider', 'anthropic') ?>>Anthropic</option>
                     <option value="openrouter" <?= $aiSelected('provider', 'openrouter') ?>>OpenRouter</option>
-                    <option value="openai_compatible" <?= $aiSelected('provider', 'openai_compatible') ?>>OpenAI compatible</option>
+                    <option value="openai_compatible" <?= $aiSelected('provider', 'openai_compatible') ?>>OpenAI Compatible</option>
                   </select>
                 </div>
                 <div class="col-md-4">
@@ -262,3 +274,40 @@ $aiAccessMode = $aiRaw('access_mode', 'super_admin_only');
     </div>
   </form>
 </div>
+
+<script>
+(function () {
+  var presets = <?= json_encode($aiProviderPresets, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+  var providerEl = document.getElementById('ai_chatbot_provider');
+  var modelEl = document.getElementById('ai_chatbot_model');
+  var baseUrlEl = document.getElementById('ai_chatbot_base_url');
+  if (!providerEl || !modelEl || !baseUrlEl) return;
+
+  function knownPresetValues(key) {
+    return Object.keys(presets).map(function (provider) {
+      return String((presets[provider] && presets[provider][key]) || '');
+    }).filter(Boolean);
+  }
+
+  var knownModels = knownPresetValues('model');
+  var knownBaseUrls = knownPresetValues('base_url');
+
+  function shouldReplace(value, knownValues) {
+    value = String(value || '').trim();
+    return value === '' || knownValues.indexOf(value) !== -1;
+  }
+
+  providerEl.addEventListener('change', function () {
+    var preset = presets[providerEl.value] || null;
+    if (!preset) return;
+
+    if (shouldReplace(modelEl.value, knownModels)) {
+      modelEl.value = preset.model || '';
+    }
+
+    if (shouldReplace(baseUrlEl.value, knownBaseUrls)) {
+      baseUrlEl.value = preset.base_url || '';
+    }
+  });
+})();
+</script>

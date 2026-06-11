@@ -2568,7 +2568,7 @@ class TetapanSistemController {
   private function validateAiChatbotSettings(array $data): array {
     $errors = [];
     $labels = $this->getAiChatbotFieldLabels();
-    $allowedProviders = ['ollama', 'groq', 'openrouter', 'openai_compatible'];
+    $allowedProviders = ['ollama', 'openai', 'gemini', 'grok', 'anthropic', 'openrouter', 'openai_compatible', 'groq'];
     $allowedAccessModes = ['super_admin_only', 'selected_groups', 'all_authenticated'];
 
     if (!in_array((string)($data['provider'] ?? ''), $allowedProviders, true)) {

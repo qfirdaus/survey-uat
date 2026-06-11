@@ -37,8 +37,10 @@ class OpenAICompatibleProvider implements AiChatbotProviderInterface
     public function send(array $messages, array $options = []): array
     {
         $started = microtime(true);
-        $baseUrl = rtrim((string)($this->config['base_url'] ?? $this->defaultBaseUrl), '/');
-        $model = trim((string)($this->config['model'] ?? $this->defaultModel));
+        $baseUrlValue = trim((string)($this->config['base_url'] ?? ''));
+        $modelValue = trim((string)($this->config['model'] ?? ''));
+        $baseUrl = rtrim($baseUrlValue !== '' ? $baseUrlValue : $this->defaultBaseUrl, '/');
+        $model = $modelValue !== '' ? $modelValue : $this->defaultModel;
         $apiKey = trim((string)($this->config['api_key'] ?? ''));
         $timeout = max(1, (int)($this->config['timeout_seconds'] ?? 30));
         $maxTokens = max(64, (int)($this->config['max_output_tokens'] ?? 800));
