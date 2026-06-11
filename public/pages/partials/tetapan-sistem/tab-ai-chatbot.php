@@ -20,14 +20,14 @@ $aiEnabled = !empty($ai['enabled']);
 $aiProvider = $aiRaw('provider', 'ollama');
 $aiModel = $aiRaw('model', 'llama3.2:3b');
 $aiAccessMode = $aiRaw('access_mode', 'super_admin_only');
-$aiProviderPresets = [
-    'ollama' => ['model' => 'llama3.2:3b', 'base_url' => 'http://127.0.0.1:11434'],
-    'openai' => ['model' => 'gpt-4o-mini', 'base_url' => 'https://api.openai.com/v1'],
-    'gemini' => ['model' => 'gemini-1.5-flash', 'base_url' => 'https://generativelanguage.googleapis.com'],
-    'grok' => ['model' => 'grok-3-mini', 'base_url' => 'https://api.x.ai/v1'],
-    'anthropic' => ['model' => 'claude-3-5-haiku-latest', 'base_url' => 'https://api.anthropic.com'],
-    'openrouter' => ['model' => 'openrouter/free', 'base_url' => 'https://openrouter.ai/api/v1'],
-    'openai_compatible' => ['model' => 'gpt-4o-mini', 'base_url' => 'https://api.openai.com/v1'],
+$aiProviderDefaults = [
+    'ollama' => ['base_url' => 'http://127.0.0.1:11434'],
+    'openai' => ['base_url' => 'https://api.openai.com/v1'],
+    'gemini' => ['base_url' => 'https://generativelanguage.googleapis.com'],
+    'grok' => ['base_url' => 'https://api.x.ai/v1'],
+    'anthropic' => ['base_url' => 'https://api.anthropic.com'],
+    'openrouter' => ['base_url' => 'https://openrouter.ai/api/v1'],
+    'openai_compatible' => ['base_url' => 'https://api.openai.com/v1'],
 ];
 ?>
 
@@ -161,7 +161,10 @@ $aiProviderPresets = [
                 </div>
                 <div class="col-md-4">
                   <label class="form-label fw-semibold" for="ai_chatbot_model">Model</label>
-                  <input type="text" class="form-control" id="ai_chatbot_model" name="ai_chatbot_model" value="<?= $aiValue('model', 'llama3.2:3b') ?>" placeholder="llama3.2:3b">
+                  <select class="form-select" id="ai_chatbot_model" name="ai_chatbot_model" data-current-model="<?= htmlspecialchars($aiModel, ENT_QUOTES, 'UTF-8') ?>">
+                    <option value="<?= htmlspecialchars($aiModel, ENT_QUOTES, 'UTF-8') ?>" selected><?= $aiModel !== '' ? htmlspecialchars($aiModel, ENT_QUOTES, 'UTF-8') : 'Fetch models from provider' ?></option>
+                  </select>
+                  <small class="text-muted" id="ai_chatbot_model_status">Model list akan difetch secara dynamic daripada provider yang dipilih.</small>
                 </div>
                 <div class="col-md-4">
                   <label class="form-label fw-semibold" for="ai_chatbot_base_url">Provider base URL</label>
@@ -277,37 +280,148 @@ $aiProviderPresets = [
 
 <script>
 (function () {
-  var presets = <?= json_encode($aiProviderPresets, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+  var providerDefaults = <?= json_encode($aiProviderDefaults, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
   var providerEl = document.getElementById('ai_chatbot_provider');
   var modelEl = document.getElementById('ai_chatbot_model');
   var baseUrlEl = document.getElementById('ai_chatbot_base_url');
+  var apiKeyEl = document.getElementById('ai_chatbot_api_key');
+  var statusEl = document.getElementById('ai_chatbot_model_status');
+  var modelEndpoint = ((window.tetapanSistemConfig && window.tetapanSistemConfig.baseUrl) || '') + 'ajax/ai-chatbot-models.php';
+  var csrfToken = (window.tetapanSistemConfig && window.tetapanSistemConfig.csrfToken) || '';
+  var lastRequestId = 0;
   if (!providerEl || !modelEl || !baseUrlEl) return;
 
-  function knownPresetValues(key) {
-    return Object.keys(presets).map(function (provider) {
-      return String((presets[provider] && presets[provider][key]) || '');
-    }).filter(Boolean);
+  function setStatus(message, tone) {
+    if (!statusEl) return;
+    statusEl.textContent = message || '';
+    statusEl.classList.remove('text-muted', 'text-danger', 'text-success');
+    statusEl.classList.add(tone === 'danger' ? 'text-danger' : (tone === 'success' ? 'text-success' : 'text-muted'));
   }
 
-  var knownModels = knownPresetValues('model');
-  var knownBaseUrls = knownPresetValues('base_url');
-
-  function shouldReplace(value, knownValues) {
+  function ensureOption(value, label) {
     value = String(value || '').trim();
-    return value === '' || knownValues.indexOf(value) !== -1;
+    if (value === '') return;
+    for (var i = 0; i < modelEl.options.length; i += 1) {
+      if (modelEl.options[i].value === value) return;
+    }
+    var option = document.createElement('option');
+    option.value = value;
+    option.textContent = label || value;
+    modelEl.insertBefore(option, modelEl.firstChild);
+  }
+
+  function rebuildModelOptions(models, preferredModel) {
+    var normalizedPreferred = String(preferredModel || '').trim();
+    var unique = [];
+    (Array.isArray(models) ? models : []).forEach(function (model) {
+      model = String(model || '').trim();
+      if (model !== '' && unique.indexOf(model) === -1) unique.push(model);
+    });
+
+    modelEl.innerHTML = '';
+
+    if (normalizedPreferred !== '' && unique.indexOf(normalizedPreferred) === -1) {
+      ensureOption(normalizedPreferred, 'Saved: ' + normalizedPreferred);
+    }
+
+    unique.forEach(function (model) {
+      var option = document.createElement('option');
+      option.value = model;
+      option.textContent = model;
+      modelEl.appendChild(option);
+    });
+
+    if (normalizedPreferred !== '') {
+      ensureOption(normalizedPreferred, 'Saved: ' + normalizedPreferred);
+      modelEl.value = normalizedPreferred;
+    } else if (unique.length > 0) {
+      modelEl.value = unique[0];
+    } else {
+      var emptyOption = document.createElement('option');
+      emptyOption.value = '';
+      emptyOption.textContent = 'No models loaded';
+      modelEl.appendChild(emptyOption);
+    }
+  }
+
+  function fetchModels(preferredModel) {
+    var requestId = ++lastRequestId;
+    var provider = providerEl.value;
+    var currentModel = String(preferredModel || modelEl.value || modelEl.getAttribute('data-current-model') || '').trim();
+    var payload = {
+      provider: provider,
+      base_url: baseUrlEl.value || '',
+      api_key: apiKeyEl ? apiKeyEl.value : ''
+    };
+
+    modelEl.disabled = true;
+    setStatus('Fetching model list from provider...', 'muted');
+
+    return fetch(modelEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-Token': csrfToken,
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-No-Loader': '1'
+      },
+      body: JSON.stringify(payload),
+      noLoader: true
+    })
+      .then(function (response) {
+        return response.json().catch(function () { return null; }).then(function (json) {
+          if (!response.ok || !json || json.success !== true) {
+            throw new Error((json && json.message) || 'Gagal fetch model list.');
+          }
+          return json;
+        });
+      })
+      .then(function (json) {
+        if (requestId !== lastRequestId) return;
+        rebuildModelOptions(json.models || [], currentModel);
+        setStatus((json.models || []).length + ' model loaded from provider.', 'success');
+      })
+      .catch(function (error) {
+        if (requestId !== lastRequestId) return;
+        rebuildModelOptions([], currentModel);
+        setStatus(error && error.message ? error.message : 'Gagal fetch model list.', 'danger');
+      })
+      .finally(function () {
+        if (requestId === lastRequestId) {
+          modelEl.disabled = false;
+        }
+      });
+  }
+
+  function applyProviderDefaultBaseUrl() {
+    var defaults = providerDefaults[providerEl.value] || null;
+    if (!defaults || !defaults.base_url) return;
+
+    var knownBaseUrls = Object.keys(providerDefaults).map(function (key) {
+      return String((providerDefaults[key] && providerDefaults[key].base_url) || '');
+    }).filter(Boolean);
+
+    if (String(baseUrlEl.value || '').trim() === '' || knownBaseUrls.indexOf(String(baseUrlEl.value || '').trim()) !== -1) {
+      baseUrlEl.value = defaults.base_url;
+    }
   }
 
   providerEl.addEventListener('change', function () {
-    var preset = presets[providerEl.value] || null;
-    if (!preset) return;
-
-    if (shouldReplace(modelEl.value, knownModels)) {
-      modelEl.value = preset.model || '';
-    }
-
-    if (shouldReplace(baseUrlEl.value, knownBaseUrls)) {
-      baseUrlEl.value = preset.base_url || '';
-    }
+    applyProviderDefaultBaseUrl();
+    fetchModels('');
   });
+
+  baseUrlEl.addEventListener('change', function () {
+    fetchModels(modelEl.value);
+  });
+
+  if (apiKeyEl) {
+    apiKeyEl.addEventListener('change', function () {
+      fetchModels(modelEl.value);
+    });
+  }
+
+  fetchModels(modelEl.value);
 })();
 </script>
