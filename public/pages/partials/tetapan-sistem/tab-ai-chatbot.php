@@ -304,11 +304,14 @@ $aiProviderDefaults = [
     $model.select2({
       width: '100%',
       placeholder: modelEl.getAttribute('data-placeholder') || 'Pilih model',
-      dropdownParent: jQuery('#ai-chatbot-subtab-provider'),
+      dropdownParent: jQuery(document.body),
+      dropdownCssClass: 'ai-chatbot-model-dropdown',
       minimumResultsForSearch: 0
     });
     return true;
   }
+
+  window.__initAiChatbotModelSelect2 = initModelSelect2;
 
   function scheduleModelSelect2Init() {
     var attempts = 0;
@@ -478,6 +481,13 @@ $aiProviderDefaults = [
     scheduleModelSelect2Init();
   }
   window.addEventListener('load', scheduleModelSelect2Init);
+  document.addEventListener('shown.bs.tab', function (event) {
+    var target = event && event.target ? event.target.getAttribute('data-bs-target') : '';
+    if (target === '#ai-chatbot-tab' || target === '#ai-chatbot-subtab-provider') {
+      scheduleModelSelect2Init();
+      refreshModelSelect();
+    }
+  });
 
   fetchModels(modelEl.value);
 })();

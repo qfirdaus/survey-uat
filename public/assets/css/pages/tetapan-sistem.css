@@ -2531,3 +2531,62 @@
       border-color: rgba(148,163,184,.3);
       color:#e2e8f0;
     }
+
+    #ai-chatbot-tab .select2-container--default{
+      width:100% !important;
+      font-size:1rem !important;
+    }
+    #ai-chatbot-tab .select2-container--default .select2-selection--single{
+      min-height:50px !important;
+      height:50px !important;
+      border:2px solid #e9ecef !important;
+      border-radius:8px !important;
+      padding:.875rem 1rem !important;
+      display:flex !important;
+      align-items:center !important;
+      transition:border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+    }
+    #ai-chatbot-tab .select2-container--default .select2-selection--single:hover{
+      border-color:#ced4da !important;
+    }
+    #ai-chatbot-tab .select2-container--default.select2-container--focus .select2-selection--single{
+      border-color:#86b7fe !important;
+      box-shadow:0 0 0 .25rem rgba(13,110,253,.25) !important;
+    }
+    #ai-chatbot-tab .select2-container--default .select2-selection--single .select2-selection__rendered{
+      line-height:1.5 !important;
+      padding-left:.5rem !important;
+      padding-right:30px !important;
+      color:#212529 !important;
+      font-size:1rem !important;
+      font-weight:600 !important;
+    }
+    #ai-chatbot-tab .select2-container--default .select2-selection--single .select2-selection__arrow{
+      height:48px !important;
+      right:10px !important;
+      width:30px !important;
+    }
+    #ai-chatbot-tab .select2-container--default .select2-selection--single .select2-selection__arrow b{
+      border-color:#6c757d transparent transparent transparent;
+      border-width:6px 5px 0 5px;
+      margin-top:-3px;
+    }
+    .ai-chatbot-model-dropdown.select2-dropdown{
+      font-size:1rem !important;
+      border:2px solid #e9ecef !important;
+      border-radius:8px !important;
+      box-shadow:0 .5rem 1rem rgba(0,0,0,.15) !important;
+    }
+    .ai-chatbot-model-dropdown .select2-results__option{
+      padding:.75rem 1rem !important;
+      font-size:1rem !important;
+      line-height:1.5 !important;
+    }
+    .ai-chatbot-model-dropdown .select2-results__option--highlighted{
+      background-color:#0d6efd !important;
+      color:#fff !important;
+    }
+    .ai-chatbot-model-dropdown .select2-results__option[aria-selected="true"]{
+      background-color:#e7f1ff !important;
+      color:#0d6efd !important;
+    }

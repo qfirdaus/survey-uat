@@ -215,12 +215,13 @@ if (isset($translationBundlesJs[$lang])) {
     $NEED_DATERANGE  = false;
     $NEED_VECTORMAP  = false;
     $NEED_DATATABLES = false;
-    $NEED_SELECT2    = true;
+    $NEED_SELECT2    = false;
     include __DIR__ . '/../includes/head.php';
   ?>
   <meta name="csrf-token" content="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
 
   <link rel="stylesheet" href="<?= asset_url('css/datatables-standard.css') ?>?v=<?= urlencode($version) ?>">
+  <link rel="stylesheet" href="<?= base_url('assets/vendor/select2/css/select2.min.css') ?>?v=<?= urlencode($version) ?>">
   <link rel="stylesheet" href="<?= asset_url('css/pages/tetapan-sistem.css') ?>?v=<?= urlencode($version) ?>">
 
   <!-- Translation map (senyap) -->
@@ -356,10 +357,22 @@ if (isset($translationBundlesJs[$lang])) {
     $NEED_JQUERY     = true;
     $NEED_SWEETALERT = true;
     $NEED_DT_JS      = true;
-    $NEED_SELECT2_JS = true;
+    $NEED_SELECT2_JS = false;
     include __DIR__ . '/../includes/script.php';
   ?>
-  <script src="<?= base_url('assets/vendor/select2/js/select2.min.js') ?>?v=<?= urlencode($version) ?>"></script>
+  <script>
+    (function () {
+      var script = document.createElement('script');
+      script.src = <?= json_encode(base_url('assets/vendor/select2/js/select2.full.min.js') . '?v=' . time(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+      script.onload = function () {
+        window.__select2ScriptLoaded = true;
+        if (typeof window.__initAiChatbotModelSelect2 === 'function') {
+          window.__initAiChatbotModelSelect2();
+        }
+      };
+      document.head.appendChild(script);
+    })();
+  </script>
 
 
   <script>
