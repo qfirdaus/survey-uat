@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.8.1`
+- Current version: `1.8.2`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -108,6 +108,9 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Runtime settings are managed from System Settings > AI Chatbot and stored in `tbl_m_config` under the `ai_chatbot` group.
 - The AI Chatbot settings UI is split into Overview, Provider, Limits, Character, and Storage subtabs.
 - Usage/session/message persistence is supported through `tbl_ai_chat_session`, `tbl_ai_chat_message`, and `tbl_ai_chat_usage` when the table script in `docs/ai-chatbot-tables-2026-06-11.sql` has been applied.
+- Role-aware answers are guided by safe runtime context, active group context, visible module/menu context, permission-filtered retrieval policy, and governance classification metadata.
+- Optional curated FAQ/SOP/manual knowledge retrieval is supported through `tbl_ai_chat_knowledge` when `docs/ai-chatbot-knowledge-tables-2026-06-12.sql` has been applied.
+- The chatbot does not execute model-generated SQL, does not expose unrestricted database records, and must ground system-specific answers in approved runtime, visible system, or curated knowledge context.
 - Implementation guidance is documented in `docs/ai-chatbot-core-blueprint-2026-06-11.md` and `docs/ai-chatbot-production-runbook-2026-06-11.md`.
 
 ### System Cache Maintenance

@@ -17,7 +17,10 @@ try {
     require_login();
     require_once __DIR__ . '/_helpers.php';
     require_once __DIR__ . '/../classes/Database.php';
+    require_once __DIR__ . '/../classes/AiChatbotKnowledgeContext.php';
+    require_once __DIR__ . '/../classes/AiChatbotQuestionClassifier.php';
     require_once __DIR__ . '/../classes/AiChatbotService.php';
+    require_once __DIR__ . '/../classes/AiChatbotSystemContext.php';
     require_once __DIR__ . '/../classes/AiChatbotUsageRepository.php';
 
     $t = static function (string $key, string $fallback): string {
@@ -92,6 +95,11 @@ try {
         jsonErrorResponse($t('aiChatbot_error_long_message', 'Mesej terlalu panjang.'), 422);
     }
 
+    $runtimeContext = is_array($data['context'] ?? null) ? $data['context'] : [];
+    $pagePath = ai_chatbot_context_path($runtimeContext['page_path'] ?? '');
+    $pageTitle = ai_chatbot_context_string($runtimeContext['page_title'] ?? '', 160);
+    $classification = (new AiChatbotQuestionClassifier())->classify($message);
+
     $userDailyLimit = $service->userDailyRequestLimit();
     if ($userDailyLimit > 0 && $loginId !== '' && $usageRepository->countToday($loginId) >= $userDailyLimit) {
         ai_chatbot_record_usage_safe($service, $usageRepository, [
@@ -125,6 +133,29 @@ try {
     $actor = [
         'lang' => (string)($_SESSION['lang'] ?? 'ms'),
         'role' => (string)($_SESSION['group_active_name'] ?? ($profile['f_groupName'] ?? '')),
+        'active_group_id' => (string)((int)($_SESSION['group_active_id'] ?? ($profile['f_groupID'] ?? 0))),
+        'active_group_code' => (string)($_SESSION['group_active_code'] ?? ($profile['f_groupKod'] ?? '')),
+        'is_super_admin' => function_exists('is_user_super_admin') ? is_user_super_admin($profile, $pdo) : false,
+        'access_mode' => (string)($publicConfig['access_mode'] ?? ''),
+        'app_title' => (string)($publicConfig['app_title'] ?? 'IQS-Framework AI Chatbot'),
+        'current_page_path' => $pagePath,
+        'current_page_title' => $pageTitle,
+        'question_classification' => $classification,
+    ];
+    $systemContext = (new AiChatbotSystemContext($pdo))->build($profile, $actor);
+    if ($systemContext !== []) {
+        $actor['system_context'] = $systemContext;
+    }
+    $knowledgeContext = (new AiChatbotKnowledgeContext($pdo))->build($message, $profile, $actor);
+    if ($knowledgeContext !== []) {
+        $actor['knowledge_context'] = $knowledgeContext;
+    }
+    $actor['retrieval_policy'] = [
+        'mode' => 'permission_filtered',
+        'requires_grounded_answer' => ai_chatbot_requires_grounded_answer($message),
+        'blocked_detail' => !empty($classification['blocked_detail']),
+        'system_context_available' => $systemContext !== [],
+        'knowledge_context_available' => $knowledgeContext !== [],
     ];
 
     $result = $service->sendMessage($message, $actor);
@@ -139,6 +170,16 @@ try {
         'request_meta' => [
             'message_length' => mb_strlen($message, 'UTF-8'),
             'access_mode' => $publicConfig['access_mode'] ?? null,
+            'current_page_path' => $pagePath !== '' ? $pagePath : null,
+            'system_context_source' => $systemContext['source'] ?? null,
+            'knowledge_context_source' => $knowledgeContext['source'] ?? null,
+            'knowledge_items_in_prompt' => $knowledgeContext['totals']['items_in_prompt'] ?? 0,
+            'requires_grounded_answer' => (bool)($actor['retrieval_policy']['requires_grounded_answer'] ?? false),
+            'question_category' => $classification['category'] ?? 'unknown',
+            'question_risk' => $classification['risk'] ?? 'low',
+            'question_needs_review' => (bool)($classification['needs_review'] ?? false),
+            'question_review_reason' => $classification['review_reason'] ?? null,
+            'blocked_detail' => (bool)($classification['blocked_detail'] ?? false),
         ],
     ]);
 
@@ -148,6 +189,8 @@ try {
             'model' => $result['model'] ?? null,
             'latency_ms' => $result['latency_ms'] ?? null,
             'message_length' => mb_strlen($message, 'UTF-8'),
+            'question_category' => $classification['category'] ?? 'unknown',
+            'question_risk' => $classification['risk'] ?? 'low',
         ];
         audit_event([
             'event_type' => 'AI_CHATBOT_MESSAGE',
@@ -222,4 +265,78 @@ function ai_chatbot_record_usage_safe(AiChatbotService $service, AiChatbotUsageR
     } catch (Throwable $e) {
         error_log('[ai-chatbot-usage] ' . $e->getMessage());
     }
+}
+
+function ai_chatbot_context_path(mixed $value): string
+{
+    $path = ai_chatbot_context_string($value, 255);
+    if ($path === '') {
+        return '';
+    }
+
+    $parsedPath = parse_url($path, PHP_URL_PATH);
+    if (is_string($parsedPath) && $parsedPath !== '') {
+        $path = $parsedPath;
+    }
+
+    if (!str_starts_with($path, '/')) {
+        return '';
+    }
+
+    return ai_chatbot_context_string($path, 255);
+}
+
+function ai_chatbot_context_string(mixed $value, int $maxLength): string
+{
+    $text = trim((string)$value);
+    if ($text === '') {
+        return '';
+    }
+
+    $text = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $text);
+    $text = trim((string)$text);
+
+    return mb_substr($text, 0, max(1, $maxLength), 'UTF-8');
+}
+
+function ai_chatbot_requires_grounded_answer(string $message): bool
+{
+    $message = mb_strtolower($message, 'UTF-8');
+    $terms = [
+        'akses',
+        'access',
+        'admin',
+        'chatbot',
+        'configure',
+        'daftar',
+        'dashboard',
+        'edit',
+        'fungsi',
+        'halaman',
+        'kemaskini',
+        'login',
+        'menu',
+        'model',
+        'modul',
+        'module',
+        'page',
+        'pengguna',
+        'permission',
+        'provider',
+        'role',
+        'route',
+        'setting',
+        'sistem',
+        'system',
+        'tetapan',
+        'user',
+    ];
+
+    foreach ($terms as $term) {
+        if (str_contains($message, $term)) {
+            return true;
+        }
+    }
+
+    return false;
 }

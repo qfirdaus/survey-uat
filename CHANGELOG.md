@@ -6,6 +6,24 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+## [1.8.2] - 2026-06-12
+
+### Added
+- Added role-aware AI Chatbot answer boundaries for system-focused assistance and restricted administrator workflows.
+- Added safe runtime context for chatbot requests, including sanitized page path/title, app title, active group context, language, and chatbot access mode.
+- Added read-only visible system context through `AiChatbotSystemContext`, capped by active group module/menu access.
+- Added optional curated AI Chatbot knowledge base support through `tbl_ai_chat_knowledge` and `docs/ai-chatbot-knowledge-tables-2026-06-12.sql`.
+- Added visibility-filtered knowledge retrieval through `AiChatbotKnowledgeContext`.
+- Added permission-filtered retrieval policy for system-specific questions so answers must be grounded in approved context.
+- Added `AiChatbotQuestionClassifier` for review-safe governance metadata across system help, navigation help, access help, troubleshooting, sensitive blocked, and unknown questions.
+- Added production runbook monitoring SQL for AI Chatbot governance review loops.
+
+### Changed
+- Changed AI Chatbot prompt construction to use approved runtime, visible system, curated knowledge, retrieval policy, and classification context.
+- Changed AI Chatbot usage metadata to include context source, knowledge item count, grounded-answer requirement, question category, risk, review reason, and blocked-detail flags.
+- Changed AI Chatbot documentation to cover phases for role-aware answer boundaries, safe runtime context, read-only system context, curated knowledge, permission-filtered retrieval, and governance review.
+- Changed project release metadata to lock the application version at `1.8.2`.
+
 ## [1.8.1] - 2026-06-11
 
 ### Added

@@ -56,6 +56,18 @@
     scrollToBottom();
   }
 
+  function safeText(value, maxLength) {
+    const text = String(value || '').replace(/[\u0000-\u001f\u007f]+/g, ' ').trim();
+    return text.length > maxLength ? text.slice(0, maxLength) : text;
+  }
+
+  function buildRuntimeContext() {
+    return {
+      page_path: safeText(window.location.pathname || '', 255),
+      page_title: safeText(document.title || '', 160)
+    };
+  }
+
   async function sendMessage(text) {
     setBusy(true);
     try {
@@ -67,7 +79,7 @@
           'X-CSRF-Token': cfg.csrf || '',
           'X-Requested-With': 'XMLHttpRequest'
         },
-        body: JSON.stringify({ message: text })
+        body: JSON.stringify({ message: text, context: buildRuntimeContext() })
       });
 
       const payload = await response.json().catch(function () { return null; });

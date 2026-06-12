@@ -74,6 +74,7 @@ final class AiChatbotService
             'character_name' => (string)$this->config['character_name'],
             'character_avatar' => (string)$this->config['character_avatar'],
             'welcome_message' => (string)$this->config['welcome_message'],
+            'app_title' => (string)$this->config['app_title'],
             'access_mode' => (string)$this->config['access_mode'],
             'allowed_groups' => (string)$this->config['allowed_groups'],
             'rate_limit_per_minute' => (int)$this->config['rate_limit_per_minute'],
@@ -229,17 +230,47 @@ final class AiChatbotService
      */
     private function systemPrompt(array $actor): string
     {
-        $lang = trim((string)($actor['lang'] ?? ($_SESSION['lang'] ?? 'ms')));
-        $role = trim((string)($actor['role'] ?? ''));
+        $lang = $this->promptContextValue($actor['lang'] ?? ($_SESSION['lang'] ?? 'ms'), 40);
+        $role = $this->promptContextValue($actor['role'] ?? '', 120);
+        $groupId = $this->promptContextValue($actor['active_group_id'] ?? '', 20);
+        $groupCode = $this->promptContextValue($actor['active_group_code'] ?? '', 60);
+        $accessMode = $this->promptContextValue($actor['access_mode'] ?? ($this->config['access_mode'] ?? ''), 80);
+        $appTitle = $this->promptContextValue($actor['app_title'] ?? ($this->config['app_title'] ?? ''), 120);
+        $pagePath = $this->promptContextValue($actor['current_page_path'] ?? '', 255);
+        $pageTitle = $this->promptContextValue($actor['current_page_title'] ?? '', 160);
+        $systemContext = is_array($actor['system_context'] ?? null) ? $actor['system_context'] : [];
+        $knowledgeContext = is_array($actor['knowledge_context'] ?? null) ? $actor['knowledge_context'] : [];
+        $retrievalPolicy = is_array($actor['retrieval_policy'] ?? null) ? $actor['retrieval_policy'] : [];
+        $classification = is_array($actor['question_classification'] ?? null) ? $actor['question_classification'] : [];
 
         $parts = [
             'You are the IQS-Framework internal assistant.',
+            'Your scope is limited to helping users understand and use the current IQS-Framework system.',
             'Answer in the user language where possible. If the user writes Malay, answer in Malay.',
             'Be concise, practical, and honest.',
+            'If the user asks about topics unrelated to this system, politely say that you can only help with this system.',
+            'Apply role-aware answer boundaries. Answer only within the current user role and access context.',
+            'Do not provide detailed steps for administrator-only settings, hidden menus, restricted routes, provider/API setup, permission management, or internal configuration unless the current user context clearly allows that access.',
+            'If the user asks about a restricted feature outside their current access, give a general support response and ask them to contact the system administrator. Do not reveal hidden menu names, routes, role structures, or setup steps.',
             'Do not claim you have performed system actions.',
             'Do not request or reveal passwords, tokens, cookies, CSRF tokens, API keys, or internal configuration.',
             'This prototype is read-only. Do not offer database writes, permission changes, or account changes.',
+            'Do not invent system details. If the available context is insufficient, say that you do not have enough system information yet.',
+            'Safe runtime context may include the app title, current page, active role/group, and chatbot access mode. Use it only as access-scoped guidance.',
+            'Do not infer hidden menus, hidden routes, permission structures, or unavailable features from the current page path.',
+            'If allowed visible system context is provided, treat it as already filtered by the application for the current active group.',
+            'Use only the provided visible modules and menus when answering navigation questions. Do not add menu names or routes that are not listed in that context.',
+            'If curated knowledge context is provided, use it as approved help content for the current user visibility. Do not reveal knowledge items that are not provided.',
+            'If curated knowledge does not contain the answer, say that the knowledge base does not have enough information yet instead of inventing details.',
+            'For system-specific questions about pages, menus, settings, roles, access, users, providers, models, configuration, or workflows, answer only from the permission-filtered runtime, visible system, or curated knowledge context provided in this prompt.',
+            'If a system-specific answer cannot be grounded in the provided context, say that you do not have enough approved system context yet and suggest contacting the system administrator or support team.',
+            'Use the question classification as a safety hint. If the category is sensitive_blocked or blocked_detail is true, refuse operational details and provide only a brief safe support response.',
+            'If the category is unknown and approved context is insufficient, say that the chatbot does not have enough reviewed knowledge yet.',
         ];
+
+        if ($appTitle !== '') {
+            $parts[] = 'Current system title: ' . $appTitle . '.';
+        }
 
         if ($lang !== '') {
             $parts[] = 'Current user language: ' . $lang . '.';
@@ -249,7 +280,192 @@ final class AiChatbotService
             $parts[] = 'Current user role label: ' . $role . '.';
         }
 
+        if ($groupCode !== '') {
+            $parts[] = 'Current active group code: ' . strtoupper($groupCode) . '.';
+        }
+
+        if ($groupId !== '' && $groupId !== '0') {
+            $parts[] = 'Current active group ID: ' . $groupId . '.';
+        }
+
+        if ($accessMode !== '') {
+            $parts[] = 'Current chatbot access mode: ' . $accessMode . '.';
+        }
+
+        if ($pageTitle !== '') {
+            $parts[] = 'Current page title: ' . $pageTitle . '.';
+        }
+
+        if ($pagePath !== '') {
+            $parts[] = 'Current page path: ' . $pagePath . '.';
+        }
+
+        $retrieval = $this->formatRetrievalPolicy($retrievalPolicy);
+        if ($retrieval !== '') {
+            $parts[] = $retrieval;
+        }
+
+        $questionPolicy = $this->formatQuestionClassification($classification);
+        if ($questionPolicy !== '') {
+            $parts[] = $questionPolicy;
+        }
+
+        $visibleContext = $this->formatVisibleSystemContext($systemContext);
+        if ($visibleContext !== '') {
+            $parts[] = $visibleContext;
+        }
+
+        $knowledge = $this->formatKnowledgeContext($knowledgeContext);
+        if ($knowledge !== '') {
+            $parts[] = $knowledge;
+        }
+
         return implode("\n", $parts);
+    }
+
+    /**
+     * @param array<string,mixed> $classification
+     */
+    private function formatQuestionClassification(array $classification): string
+    {
+        if ($classification === []) {
+            return '';
+        }
+
+        $category = $this->promptContextValue($classification['category'] ?? 'unknown', 60);
+        $risk = $this->promptContextValue($classification['risk'] ?? 'low', 30);
+        $blocked = !empty($classification['blocked_detail']);
+        $needsReview = !empty($classification['needs_review']);
+        $reason = $this->promptContextValue($classification['review_reason'] ?? '', 100);
+
+        return implode("\n", [
+            'Current question classification: ' . ($category !== '' ? $category : 'unknown') . '.',
+            'Question risk level: ' . ($risk !== '' ? $risk : 'low') . '.',
+            'Block detailed operational answer: ' . ($blocked ? 'yes' : 'no') . '.',
+            'Needs review loop attention: ' . ($needsReview ? 'yes' : 'no') . '.',
+            'Classification reason: ' . ($reason !== '' ? $reason : 'not_provided') . '.',
+        ]);
+    }
+
+    /**
+     * @param array<string,mixed> $policy
+     */
+    private function formatRetrievalPolicy(array $policy): string
+    {
+        if ($policy === []) {
+            return '';
+        }
+
+        $mode = $this->promptContextValue($policy['mode'] ?? 'permission_filtered', 80);
+        $requiresGrounded = !empty($policy['requires_grounded_answer']);
+        $systemAvailable = !empty($policy['system_context_available']);
+        $knowledgeAvailable = !empty($policy['knowledge_context_available']);
+
+        return implode("\n", [
+            'Current retrieval policy: ' . ($mode !== '' ? $mode : 'permission_filtered') . '.',
+            'System-specific grounding required: ' . ($requiresGrounded ? 'yes' : 'no') . '.',
+            'Visible system context available: ' . ($systemAvailable ? 'yes' : 'no') . '.',
+            'Curated knowledge context available: ' . ($knowledgeAvailable ? 'yes' : 'no') . '.',
+        ]);
+    }
+
+    /**
+     * @param array<string,mixed> $context
+     */
+    private function formatKnowledgeContext(array $context): string
+    {
+        $items = is_array($context['items'] ?? null) ? $context['items'] : [];
+        if ($items === []) {
+            return '';
+        }
+
+        $lines = ['Approved curated knowledge context visible to the current user:'];
+        foreach ($items as $index => $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $title = $this->promptContextValue($item['title'] ?? '', 180);
+            $question = $this->promptContextValue($item['question'] ?? '', 240);
+            $answer = $this->promptContextValue($item['answer'] ?? '', 900);
+            if ($title === '' || $answer === '') {
+                continue;
+            }
+
+            $lines[] = ((int)$index + 1) . '. ' . $title;
+            if ($question !== '') {
+                $lines[] = 'Question: ' . $question;
+            }
+            $lines[] = 'Answer: ' . $answer;
+        }
+
+        return count($lines) > 1 ? implode("\n", $lines) : '';
+    }
+
+    /**
+     * @param array<string,mixed> $context
+     */
+    private function formatVisibleSystemContext(array $context): string
+    {
+        $modules = is_array($context['visible_modules'] ?? null) ? $context['visible_modules'] : [];
+        if ($modules === []) {
+            return '';
+        }
+
+        $lines = ['Allowed visible system context for the current active group:'];
+        $totals = is_array($context['totals'] ?? null) ? $context['totals'] : [];
+        $moduleCount = (int)($totals['modules_in_prompt'] ?? count($modules));
+        $menuCount = (int)($totals['menus_in_prompt'] ?? 0);
+        $lines[] = 'Context totals in prompt: ' . $moduleCount . ' modules, ' . $menuCount . ' menus.';
+
+        $currentPageMenu = is_array($context['current_page_menu'] ?? null) ? $context['current_page_menu'] : [];
+        $currentMenuName = $this->promptContextValue($currentPageMenu['menu'] ?? '', 120);
+        $currentModuleName = $this->promptContextValue($currentPageMenu['module'] ?? '', 120);
+        if ($currentMenuName !== '') {
+            $lines[] = 'Current page matched allowed menu: ' . $currentMenuName . ($currentModuleName !== '' ? ' under ' . $currentModuleName : '') . '.';
+        }
+
+        foreach ($modules as $module) {
+            if (!is_array($module)) {
+                continue;
+            }
+
+            $moduleName = $this->promptContextValue($module['name'] ?? '', 120);
+            if ($moduleName === '') {
+                continue;
+            }
+
+            $menuParts = [];
+            $menus = is_array($module['menus'] ?? null) ? $module['menus'] : [];
+            foreach ($menus as $menu) {
+                if (!is_array($menu)) {
+                    continue;
+                }
+                $menuName = $this->promptContextValue($menu['name'] ?? '', 120);
+                $menuPath = $this->promptContextValue($menu['path'] ?? '', 180);
+                if ($menuName === '') {
+                    continue;
+                }
+                $menuParts[] = $menuName . ($menuPath !== '' ? ' [' . $menuPath . ']' : '');
+            }
+
+            $lines[] = '- ' . $moduleName . ': ' . ($menuParts !== [] ? implode('; ', $menuParts) : 'no visible menu listed');
+        }
+
+        return implode("\n", $lines);
+    }
+
+    private function promptContextValue(mixed $value, int $maxLength): string
+    {
+        $text = trim((string)$value);
+        if ($text === '') {
+            return '';
+        }
+
+        $text = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $text);
+        $text = trim((string)$text);
+
+        return mb_substr($text, 0, max(1, $maxLength), 'UTF-8');
     }
 
     /**
