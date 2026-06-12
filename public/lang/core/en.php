@@ -29,7 +29,7 @@
 'aiChatbot_panel_label'         => 'AI Chatbot panel',
 'aiChatbot_send_label'          => 'Send',
 'aiChatbot_input_placeholder'   => 'Type a message...',
-'aiChatbot_status_ready'        => 'Prototype active',
+'aiChatbot_status_ready'        => 'User Support Assistant',
 'aiChatbot_status_busy'         => 'Answering...',
 'aiChatbot_status_disabled'     => 'Not active',
 'aiChatbot_error_generic'       => 'AI Chatbot cannot answer right now.',

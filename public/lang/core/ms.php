@@ -29,7 +29,7 @@
 'aiChatbot_panel_label'         => 'Panel AI Chatbot',
 'aiChatbot_send_label'          => 'Hantar',
 'aiChatbot_input_placeholder'   => 'Tulis mesej...',
-'aiChatbot_status_ready'        => 'Prototype aktif',
+'aiChatbot_status_ready'        => 'Pembantu Sokongan Pengguna',
 'aiChatbot_status_busy'         => 'Sedang menjawab...',
 'aiChatbot_status_disabled'     => 'Belum aktif',
 'aiChatbot_error_generic'       => 'AI Chatbot tidak dapat menjawab buat masa ini.',
