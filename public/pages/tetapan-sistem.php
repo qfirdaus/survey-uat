@@ -215,7 +215,7 @@ if (isset($translationBundlesJs[$lang])) {
     $NEED_DATERANGE  = false;
     $NEED_VECTORMAP  = false;
     $NEED_DATATABLES = false;
-    $NEED_SELECT2    = false;
+    $NEED_SELECT2    = true;
     include __DIR__ . '/../includes/head.php';
   ?>
   <meta name="csrf-token" content="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
@@ -356,9 +356,10 @@ if (isset($translationBundlesJs[$lang])) {
     $NEED_JQUERY     = true;
     $NEED_SWEETALERT = true;
     $NEED_DT_JS      = true;
-    $NEED_SELECT2_JS = false;
+    $NEED_SELECT2_JS = true;
     include __DIR__ . '/../includes/script.php';
   ?>
+  <script src="<?= base_url('assets/vendor/select2/js/select2.min.js') ?>?v=<?= urlencode($version) ?>"></script>
 
 
   <script>

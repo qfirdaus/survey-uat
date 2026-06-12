@@ -161,7 +161,7 @@ $aiProviderDefaults = [
                 </div>
                 <div class="col-md-4">
                   <label class="form-label fw-semibold" for="ai_chatbot_model">Model</label>
-                  <select class="form-select" id="ai_chatbot_model" name="ai_chatbot_model" data-current-model="<?= htmlspecialchars($aiModel, ENT_QUOTES, 'UTF-8') ?>">
+                  <select class="form-select ai-chatbot-model-select" id="ai_chatbot_model" name="ai_chatbot_model" data-current-model="<?= htmlspecialchars($aiModel, ENT_QUOTES, 'UTF-8') ?>" data-placeholder="Pilih model">
                     <option value="<?= htmlspecialchars($aiModel, ENT_QUOTES, 'UTF-8') ?>" selected><?= $aiModel !== '' ? htmlspecialchars($aiModel, ENT_QUOTES, 'UTF-8') : 'Fetch models from provider' ?></option>
                   </select>
                   <small class="text-muted" id="ai_chatbot_model_status">Model list akan difetch secara dynamic daripada provider yang dipilih.</small>
@@ -291,6 +291,48 @@ $aiProviderDefaults = [
   var lastRequestId = 0;
   if (!providerEl || !modelEl || !baseUrlEl) return;
 
+  function initModelSelect2() {
+    if (!(window.jQuery && jQuery.fn && typeof jQuery.fn.select2 === 'function')) {
+      return false;
+    }
+
+    var $model = jQuery(modelEl);
+    if ($model.data('select2')) {
+      return true;
+    }
+
+    $model.select2({
+      width: '100%',
+      placeholder: modelEl.getAttribute('data-placeholder') || 'Pilih model',
+      dropdownParent: jQuery('#ai-chatbot-subtab-provider'),
+      minimumResultsForSearch: 0
+    });
+    return true;
+  }
+
+  function scheduleModelSelect2Init() {
+    var attempts = 0;
+    var timer = window.setInterval(function () {
+      attempts += 1;
+      if (initModelSelect2() || attempts >= 40) {
+        window.clearInterval(timer);
+      }
+    }, 100);
+  }
+
+  function refreshModelSelect() {
+    if (initModelSelect2() && window.jQuery) {
+      jQuery(modelEl).trigger('change.select2');
+    }
+  }
+
+  function setModelDisabled(disabled) {
+    modelEl.disabled = !!disabled;
+    if (window.jQuery) {
+      jQuery(modelEl).prop('disabled', !!disabled).trigger('change.select2');
+    }
+  }
+
   function setStatus(message, tone) {
     if (!statusEl) return;
     statusEl.textContent = message || '';
@@ -342,6 +384,8 @@ $aiProviderDefaults = [
       emptyOption.textContent = 'No models loaded';
       modelEl.appendChild(emptyOption);
     }
+
+    refreshModelSelect();
   }
 
   function fetchModels(preferredModel) {
@@ -354,7 +398,7 @@ $aiProviderDefaults = [
       api_key: apiKeyEl ? apiKeyEl.value : ''
     };
 
-    modelEl.disabled = true;
+    setModelDisabled(true);
     setStatus('Fetching model list from provider...', 'muted');
 
     return fetch(modelEndpoint, {
@@ -395,7 +439,7 @@ $aiProviderDefaults = [
       })
       .finally(function () {
         if (requestId === lastRequestId) {
-          modelEl.disabled = false;
+          setModelDisabled(false);
         }
       });
   }
@@ -427,6 +471,13 @@ $aiProviderDefaults = [
       fetchModels(modelEl.value);
     });
   }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', scheduleModelSelect2Init);
+  } else {
+    scheduleModelSelect2Init();
+  }
+  window.addEventListener('load', scheduleModelSelect2Init);
 
   fetchModels(modelEl.value);
 })();
