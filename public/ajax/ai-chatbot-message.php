@@ -17,6 +17,8 @@ try {
     require_login();
     require_once __DIR__ . '/_helpers.php';
     require_once __DIR__ . '/../classes/Database.php';
+    require_once __DIR__ . '/../classes/AiChatbotActionSuggestionService.php';
+    require_once __DIR__ . '/../classes/AiChatbotConversationRepository.php';
     require_once __DIR__ . '/../classes/AiChatbotKnowledgeContext.php';
     require_once __DIR__ . '/../classes/AiChatbotQuestionClassifier.php';
     require_once __DIR__ . '/../classes/AiChatbotService.php';
@@ -41,9 +43,13 @@ try {
     $profile = is_array($profile) ? $profile : [];
     $service = new AiChatbotService();
     $usageRepository = new AiChatbotUsageRepository($pdo);
+    $conversationRepository = new AiChatbotConversationRepository($pdo);
     $loginId = trim((string)($_SESSION['f_loginID'] ?? $_SESSION['user']['f_loginID'] ?? ($profile['f_loginID'] ?? '')));
     $userId = $_SESSION['user']['f_userID'] ?? $_SESSION['f_userID'] ?? ($profile['f_userID'] ?? null);
     $publicConfig = $service->publicConfig();
+    $conversationSessionId = null;
+    $conversationUserMessageId = null;
+    $conversationAssistantMessageId = null;
 
     if (!$service->isEnabled()) {
         jsonErrorResponse($t('aiChatbot_error_disabled', 'AI Chatbot belum diaktifkan.'), 403);
@@ -98,8 +104,20 @@ try {
     $runtimeContext = is_array($data['context'] ?? null) ? $data['context'] : [];
     $pagePath = ai_chatbot_context_path($runtimeContext['page_path'] ?? '');
     $pageTitle = ai_chatbot_context_string($runtimeContext['page_title'] ?? '', 160);
+    $pageUiContext = ai_chatbot_page_ui_context($runtimeContext['page_ui'] ?? []);
     $classification = (new AiChatbotQuestionClassifier())->classify($message);
-
+    $conversationContext = [
+        'user_id' => $userId,
+        'login_id' => $loginId,
+        'staf_id' => $_SESSION['f_stafID'] ?? $_SESSION['user']['f_stafID'] ?? ($profile['f_stafID'] ?? null),
+        'group_id' => (int)($_SESSION['group_active_id'] ?? ($profile['f_groupID'] ?? 0)),
+        'group_kod' => (string)($_SESSION['group_active_code'] ?? ($profile['f_groupKod'] ?? '')),
+        'provider' => $publicConfig['provider'] ?? 'unknown',
+        'model' => $publicConfig['model'] ?? 'unknown',
+        'access_mode' => $publicConfig['access_mode'] ?? 'super_admin_only',
+        'title' => mb_substr($message, 0, 120, 'UTF-8'),
+        'actor' => $loginId !== '' ? $loginId : ($_SESSION['f_stafID'] ?? 'ai-chatbot'),
+    ];
     $userDailyLimit = $service->userDailyRequestLimit();
     if ($userDailyLimit > 0 && $loginId !== '' && $usageRepository->countToday($loginId) >= $userDailyLimit) {
         ai_chatbot_record_usage_safe($service, $usageRepository, [
@@ -130,6 +148,32 @@ try {
         jsonErrorResponse($t('aiChatbot_error_rate_limit', 'Terlalu banyak permintaan. Sila cuba semula sebentar lagi.'), 429);
     }
 
+    if (!empty($publicConfig['store_conversations'])) {
+        $session = ai_chatbot_ensure_conversation_session_safe($conversationRepository, $conversationContext);
+        $conversationSessionId = $session['id'] ?? null;
+        if ($conversationSessionId) {
+            $conversationUserMessageId = ai_chatbot_record_conversation_message_safe($conversationRepository, (int)$conversationSessionId, [
+                'role' => 'user',
+                'provider' => $publicConfig['provider'] ?? 'unknown',
+                'model' => $publicConfig['model'] ?? 'unknown',
+                'content' => $message,
+                'status' => 'sent',
+                'actor' => $conversationContext['actor'],
+                'meta' => [
+                    'message_length' => mb_strlen($message, 'UTF-8'),
+                    'current_page_path' => $pagePath !== '' ? $pagePath : null,
+                    'current_page_title' => $pageTitle !== '' ? $pageTitle : null,
+                    'page_ui_context' => ai_chatbot_page_ui_meta($pageUiContext),
+                    'question_category' => $classification['category'] ?? 'unknown',
+                    'question_risk' => $classification['risk'] ?? 'low',
+                    'question_needs_review' => (bool)($classification['needs_review'] ?? false),
+                    'question_review_reason' => $classification['review_reason'] ?? null,
+                    'blocked_detail' => (bool)($classification['blocked_detail'] ?? false),
+                ],
+            ], !empty($publicConfig['log_message_content']));
+        }
+    }
+
     $actor = [
         'lang' => (string)($_SESSION['lang'] ?? 'ms'),
         'role' => (string)($_SESSION['group_active_name'] ?? ($profile['f_groupName'] ?? '')),
@@ -140,6 +184,7 @@ try {
         'app_title' => (string)($publicConfig['app_title'] ?? 'IQS-Framework AI Chatbot'),
         'current_page_path' => $pagePath,
         'current_page_title' => $pageTitle,
+        'current_page_ui' => $pageUiContext,
         'question_classification' => $classification,
     ];
     $systemContext = (new AiChatbotSystemContext($pdo))->build($profile, $actor);
@@ -150,6 +195,7 @@ try {
     if ($knowledgeContext !== []) {
         $actor['knowledge_context'] = $knowledgeContext;
     }
+    $suggestedActions = (new AiChatbotActionSuggestionService())->build($message, $systemContext, $classification);
     $actor['retrieval_policy'] = [
         'mode' => 'permission_filtered',
         'requires_grounded_answer' => ai_chatbot_requires_grounded_answer($message),
@@ -159,7 +205,29 @@ try {
     ];
 
     $result = $service->sendMessage($message, $actor);
+    if (!empty($publicConfig['store_conversations']) && $conversationSessionId) {
+        $conversationAssistantMessageId = ai_chatbot_record_conversation_message_safe($conversationRepository, (int)$conversationSessionId, [
+            'role' => 'assistant',
+            'provider' => $result['provider'] ?? ($publicConfig['provider'] ?? 'unknown'),
+            'model' => $result['model'] ?? ($publicConfig['model'] ?? 'unknown'),
+            'content' => (string)($result['message'] ?? ''),
+            'latency_ms' => $result['latency_ms'] ?? null,
+            'status' => 'completed',
+            'actor' => $conversationContext['actor'],
+            'meta' => [
+                'user_message_id' => $conversationUserMessageId,
+                'knowledge_items_in_prompt' => $knowledgeContext['totals']['items_in_prompt'] ?? 0,
+                'knowledge_retrieval_mode' => $knowledgeContext['retrieval_mode'] ?? null,
+                'knowledge_expanded_term_count' => count(is_array($knowledgeContext['expanded_terms'] ?? null) ? $knowledgeContext['expanded_terms'] : []),
+                'suggested_action_count' => count($suggestedActions),
+                'system_context_available' => $systemContext !== [],
+                'knowledge_context_available' => $knowledgeContext !== [],
+            ],
+        ], !empty($publicConfig['log_message_content']));
+    }
     ai_chatbot_record_usage_safe($service, $usageRepository, [
+        'session_id' => $conversationSessionId,
+        'message_id' => $conversationAssistantMessageId,
         'user_id' => $userId,
         'login_id' => $loginId,
         'provider' => $result['provider'] ?? ($publicConfig['provider'] ?? 'unknown'),
@@ -171,9 +239,13 @@ try {
             'message_length' => mb_strlen($message, 'UTF-8'),
             'access_mode' => $publicConfig['access_mode'] ?? null,
             'current_page_path' => $pagePath !== '' ? $pagePath : null,
+            'page_ui_context' => ai_chatbot_page_ui_meta($pageUiContext),
             'system_context_source' => $systemContext['source'] ?? null,
             'knowledge_context_source' => $knowledgeContext['source'] ?? null,
+            'knowledge_retrieval_mode' => $knowledgeContext['retrieval_mode'] ?? null,
             'knowledge_items_in_prompt' => $knowledgeContext['totals']['items_in_prompt'] ?? 0,
+            'knowledge_expanded_term_count' => count(is_array($knowledgeContext['expanded_terms'] ?? null) ? $knowledgeContext['expanded_terms'] : []),
+            'suggested_action_count' => count($suggestedActions),
             'requires_grounded_answer' => (bool)($actor['retrieval_policy']['requires_grounded_answer'] ?? false),
             'question_category' => $classification['category'] ?? 'unknown',
             'question_risk' => $classification['risk'] ?? 'low',
@@ -220,7 +292,22 @@ try {
 } catch (Throwable $e) {
     error_log('[ai-chatbot-message] ' . $e->getMessage());
     if (isset($service, $usageRepository)) {
+        $errorMessageId = null;
+        if (!empty($publicConfig['store_conversations']) && !empty($conversationSessionId) && isset($conversationRepository)) {
+            $errorMessageId = ai_chatbot_record_conversation_message_safe($conversationRepository, (int)$conversationSessionId, [
+                'role' => 'error',
+                'provider' => $publicConfig['provider'] ?? 'unknown',
+                'model' => $publicConfig['model'] ?? 'unknown',
+                'content' => $e->getMessage(),
+                'status' => str_contains(strtolower($e->getMessage()), 'blocked') ? 'blocked' : 'failed',
+                'error_code' => get_class($e),
+                'error_message' => $e->getMessage(),
+                'actor' => $loginId ?? ($_SESSION['f_stafID'] ?? 'ai-chatbot'),
+            ], false);
+        }
         ai_chatbot_record_usage_safe($service, $usageRepository, [
+            'session_id' => $conversationSessionId ?? null,
+            'message_id' => $errorMessageId,
             'user_id' => $userId ?? null,
             'login_id' => $loginId ?? null,
             'provider' => $publicConfig['provider'] ?? 'unknown',
@@ -267,6 +354,34 @@ function ai_chatbot_record_usage_safe(AiChatbotService $service, AiChatbotUsageR
     }
 }
 
+/**
+ * @param array<string,mixed> $context
+ * @return array{id:int,public_id:string}|array{}
+ */
+function ai_chatbot_ensure_conversation_session_safe(AiChatbotConversationRepository $repository, array $context): array
+{
+    try {
+        return $repository->ensureSession($context);
+    } catch (Throwable $e) {
+        error_log('[ai-chatbot-conversation-session] ' . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * @param array<string,mixed> $data
+ */
+function ai_chatbot_record_conversation_message_safe(AiChatbotConversationRepository $repository, int $sessionId, array $data, bool $storeContent): ?int
+{
+    try {
+        $messageId = $repository->recordMessage($sessionId, $data, $storeContent);
+        return $messageId > 0 ? $messageId : null;
+    } catch (Throwable $e) {
+        error_log('[ai-chatbot-conversation-message] ' . $e->getMessage());
+        return null;
+    }
+}
+
 function ai_chatbot_context_path(mixed $value): string
 {
     $path = ai_chatbot_context_string($value, 255);
@@ -284,6 +399,78 @@ function ai_chatbot_context_path(mixed $value): string
     }
 
     return ai_chatbot_context_string($path, 255);
+}
+
+/**
+ * @return array<string,mixed>
+ */
+function ai_chatbot_page_ui_context(mixed $value): array
+{
+    $input = is_array($value) ? $value : [];
+    $context = [
+        'heading' => ai_chatbot_safe_ui_text($input['heading'] ?? '', 120),
+        'active_tab' => ai_chatbot_safe_ui_text($input['active_tab'] ?? '', 100),
+        'modal_title' => ai_chatbot_safe_ui_text($input['modal_title'] ?? '', 120),
+        'form_labels' => ai_chatbot_ui_text_list($input['form_labels'] ?? [], 18, 80),
+        'validation_errors' => ai_chatbot_ui_text_list($input['validation_errors'] ?? [], 8, 160),
+        'table_headings' => ai_chatbot_ui_text_list($input['table_headings'] ?? [], 20, 80),
+    ];
+
+    return array_filter($context, static fn($item): bool => is_array($item) ? $item !== [] : $item !== '');
+}
+
+/**
+ * @param array<string,mixed> $context
+ * @return array<string,mixed>
+ */
+function ai_chatbot_page_ui_meta(array $context): array
+{
+    return [
+        'heading_available' => !empty($context['heading']),
+        'active_tab_available' => !empty($context['active_tab']),
+        'modal_title_available' => !empty($context['modal_title']),
+        'form_label_count' => count(is_array($context['form_labels'] ?? null) ? $context['form_labels'] : []),
+        'validation_error_count' => count(is_array($context['validation_errors'] ?? null) ? $context['validation_errors'] : []),
+        'table_heading_count' => count(is_array($context['table_headings'] ?? null) ? $context['table_headings'] : []),
+    ];
+}
+
+/**
+ * @return array<int,string>
+ */
+function ai_chatbot_ui_text_list(mixed $value, int $maxItems, int $maxLength): array
+{
+    $items = is_array($value) ? $value : [];
+    $out = [];
+    $seen = [];
+    foreach ($items as $item) {
+        $text = ai_chatbot_safe_ui_text($item, $maxLength);
+        $key = mb_strtolower($text, 'UTF-8');
+        if ($text === '' || isset($seen[$key])) {
+            continue;
+        }
+        $seen[$key] = true;
+        $out[] = $text;
+        if (count($out) >= $maxItems) {
+            break;
+        }
+    }
+
+    return $out;
+}
+
+function ai_chatbot_safe_ui_text(mixed $value, int $maxLength): string
+{
+    $text = ai_chatbot_context_string($value, $maxLength);
+    if ($text === '') {
+        return '';
+    }
+
+    if (preg_match('/(csrf|token|secret|api\s*key|apikey|password|cookie|authorization)/i', $text) === 1) {
+        return '';
+    }
+
+    return $text;
 }
 
 function ai_chatbot_context_string(mixed $value, int $maxLength): string

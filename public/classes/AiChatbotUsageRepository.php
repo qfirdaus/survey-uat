@@ -11,15 +11,26 @@ declare(strict_types=1);
 
 final class AiChatbotUsageRepository
 {
+    private const TABLE_NAME = 'tbl_ai_chat_usage';
+
     public function __construct(private PDO $pdo)
     {
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     }
 
+    public function isAvailable(): bool
+    {
+        return $this->tableExists(self::TABLE_NAME);
+    }
+
     public function countToday(?string $loginId = null): int
     {
+        if (!$this->isAvailable()) {
+            return 0;
+        }
+
         $sql = "SELECT COUNT(*)
-                FROM tbl_ai_chat_usage
+                FROM " . self::TABLE_NAME . "
                 WHERE f_createdDt >= CURRENT_DATE()
                   AND f_outcome IN ('success','failed','timeout')";
         $params = [];
@@ -37,8 +48,12 @@ final class AiChatbotUsageRepository
     /**
      * @param array<string,mixed> $row
      */
-    public function record(array $row): void
+    public function record(array $row): int
     {
+        if (!$this->isAvailable()) {
+            return 0;
+        }
+
         $usage = is_array($row['usage'] ?? null) ? $row['usage'] : [];
         $promptTokens = $this->intOrNull($usage['prompt_tokens'] ?? $usage['promptTokens'] ?? null);
         $completionTokens = $this->intOrNull($usage['completion_tokens'] ?? $usage['completionTokens'] ?? null);
@@ -51,7 +66,7 @@ final class AiChatbotUsageRepository
         }
 
         $stmt = $this->pdo->prepare("
-            INSERT INTO tbl_ai_chat_usage (
+            INSERT INTO " . self::TABLE_NAME . " (
                 f_aiChatSessionID,
                 f_aiChatMessageID,
                 f_userID,
@@ -72,8 +87,8 @@ final class AiChatbotUsageRepository
                 f_requestMetaJson,
                 f_createdDt
             ) VALUES (
-                NULL,
-                NULL,
+                :session_id,
+                :message_id,
                 :user_id,
                 :login_id,
                 :provider,
@@ -95,6 +110,8 @@ final class AiChatbotUsageRepository
         ");
 
         $stmt->execute([
+            ':session_id' => $this->intOrNull($row['session_id'] ?? $row['ai_chat_session_id'] ?? null),
+            ':message_id' => $this->intOrNull($row['message_id'] ?? $row['ai_chat_message_id'] ?? null),
             ':user_id' => $this->intOrNull($row['user_id'] ?? null),
             ':login_id' => $this->stringOrNull($row['login_id'] ?? null, 191),
             ':provider' => $this->stringOrDefault($row['provider'] ?? null, 'unknown', 64),
@@ -110,6 +127,24 @@ final class AiChatbotUsageRepository
             ':error_message' => $this->stringOrNull($row['error_message'] ?? null, 500),
             ':request_meta' => $metaJson,
         ]);
+
+        return (int)$this->pdo->lastInsertId();
+    }
+
+    private function tableExists(string $table): bool
+    {
+        try {
+            $stmt = $this->pdo->prepare('
+                SELECT COUNT(*)
+                FROM INFORMATION_SCHEMA.TABLES
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = :table_name
+            ');
+            $stmt->execute([':table_name' => $table]);
+            return (int)$stmt->fetchColumn() > 0;
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     private function normalizeOutcome(string $outcome): string

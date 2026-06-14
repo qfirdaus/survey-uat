@@ -49,6 +49,12 @@ $aiProviderDefaults = [
             </div>
           </div>
           <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-sm btn-outline-primary" href="<?= htmlspecialchars(base_url('pages/ai-chatbot-knowledge.php'), ENT_QUOTES, 'UTF-8') ?>">
+              <i class="ri-chat-quote-line me-1"></i> Knowledge Manager
+            </a>
+            <a class="btn btn-sm btn-outline-secondary" href="<?= htmlspecialchars(base_url('pages/ai-chatbot-review.php'), ENT_QUOTES, 'UTF-8') ?>">
+              <i class="ri-shield-search-line me-1"></i> Review Dashboard
+            </a>
             <span class="badge <?= $aiEnabled ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle' ?>">
               <?= $aiEnabled ? 'Enabled' : 'Disabled' ?>
             </span>

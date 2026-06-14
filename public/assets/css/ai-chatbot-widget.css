@@ -154,6 +154,38 @@
   color: #0f172a;
 }
 
+.ai-chatbot-message__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  max-width: 82%;
+}
+
+.ai-chatbot-action-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  max-width: 100%;
+  padding: 5px 9px;
+  border: 1px solid rgba(37, 99, 235, .24);
+  border-radius: 8px;
+  background: rgba(219, 234, 254, .7);
+  color: #1d4ed8;
+  font-size: .78rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.ai-chatbot-action-link:hover,
+.ai-chatbot-action-link:focus {
+  background: rgba(191, 219, 254, .9);
+  color: #1e40af;
+  text-decoration: none;
+}
+
 .ai-chatbot-panel__form {
   display: flex;
   gap: 8px;
