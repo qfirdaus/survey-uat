@@ -20,6 +20,7 @@ try {
     require_once __DIR__ . '/../classes/AiChatbotActionSuggestionService.php';
     require_once __DIR__ . '/../classes/AiChatbotConversationRepository.php';
     require_once __DIR__ . '/../classes/AiChatbotKnowledgeContext.php';
+    require_once __DIR__ . '/../classes/AiChatbotProjectContextRegistry.php';
     require_once __DIR__ . '/../classes/AiChatbotQuestionClassifier.php';
     require_once __DIR__ . '/../classes/AiChatbotService.php';
     require_once __DIR__ . '/../classes/AiChatbotSystemContext.php';
@@ -50,6 +51,8 @@ try {
     $conversationSessionId = null;
     $conversationUserMessageId = null;
     $conversationAssistantMessageId = null;
+    $projectContext = [];
+    $projectContextMeta = [];
 
     if (!$service->isEnabled()) {
         jsonErrorResponse($t('aiChatbot_error_disabled', 'AI Chatbot belum diaktifkan.'), 403);
@@ -195,6 +198,11 @@ try {
     if ($knowledgeContext !== []) {
         $actor['knowledge_context'] = $knowledgeContext;
     }
+    $projectContext = AiChatbotProjectContextRegistry::default()->build($message, $profile, $actor);
+    if ($projectContext !== []) {
+        $actor['project_context'] = $projectContext;
+    }
+    $projectContextMeta = ai_chatbot_project_context_meta($projectContext);
     $suggestedActions = (new AiChatbotActionSuggestionService())->build($message, $systemContext, $classification);
     $actor['retrieval_policy'] = [
         'mode' => 'permission_filtered',
@@ -202,6 +210,9 @@ try {
         'blocked_detail' => !empty($classification['blocked_detail']),
         'system_context_available' => $systemContext !== [],
         'knowledge_context_available' => $knowledgeContext !== [],
+        'project_context_available' => (bool)($projectContextMeta['has_records'] ?? false),
+        'project_context_status' => $projectContextMeta['status'] ?? null,
+        'project_context_provider' => $projectContextMeta['provider'] ?? null,
     ];
 
     $result = $service->sendMessage($message, $actor);
@@ -219,9 +230,11 @@ try {
                 'knowledge_items_in_prompt' => $knowledgeContext['totals']['items_in_prompt'] ?? 0,
                 'knowledge_retrieval_mode' => $knowledgeContext['retrieval_mode'] ?? null,
                 'knowledge_expanded_term_count' => count(is_array($knowledgeContext['expanded_terms'] ?? null) ? $knowledgeContext['expanded_terms'] : []),
+                'project_context' => $projectContextMeta,
                 'suggested_action_count' => count($suggestedActions),
                 'system_context_available' => $systemContext !== [],
                 'knowledge_context_available' => $knowledgeContext !== [],
+                'project_context_available' => (bool)($projectContextMeta['has_records'] ?? false),
             ],
         ], !empty($publicConfig['log_message_content']));
     }
@@ -245,6 +258,7 @@ try {
             'knowledge_retrieval_mode' => $knowledgeContext['retrieval_mode'] ?? null,
             'knowledge_items_in_prompt' => $knowledgeContext['totals']['items_in_prompt'] ?? 0,
             'knowledge_expanded_term_count' => count(is_array($knowledgeContext['expanded_terms'] ?? null) ? $knowledgeContext['expanded_terms'] : []),
+            'project_context' => $projectContextMeta,
             'suggested_action_count' => count($suggestedActions),
             'requires_grounded_answer' => (bool)($actor['retrieval_policy']['requires_grounded_answer'] ?? false),
             'question_category' => $classification['category'] ?? 'unknown',
@@ -263,6 +277,7 @@ try {
             'message_length' => mb_strlen($message, 'UTF-8'),
             'question_category' => $classification['category'] ?? 'unknown',
             'question_risk' => $classification['risk'] ?? 'low',
+            'project_context' => $projectContextMeta,
         ];
         audit_event([
             'event_type' => 'AI_CHATBOT_MESSAGE',
@@ -315,6 +330,9 @@ try {
             'outcome' => str_contains(strtolower($e->getMessage()), 'timed out') ? 'timeout' : 'failed',
             'error_code' => get_class($e),
             'error_message' => $e->getMessage(),
+            'request_meta' => [
+                'project_context' => is_array($projectContextMeta ?? null) ? $projectContextMeta : [],
+            ],
         ]);
     }
     if (function_exists('audit_event')) {
@@ -331,6 +349,7 @@ try {
             'meta' => [
                 'error_class' => get_class($e),
                 'error_message' => $e->getMessage(),
+                'project_context' => is_array($projectContextMeta ?? null) ? $projectContextMeta : [],
             ],
         ]);
     }
@@ -526,4 +545,79 @@ function ai_chatbot_requires_grounded_answer(string $message): bool
     }
 
     return false;
+}
+
+/**
+ * @param array<string,mixed> $context
+ */
+function ai_chatbot_project_context_has_records(array $context): bool
+{
+    $inner = is_array($context['context'] ?? null) ? $context['context'] : [];
+    if ((int)($inner['row_count'] ?? 0) > 0) {
+        return true;
+    }
+
+    return is_array($inner['items'] ?? null) && $inner['items'] !== [];
+}
+
+/**
+ * Return project context audit metadata only. Do not include raw project rows.
+ *
+ * @param array<string,mixed> $context
+ * @return array<string,mixed>
+ */
+function ai_chatbot_project_context_meta(array $context): array
+{
+    if ($context === []) {
+        return [
+            'status' => 'not_built',
+            'provider' => null,
+            'match_score' => null,
+            'intent' => null,
+            'scope' => null,
+            'row_count' => 0,
+            'has_records' => false,
+            'denied_reason' => null,
+        ];
+    }
+
+    $inner = is_array($context['context'] ?? null) ? $context['context'] : [];
+    $innerStatus = ai_chatbot_meta_string($inner['status'] ?? null, 80);
+    $status = ai_chatbot_meta_string($context['status'] ?? null, 80);
+    $deniedReason = null;
+
+    if (in_array($innerStatus, ['denied_missing_staff_scope', 'unsupported_intent', 'data_unavailable'], true)) {
+        $deniedReason = $innerStatus;
+    } elseif (in_array($status, ['core_only', 'ambiguous', 'no_project_provider', 'provider_not_found'], true)) {
+        $deniedReason = $status;
+    }
+
+    return [
+        'status' => $status !== '' ? $status : 'unknown',
+        'provider' => ai_chatbot_meta_string($context['matched_provider'] ?? null, 80) ?: null,
+        'provider_label' => ai_chatbot_meta_string($context['matched_label'] ?? null, 160) ?: null,
+        'match_score' => is_numeric($context['match_score'] ?? null) ? (int)$context['match_score'] : null,
+        'intent' => ai_chatbot_meta_string($inner['intent'] ?? null, 80) ?: null,
+        'scope' => ai_chatbot_meta_string($inner['scope'] ?? null, 120) ?: null,
+        'provider_context_status' => $innerStatus !== '' ? $innerStatus : null,
+        'row_count' => max(0, (int)($inner['row_count'] ?? 0)),
+        'has_records' => ai_chatbot_project_context_has_records($context),
+        'denied_reason' => $deniedReason,
+    ];
+}
+
+function ai_chatbot_meta_string(mixed $value, int $maxLength): string
+{
+    $value = trim((string)($value ?? ''));
+    if ($value === '') {
+        return '';
+    }
+
+    $value = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $value);
+    $value = trim((string)$value);
+    $maxLength = max(1, $maxLength);
+
+    return function_exists('mb_substr')
+        ? mb_substr($value, 0, $maxLength, 'UTF-8')
+        : substr($value, 0, $maxLength);
 }

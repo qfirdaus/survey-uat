@@ -241,6 +241,7 @@ final class AiChatbotService
         $pageUiContext = is_array($actor['current_page_ui'] ?? null) ? $actor['current_page_ui'] : [];
         $systemContext = is_array($actor['system_context'] ?? null) ? $actor['system_context'] : [];
         $knowledgeContext = is_array($actor['knowledge_context'] ?? null) ? $actor['knowledge_context'] : [];
+        $projectContext = is_array($actor['project_context'] ?? null) ? $actor['project_context'] : [];
         $retrievalPolicy = is_array($actor['retrieval_policy'] ?? null) ? $actor['retrieval_policy'] : [];
         $classification = is_array($actor['question_classification'] ?? null) ? $actor['question_classification'] : [];
 
@@ -264,6 +265,12 @@ final class AiChatbotService
             'Use only the provided visible modules and menus when answering navigation questions. Do not add menu names or routes that are not listed in that context.',
             'If curated knowledge context is provided, use it as active permission-filtered help content for the current user visibility. Do not reveal knowledge items that are not provided.',
             'If curated knowledge does not contain the answer, say that the knowledge base does not have enough information yet instead of inventing details.',
+            'If project data context is provided, use it only as permission-filtered live/current operational data for the current deployed system.',
+            'Treat project database context as authoritative for current status, counts, assignments, dates, and latest operational values.',
+            'Treat curated knowledge context as authoritative for policy, SOP, manual explanations, definitions, and workflow meaning.',
+            'When both project data and curated knowledge are relevant, combine them carefully: live data answers what is current, knowledge base explains what it means or what process applies.',
+            'Never ask the model to generate SQL and never mention internal table or column names unless they are explicitly present in user-visible documentation.',
+            'Never reveal other users private project data, raw feedback comments, raw document paths, hidden records, or data not present in the permission-filtered project context.',
             'For system-specific questions about pages, menus, settings, roles, access, users, providers, models, configuration, or workflows, answer only from the permission-filtered runtime, visible system, or curated knowledge context provided in this prompt.',
             'If a system-specific answer cannot be grounded in the provided context, say that you do not have enough permission-filtered system context yet and suggest contacting the system administrator or support team.',
             'Use the question classification as a safety hint. If the category is sensitive_blocked or blocked_detail is true, refuse operational details and provide only a brief safe support response.',
@@ -325,6 +332,11 @@ final class AiChatbotService
         $knowledge = $this->formatKnowledgeContext($knowledgeContext);
         if ($knowledge !== '') {
             $parts[] = $knowledge;
+        }
+
+        $project = $this->formatProjectContext($projectContext);
+        if ($project !== '') {
+            $parts[] = $project;
         }
 
         return implode("\n", $parts);
@@ -412,12 +424,18 @@ final class AiChatbotService
         $requiresGrounded = !empty($policy['requires_grounded_answer']);
         $systemAvailable = !empty($policy['system_context_available']);
         $knowledgeAvailable = !empty($policy['knowledge_context_available']);
+        $projectAvailable = !empty($policy['project_context_available']);
+        $projectStatus = $this->promptContextValue($policy['project_context_status'] ?? '', 80);
+        $projectProvider = $this->promptContextValue($policy['project_context_provider'] ?? '', 80);
 
         return implode("\n", [
             'Current retrieval policy: ' . ($mode !== '' ? $mode : 'permission_filtered') . '.',
             'System-specific grounding required: ' . ($requiresGrounded ? 'yes' : 'no') . '.',
             'Visible system context available: ' . ($systemAvailable ? 'yes' : 'no') . '.',
             'Curated knowledge context available: ' . ($knowledgeAvailable ? 'yes' : 'no') . '.',
+            'Project data context available: ' . ($projectAvailable ? 'yes' : 'no') . '.',
+            'Project data context status: ' . ($projectStatus !== '' ? $projectStatus : 'not_provided') . '.',
+            'Project data context provider: ' . ($projectProvider !== '' ? $projectProvider : 'not_provided') . '.',
         ]);
     }
 
@@ -511,6 +529,81 @@ final class AiChatbotService
         return implode("\n", $lines);
     }
 
+    /**
+     * @param array<string,mixed> $context
+     */
+    private function formatProjectContext(array $context): string
+    {
+        if ($context === []) {
+            return '';
+        }
+
+        $status = $this->promptContextValue($context['status'] ?? '', 80);
+        $provider = $this->promptContextValue($context['matched_provider'] ?? '', 80);
+        $label = $this->promptContextValue($context['matched_label'] ?? '', 160);
+        $inner = is_array($context['context'] ?? null) ? $context['context'] : [];
+        $intent = $this->promptContextValue($inner['intent'] ?? '', 80);
+        $scope = $this->promptContextValue($inner['scope'] ?? '', 120);
+        $innerStatus = $this->promptContextValue($inner['status'] ?? '', 80);
+        $records = is_array($inner['items'] ?? null) ? $inner['items'] : [];
+
+        if ($records === [] && is_array($inner['records'] ?? null)) {
+            $records = $inner['records'];
+        }
+
+        $lines = ['Permission-filtered project data context for the current deployed system:'];
+        $lines[] = 'Registry status: ' . ($status !== '' ? $status : 'not_provided') . '.';
+        if ($provider !== '' || $label !== '') {
+            $lines[] = 'Matched project provider: ' . ($label !== '' ? $label : $provider) . ($provider !== '' ? ' [' . $provider . ']' : '') . '.';
+        }
+        if ($innerStatus !== '') {
+            $lines[] = 'Provider context status: ' . $innerStatus . '.';
+        }
+        if ($intent !== '') {
+            $lines[] = 'Detected project intent: ' . $intent . '.';
+        }
+        if ($scope !== '') {
+            $lines[] = 'Applied project data scope: ' . $scope . '.';
+        }
+
+        if ($records === []) {
+            if (in_array($innerStatus, ['data_unavailable', 'denied_missing_staff_scope', 'unsupported_intent'], true)) {
+                $lines[] = 'No project records are available for this question and current user context.';
+                return implode("\n", $lines);
+            }
+
+            return '';
+        }
+
+        $lines[] = 'Project data records visible to the current user:';
+        foreach (array_slice($records, 0, 8) as $index => $record) {
+            if (!is_array($record)) {
+                continue;
+            }
+
+            $parts = [];
+            foreach ($record as $key => $value) {
+                if (is_array($value) || is_object($value)) {
+                    continue;
+                }
+
+                $safeKey = $this->promptContextValue((string)$key, 50);
+                $safeValue = $this->promptContextValue($value, 180);
+                if ($safeKey === '' || $safeValue === '') {
+                    continue;
+                }
+
+                $parts[] = $safeKey . '=' . $safeValue;
+            }
+
+            if ($parts !== []) {
+                $lines[] = ((int)$index + 1) . '. ' . implode('; ', $parts) . '.';
+            }
+        }
+
+        return count($lines) > 1 ? implode("\n", $lines) : '';
+    }
+
     private function promptContextValue(mixed $value, int $maxLength): string
     {
         $text = trim((string)$value);
@@ -521,7 +614,10 @@ final class AiChatbotService
         $text = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $text);
         $text = trim((string)$text);
 
-        return mb_substr($text, 0, max(1, $maxLength), 'UTF-8');
+        $maxLength = max(1, $maxLength);
+        return function_exists('mb_substr')
+            ? mb_substr($text, 0, $maxLength, 'UTF-8')
+            : substr($text, 0, $maxLength);
     }
 
     /**

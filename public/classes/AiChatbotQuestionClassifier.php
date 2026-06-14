@@ -23,7 +23,14 @@ final class AiChatbotQuestionClassifier
         }
 
         if ($this->containsAny($text, [
-            'bypass', 'hack', 'sql injection', 'drop table', 'dump database', 'api key',
+            'bypass', 'hack', 'sql', 'sql injection', 'query database', 'database query',
+            'drop table', 'dump database', 'database dump', 'schema database',
+            'database schema', 'struktur table', 'struktur database', 'nama table',
+            'senarai table', 'table monitoring', 'column database', 'kolum database', 'api key',
+            'orang lain', 'pengguna lain', 'user lain', 'staf lain', 'semua owner',
+            'semua staf', 'semua pengguna', 'semua projek', 'komen feedback',
+            'raw feedback', 'feedback comment', 'dokumen laporan', 'document path',
+            'laluan dokumen', 'file laporan',
             'token', 'csrf', 'cookie', 'password', 'kata laluan', 'elevate', 'escalate',
             'role escalation', 'permission escalation', 'hidden route', 'route tersembunyi',
             'akses tersembunyi', 'cara masuk admin', 'super admin password',
@@ -84,7 +91,8 @@ final class AiChatbotQuestionClassifier
 
     private function normalize(string $message): string
     {
-        $message = mb_strtolower(strip_tags($message), 'UTF-8');
+        $message = strip_tags($message);
+        $message = function_exists('mb_strtolower') ? mb_strtolower($message, 'UTF-8') : strtolower($message);
         $message = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', (string)$message);
         $message = preg_replace('/\s+/u', ' ', (string)$message);
 

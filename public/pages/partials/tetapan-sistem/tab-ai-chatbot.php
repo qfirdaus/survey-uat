@@ -9,6 +9,8 @@
  */
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 3) . '/classes/AiChatbotProjectContextRegistry.php';
+
 $ai = is_array($aiChatbotSettings ?? null) ? $aiChatbotSettings : [];
 $aiValue = static fn(string $key, mixed $default = ''): string => htmlspecialchars((string)($ai[$key] ?? $default), ENT_QUOTES, 'UTF-8');
 $aiRaw = static fn(string $key, mixed $default = ''): string => (string)($ai[$key] ?? $default);
@@ -24,6 +26,39 @@ $aiEnabled = !empty($ai['enabled']);
 $aiProvider = $aiRaw('provider', 'ollama');
 $aiModel = $aiRaw('model', 'llama3.2:3b');
 $aiAccessMode = $aiRaw('access_mode', 'super_admin_only');
+$projectContextDiagnostic = AiChatbotProjectContextRegistry::default()->diagnose();
+$projectContextStatus = (string)($projectContextDiagnostic['status'] ?? 'error');
+$projectContextStatusMap = [
+    'matched' => [
+        'label' => $aiText('config_ai_chatbot_project_status_matched', 'Matched'),
+        'class' => 'bg-success-subtle text-success border border-success-subtle',
+        'icon' => 'ri-checkbox-circle-line',
+    ],
+    'core_only' => [
+        'label' => $aiText('config_ai_chatbot_project_status_core_only', 'Core only'),
+        'class' => 'bg-secondary-subtle text-secondary border border-secondary-subtle',
+        'icon' => 'ri-shield-check-line',
+    ],
+    'no_project_provider' => [
+        'label' => $aiText('config_ai_chatbot_project_status_no_provider', 'No project provider'),
+        'class' => 'bg-warning-subtle text-warning border border-warning-subtle',
+        'icon' => 'ri-plug-2-line',
+    ],
+    'ambiguous' => [
+        'label' => $aiText('config_ai_chatbot_project_status_ambiguous', 'Ambiguous'),
+        'class' => 'bg-danger-subtle text-danger border border-danger-subtle',
+        'icon' => 'ri-error-warning-line',
+    ],
+    'error' => [
+        'label' => $aiText('config_ai_chatbot_project_status_error', 'Error'),
+        'class' => 'bg-danger-subtle text-danger border border-danger-subtle',
+        'icon' => 'ri-error-warning-line',
+    ],
+];
+$projectContextStatusMeta = $projectContextStatusMap[$projectContextStatus] ?? $projectContextStatusMap['error'];
+$projectContextProviders = is_array($projectContextDiagnostic['available_providers'] ?? null)
+    ? $projectContextDiagnostic['available_providers']
+    : [];
 $aiProviderDefaults = [
     'ollama' => ['base_url' => 'http://127.0.0.1:11434'],
     'openai' => ['base_url' => 'https://api.openai.com/v1'],
@@ -94,6 +129,11 @@ $aiProviderDefaults = [
           <li class="nav-item" role="presentation">
             <button class="nav-link" data-bs-toggle="pill" data-bs-target="#ai-chatbot-subtab-storage" type="button" role="tab">
               <i class="ri-database-2-line me-1"></i>Storage
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#ai-chatbot-subtab-project-context" type="button" role="tab">
+              <i class="ri-node-tree me-1"></i><?= htmlspecialchars($aiText('config_ai_chatbot_project_context_tab', 'Project Context'), ENT_QUOTES, 'UTF-8') ?>
             </button>
           </li>
         </ul>
@@ -270,6 +310,100 @@ $aiProviderDefaults = [
                   <label class="form-label fw-semibold" for="ai_chatbot_app_title"><?= htmlspecialchars($aiText('config_ai_chatbot_app_title', 'App title'), ENT_QUOTES, 'UTF-8') ?></label>
                   <input type="text" class="form-control" id="ai_chatbot_app_title" name="ai_chatbot_app_title" value="<?= $aiValue('app_title', 'IQS-Framework AI Chatbot') ?>">
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-pane fade auth-subtab-pane" id="ai-chatbot-subtab-project-context" role="tabpanel">
+            <div class="auth-summary-box">
+              <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-3">
+                <div>
+                  <div class="text-uppercase small fw-semibold text-muted mb-1"><?= htmlspecialchars($aiText('config_ai_chatbot_project_context_title', 'Project-Aware Data Context'), ENT_QUOTES, 'UTF-8') ?></div>
+                  <div class="fw-semibold text-body-emphasis"><?= htmlspecialchars($aiText('config_ai_chatbot_project_context_subtitle', 'Diagnostic for provider matching based on system.name.'), ENT_QUOTES, 'UTF-8') ?></div>
+                </div>
+                <span class="badge <?= htmlspecialchars($projectContextStatusMeta['class'], ENT_QUOTES, 'UTF-8') ?>">
+                  <i class="<?= htmlspecialchars($projectContextStatusMeta['icon'], ENT_QUOTES, 'UTF-8') ?> me-1"></i><?= htmlspecialchars($projectContextStatusMeta['label'], ENT_QUOTES, 'UTF-8') ?>
+                </span>
+              </div>
+
+              <div class="row g-2 mb-3">
+                <div class="col-lg-6">
+                  <div class="p-3 rounded border bg-light-subtle h-100">
+                    <div class="text-muted small mb-1"><?= htmlspecialchars($aiText('config_ai_chatbot_project_system_name', 'System name'), ENT_QUOTES, 'UTF-8') ?></div>
+                    <div class="fw-semibold text-break"><?= htmlspecialchars((string)($projectContextDiagnostic['system_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
+                  </div>
+                </div>
+                <div class="col-lg-6">
+                  <div class="p-3 rounded border bg-light-subtle h-100">
+                    <div class="text-muted small mb-1"><?= htmlspecialchars($aiText('config_ai_chatbot_project_normalized_identity', 'Normalized identity'), ENT_QUOTES, 'UTF-8') ?></div>
+                    <div class="fw-semibold text-break"><?= htmlspecialchars((string)($projectContextDiagnostic['normalized_identity'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
+                  </div>
+                </div>
+                <div class="col-lg-4">
+                  <div class="p-3 rounded border bg-light-subtle h-100">
+                    <div class="text-muted small mb-1"><?= htmlspecialchars($aiText('config_ai_chatbot_project_provider', 'Matched provider'), ENT_QUOTES, 'UTF-8') ?></div>
+                    <div class="fw-semibold text-break">
+                      <?php if (!empty($projectContextDiagnostic['matched_label'])): ?>
+                        <?= htmlspecialchars((string)$projectContextDiagnostic['matched_label'], ENT_QUOTES, 'UTF-8') ?>
+                        <span class="text-muted">(<?= htmlspecialchars((string)$projectContextDiagnostic['matched_provider'], ENT_QUOTES, 'UTF-8') ?>)</span>
+                      <?php else: ?>
+                        <span class="text-muted"><?= htmlspecialchars($aiText('config_ai_chatbot_project_none', 'None'), ENT_QUOTES, 'UTF-8') ?></span>
+                      <?php endif; ?>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-lg-4">
+                  <div class="p-3 rounded border bg-light-subtle h-100">
+                    <div class="text-muted small mb-1"><?= htmlspecialchars($aiText('config_ai_chatbot_project_matched_alias', 'Matched alias'), ENT_QUOTES, 'UTF-8') ?></div>
+                    <div class="fw-semibold text-break"><?= htmlspecialchars((string)($projectContextDiagnostic['matched_alias'] ?: $aiText('config_ai_chatbot_project_none', 'None')), ENT_QUOTES, 'UTF-8') ?></div>
+                  </div>
+                </div>
+                <div class="col-lg-4">
+                  <div class="p-3 rounded border bg-light-subtle h-100">
+                    <div class="text-muted small mb-1"><?= htmlspecialchars($aiText('config_ai_chatbot_project_match_score', 'Match score'), ENT_QUOTES, 'UTF-8') ?></div>
+                    <div class="fw-semibold">
+                      <?= (int)($projectContextDiagnostic['match_score'] ?? 0) ?>
+                      <span class="text-muted">/ 100</span>
+                      <span class="text-muted small ms-2"><?= htmlspecialchars($aiText('config_ai_chatbot_project_minimum', 'Minimum'), ENT_QUOTES, 'UTF-8') ?> <?= (int)($projectContextDiagnostic['minimum_score'] ?? AiChatbotProjectContextRegistry::DEFAULT_MINIMUM_MATCH_SCORE) ?></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="table-responsive rounded border">
+                <table class="table table-sm align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th><?= htmlspecialchars($aiText('config_ai_chatbot_project_provider_code', 'Provider code'), ENT_QUOTES, 'UTF-8') ?></th>
+                      <th><?= htmlspecialchars($aiText('config_ai_chatbot_project_provider_label', 'Provider label'), ENT_QUOTES, 'UTF-8') ?></th>
+                      <th><?= htmlspecialchars($aiText('config_ai_chatbot_project_score', 'Score'), ENT_QUOTES, 'UTF-8') ?></th>
+                      <th><?= htmlspecialchars($aiText('config_ai_chatbot_project_alias', 'Alias'), ENT_QUOTES, 'UTF-8') ?></th>
+                      <th><?= htmlspecialchars($aiText('config_ai_chatbot_project_status', 'Status'), ENT_QUOTES, 'UTF-8') ?></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <?php if ($projectContextProviders === []): ?>
+                      <tr>
+                        <td colspan="5" class="text-center text-muted py-3">
+                          <?= htmlspecialchars($aiText('config_ai_chatbot_project_no_providers', 'No project provider has been registered yet.'), ENT_QUOTES, 'UTF-8') ?>
+                        </td>
+                      </tr>
+                    <?php else: ?>
+                      <?php foreach ($projectContextProviders as $candidate): ?>
+                        <tr>
+                          <td class="fw-semibold"><?= htmlspecialchars((string)($candidate['code'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                          <td><?= htmlspecialchars((string)($candidate['label'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                          <td><?= (int)($candidate['score'] ?? 0) ?></td>
+                          <td><?= htmlspecialchars((string)($candidate['alias'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                          <td><?= htmlspecialchars((string)($candidate['status'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                        </tr>
+                      <?php endforeach; ?>
+                    <?php endif; ?>
+                  </tbody>
+                </table>
+              </div>
+              <div class="text-muted small mt-2">
+                <i class="ri-information-line me-1"></i><?= htmlspecialchars($aiText('config_ai_chatbot_project_context_note', 'If the system name changes and no provider matches, chatbot will use core context and knowledge base only.'), ENT_QUOTES, 'UTF-8') ?>
               </div>
             </div>
           </div>
