@@ -16,7 +16,13 @@ require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/AiChatbotReviewDashboardService.php';
 
 $pdo = Database::getInstance('mysql')->getConnection();
-ensurePageGroupManagePermission($pdo, 'Anda tidak mempunyai kebenaran untuk melihat AI Chatbot Review Dashboard.');
+$permissionMessage = __('aiChatbotReview_permission_denied');
+ensurePageGroupManagePermission(
+    $pdo,
+    ($permissionMessage === null || $permissionMessage === '' || $permissionMessage === 'aiChatbotReview_permission_denied')
+        ? 'Anda tidak mempunyai kebenaran untuk melihat AI Chatbot Review Dashboard.'
+        : (string)$permissionMessage
+);
 
 if (!function_exists('h')) {
     function h($value): string
@@ -43,6 +49,12 @@ function ai_review_badge_class(string $value, string $type = 'outcome'): string
         'rate_limited', 'blocked', 'unknown' => 'bg-warning-subtle text-warning',
         default => 'bg-secondary-subtle text-secondary',
     };
+}
+
+function ai_review_label(string $key, string $fallback): string
+{
+    $value = __($key);
+    return ($value === null || $value === '' || $value === $key) ? $fallback : (string)$value;
 }
 
 function ai_review_render_rows(array $rows, bool $showError = false): void
@@ -91,7 +103,7 @@ $dashboard = $service->build($days, $limit);
 $summary = $dashboard['summary'];
 $lang = (string)($_SESSION['lang'] ?? 'ms');
 $version = (string)($_ENV['APP_ASSET_VER'] ?? date('ymdHis'));
-$PAGE_TITLE = 'AI Chatbot Review Dashboard';
+$PAGE_TITLE = ai_review_label('aiChatbotReview_page_title', 'AI Chatbot Review Dashboard');
 ?>
 <!doctype html>
 <html lang="<?= h($lang) ?>" data-bs-theme="<?= h($_SESSION['theme.layout'] ?? 'light') ?>">
@@ -359,12 +371,12 @@ $PAGE_TITLE = 'AI Chatbot Review Dashboard';
         <div class="row mb-3">
           <div class="col-12">
             <div class="page-title-box d-flex justify-content-between align-items-center flex-wrap">
-              <h4 class="page-title"><i class="ri-shield-search-line me-1"></i>AI Chatbot Review Dashboard</h4>
+              <h4 class="page-title"><i class="ri-shield-search-line me-1"></i><?= h($PAGE_TITLE) ?></h4>
               <div class="page-title-right">
                 <ol class="breadcrumb m-0">
-                  <li class="breadcrumb-item"><a href="<?= h(base_url('pages/dashboard.php')) ?>">Dashboard</a></li>
-                  <li class="breadcrumb-item"><a href="<?= h(base_url('pages/tetapan-sistem.php?tab=ai-chatbot')) ?>">AI Chatbot</a></li>
-                  <li class="breadcrumb-item active">Review</li>
+                  <li class="breadcrumb-item"><a href="<?= h(base_url('pages/dashboard.php')) ?>"><?= h(ai_review_label('common_dashboard', 'Dashboard')) ?></a></li>
+                  <li class="breadcrumb-item"><a href="<?= h(base_url('pages/tetapan-sistem.php?tab=ai-chatbot')) ?>"><?= h(ai_review_label('config_ai_chatbot_title', 'AI Chatbot')) ?></a></li>
+                  <li class="breadcrumb-item active"><?= h(ai_review_label('aiChatbotReview_table_review', 'Review')) ?></li>
                 </ol>
               </div>
             </div>
@@ -380,26 +392,26 @@ $PAGE_TITLE = 'AI Chatbot Review Dashboard';
             </div>
             <form class="d-flex flex-wrap align-items-end gap-2" method="get">
               <div>
-                <label class="form-label small fw-semibold" for="review_days">Days</label>
+                <label class="form-label small fw-semibold" for="review_days"><?= h(ai_review_label('aiChatbotReview_filter_days', 'Days')) ?></label>
                 <input class="form-control form-control-sm" type="number" min="1" max="365" id="review_days" name="days" value="<?= h((string)$dashboard['days']) ?>">
               </div>
               <div>
-                <label class="form-label small fw-semibold" for="review_limit">Rows</label>
+                <label class="form-label small fw-semibold" for="review_limit"><?= h(ai_review_label('aiChatbotReview_filter_rows', 'Rows')) ?></label>
                 <input class="form-control form-control-sm" type="number" min="50" max="2000" id="review_limit" name="limit" value="<?= h((string)$dashboard['limit']) ?>">
               </div>
-              <button class="btn btn-sm btn-primary" type="submit"><i class="ri-filter-3-line me-1"></i>Apply</button>
-              <a class="btn btn-sm btn-outline-secondary" href="<?= h(base_url('pages/ai-chatbot-knowledge.php')) ?>"><i class="ri-chat-quote-line me-1"></i>Knowledge Manager</a>
+              <button class="btn btn-sm btn-primary" type="submit"><i class="ri-filter-3-line me-1"></i><?= h(ai_review_label('aiChatbotReview_filter_apply', 'Apply')) ?></button>
+              <a class="btn btn-sm btn-outline-secondary" href="<?= h(base_url('pages/ai-chatbot-knowledge.php')) ?>"><i class="ri-chat-quote-line me-1"></i><?= h(ai_review_label('aiChatbotReview_knowledge_manager', 'Knowledge Manager')) ?></a>
             </form>
           </div>
         </div>
 
         <div class="row g-2 mb-3">
           <?php foreach ([
-            'total' => ['Total Requests', 'ri-chat-3-line', 'text-primary', 'bg-primary-subtle'],
+            'total' => [ai_review_label('aiChatbotReview_summary_total_requests', 'Total Requests'), 'ri-chat-3-line', 'text-primary', 'bg-primary-subtle'],
             'success' => ['Success', 'ri-checkbox-circle-line', 'text-success', 'bg-success-subtle'],
             'failed' => ['Failed/Blocked', 'ri-error-warning-line', 'text-danger', 'bg-danger-subtle'],
-            'needs_review' => ['Needs Review', 'ri-search-eye-line', 'text-warning', 'bg-warning-subtle'],
-            'no_knowledge' => ['No Knowledge', 'ri-question-line', 'text-info', 'bg-info-subtle'],
+            'needs_review' => [ai_review_label('aiChatbotReview_summary_review_queue', 'Needs Review'), 'ri-search-eye-line', 'text-warning', 'bg-warning-subtle'],
+            'no_knowledge' => [ai_review_label('aiChatbotReview_summary_no_knowledge', 'No Knowledge'), 'ri-question-line', 'text-info', 'bg-info-subtle'],
             'avg_latency_ms' => ['Avg Latency ms', 'ri-timer-flash-line', 'text-secondary', 'bg-secondary-subtle'],
           ] as $key => $meta): ?>
             <div class="col-sm-6 col-xl-2">
@@ -466,17 +478,17 @@ $PAGE_TITLE = 'AI Chatbot Review Dashboard';
             <ul class="nav nav-tabs ai-review-tabs" id="aiReviewTableTabs" role="tablist">
               <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="review-queue-tab" data-bs-toggle="tab" data-bs-target="#review-queue-pane" type="button" role="tab" aria-controls="review-queue-pane" aria-selected="true">
-                  <i class="ri-search-eye-line me-1"></i>Review Queue
+                  <i class="ri-search-eye-line me-1"></i><?= h(ai_review_label('aiChatbotReview_tab_review_queue', 'Review Queue')) ?>
                 </button>
               </li>
               <li class="nav-item" role="presentation">
                 <button class="nav-link" id="no-knowledge-tab" data-bs-toggle="tab" data-bs-target="#no-knowledge-pane" type="button" role="tab" aria-controls="no-knowledge-pane" aria-selected="false">
-                  <i class="ri-question-line me-1"></i>No Knowledge
+                  <i class="ri-question-line me-1"></i><?= h(ai_review_label('aiChatbotReview_tab_no_knowledge', 'No Knowledge')) ?>
                 </button>
               </li>
               <li class="nav-item" role="presentation">
                 <button class="nav-link" id="provider-failures-tab" data-bs-toggle="tab" data-bs-target="#provider-failures-pane" type="button" role="tab" aria-controls="provider-failures-pane" aria-selected="false">
-                  <i class="ri-error-warning-line me-1"></i>Provider Failures
+                  <i class="ri-error-warning-line me-1"></i><?= h(ai_review_label('aiChatbotReview_tab_provider_failures', 'Provider Failures')) ?>
                 </button>
               </li>
             </ul>
@@ -486,13 +498,13 @@ $PAGE_TITLE = 'AI Chatbot Review Dashboard';
               <div class="tab-pane fade show active ai-review-tab-pane" id="review-queue-pane" role="tabpanel" aria-labelledby="review-queue-tab" tabindex="0">
                 <div class="ai-review-tab-heading">
                   <div>
-                    <h5 class="card-title">Review Queue</h5>
+                    <h5 class="card-title"><?= h(ai_review_label('aiChatbotReview_tab_review_queue', 'Review Queue')) ?></h5>
                     <p class="text-muted mb-0">Unknown, sensitive blocked, blocked detail, atau item yang classifier tandakan perlu semakan.</p>
                   </div>
                 </div>
                 <div class="table-responsive ai-review-table-wrap">
                   <table class="table table-striped ai-review-table js-ai-review-table" id="aiReviewQueueTable">
-                    <thead><tr><th>Time/User</th><th>Category/Risk</th><th>Reason/Page</th><th>Provider</th><th>Outcome</th><th>Prompt Signals</th></tr></thead>
+                    <thead><tr><th><?= h(ai_review_label('aiChatbotReview_table_time', 'Time')) ?>/<?= h(ai_review_label('aiChatbotReview_table_user', 'User')) ?></th><th>Category/Risk</th><th>Reason/Page</th><th><?= h(ai_review_label('aiChatbotReview_table_provider', 'Provider')) ?></th><th><?= h(ai_review_label('aiChatbotReview_table_outcome', 'Outcome')) ?></th><th>Prompt Signals</th></tr></thead>
                     <tbody><?php ai_review_render_rows($dashboard['review_items']); ?></tbody>
                   </table>
                 </div>
@@ -501,13 +513,13 @@ $PAGE_TITLE = 'AI Chatbot Review Dashboard';
               <div class="tab-pane fade ai-review-tab-pane" id="no-knowledge-pane" role="tabpanel" aria-labelledby="no-knowledge-tab" tabindex="0">
                 <div class="ai-review-tab-heading">
                   <div>
-                    <h5 class="card-title">No Knowledge Candidates</h5>
+                    <h5 class="card-title"><?= h(ai_review_label('aiChatbotReview_tab_no_knowledge', 'No Knowledge')) ?></h5>
                     <p class="text-muted mb-0">System-specific requests yang berjaya tetapi tiada curated knowledge item dalam prompt. Ini calon terbaik untuk ditukar menjadi artikel knowledge.</p>
                   </div>
                 </div>
                 <div class="table-responsive ai-review-table-wrap">
                   <table class="table table-striped ai-review-table js-ai-review-table" id="aiNoKnowledgeTable">
-                    <thead><tr><th>Time/User</th><th>Category/Risk</th><th>Reason/Page</th><th>Provider</th><th>Outcome</th><th>Prompt Signals</th></tr></thead>
+                    <thead><tr><th><?= h(ai_review_label('aiChatbotReview_table_time', 'Time')) ?>/<?= h(ai_review_label('aiChatbotReview_table_user', 'User')) ?></th><th>Category/Risk</th><th>Reason/Page</th><th><?= h(ai_review_label('aiChatbotReview_table_provider', 'Provider')) ?></th><th><?= h(ai_review_label('aiChatbotReview_table_outcome', 'Outcome')) ?></th><th>Prompt Signals</th></tr></thead>
                     <tbody><?php ai_review_render_rows($dashboard['no_knowledge']); ?></tbody>
                   </table>
                 </div>
@@ -516,13 +528,13 @@ $PAGE_TITLE = 'AI Chatbot Review Dashboard';
               <div class="tab-pane fade ai-review-tab-pane" id="provider-failures-pane" role="tabpanel" aria-labelledby="provider-failures-tab" tabindex="0">
                 <div class="ai-review-tab-heading">
                   <div>
-                    <h5 class="card-title">Provider Failures</h5>
+                    <h5 class="card-title"><?= h(ai_review_label('aiChatbotReview_tab_provider_failures', 'Provider Failures')) ?></h5>
                     <p class="text-muted mb-0">Failed, timeout, rate-limited, dan blocked outcomes untuk semakan provider/model/limit.</p>
                   </div>
                 </div>
                 <div class="table-responsive ai-review-table-wrap">
                   <table class="table table-striped ai-review-table js-ai-review-table" id="aiProviderFailuresTable">
-                    <thead><tr><th>Time/User</th><th>Category/Risk</th><th>Reason/Page</th><th>Provider</th><th>Outcome</th><th>Prompt Signals</th><th>Error</th></tr></thead>
+                    <thead><tr><th><?= h(ai_review_label('aiChatbotReview_table_time', 'Time')) ?>/<?= h(ai_review_label('aiChatbotReview_table_user', 'User')) ?></th><th>Category/Risk</th><th>Reason/Page</th><th><?= h(ai_review_label('aiChatbotReview_table_provider', 'Provider')) ?></th><th><?= h(ai_review_label('aiChatbotReview_table_outcome', 'Outcome')) ?></th><th>Prompt Signals</th><th>Error</th></tr></thead>
                     <tbody><?php ai_review_render_rows($dashboard['failures'], true); ?></tbody>
                   </table>
                 </div>
@@ -550,7 +562,7 @@ document.addEventListener('DOMContentLoaded', function () {
           pageLength: 10,
           order: [],
           responsive: true,
-          searchPlaceholder: 'Search review...'
+          searchPlaceholder: <?= json_encode(ai_review_label('aiChatbotReview_search_placeholder', 'Search review...'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
         })
       : {
           dom: reviewDom,
@@ -567,7 +579,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
       if (window.DataTableStandard) {
         window.DataTableStandard.decorate(table, {
-          searchPlaceholder: 'Search review...'
+          searchPlaceholder: <?= json_encode(ai_review_label('aiChatbotReview_search_placeholder', 'Search review...'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
         });
       }
     });

@@ -14,6 +14,10 @@ $aiValue = static fn(string $key, mixed $default = ''): string => htmlspecialcha
 $aiRaw = static fn(string $key, mixed $default = ''): string => (string)($ai[$key] ?? $default);
 $aiChecked = static fn(string $key, bool $default = false): string => !empty($ai[$key] ?? $default) ? 'checked' : '';
 $aiSelected = static fn(string $key, string $value, string $default = ''): string => ((string)($ai[$key] ?? $default) === $value) ? 'selected' : '';
+$aiText = static function (string $key, string $fallback): string {
+    $value = function_exists('__') ? __($key) : null;
+    return ($value === null || $value === '' || $value === $key) ? $fallback : (string)$value;
+};
 $apiKeyConfigured = !empty($ai['api_key_configured']);
 $configSource = (string)($ai['config_source'] ?? 'defaults');
 $aiEnabled = !empty($ai['enabled']);
@@ -44,16 +48,16 @@ $aiProviderDefaults = [
               <i class="ri-chat-3-line fs-5"></i>
             </div>
             <div>
-              <h5 class="mb-1 fw-semibold text-primary"><?= __('config_ai_chatbot_title') ?? 'AI Chatbot' ?></h5>
-              <small class="text-muted"><?= __('config_ai_chatbot_subtitle') ?? 'Runtime settings for the core framework AI Chatbot widget.' ?></small>
+              <h5 class="mb-1 fw-semibold text-primary"><?= htmlspecialchars($aiText('config_ai_chatbot_title', 'AI Chatbot'), ENT_QUOTES, 'UTF-8') ?></h5>
+              <small class="text-muted"><?= htmlspecialchars($aiText('config_ai_chatbot_subtitle', 'Runtime settings for the core framework AI Chatbot widget.'), ENT_QUOTES, 'UTF-8') ?></small>
             </div>
           </div>
           <div class="d-flex flex-wrap gap-2">
             <a class="btn btn-sm btn-outline-primary" href="<?= htmlspecialchars(base_url('pages/ai-chatbot-knowledge.php'), ENT_QUOTES, 'UTF-8') ?>">
-              <i class="ri-chat-quote-line me-1"></i> Knowledge Manager
+              <i class="ri-chat-quote-line me-1"></i> <?= htmlspecialchars($aiText('config_ai_chatbot_knowledge_manager', 'Knowledge Manager'), ENT_QUOTES, 'UTF-8') ?>
             </a>
             <a class="btn btn-sm btn-outline-secondary" href="<?= htmlspecialchars(base_url('pages/ai-chatbot-review.php'), ENT_QUOTES, 'UTF-8') ?>">
-              <i class="ri-shield-search-line me-1"></i> Review Dashboard
+              <i class="ri-shield-search-line me-1"></i> <?= htmlspecialchars($aiText('config_ai_chatbot_review_dashboard', 'Review Dashboard'), ENT_QUOTES, 'UTF-8') ?>
             </a>
             <span class="badge <?= $aiEnabled ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle' ?>">
               <?= $aiEnabled ? 'Enabled' : 'Disabled' ?>
@@ -100,23 +104,23 @@ $aiProviderDefaults = [
               <div class="col-xl-8">
                 <div class="auth-summary-box auth-summary-box-main h-100">
                   <div class="text-uppercase small fw-semibold text-muted mb-1">Runtime Snapshot</div>
-                  <div class="fw-semibold text-body-emphasis mb-2">AI Chatbot Core Settings</div>
+                  <div class="fw-semibold text-body-emphasis mb-2"><?= htmlspecialchars($aiText('config_ai_chatbot_core_settings', 'AI Chatbot Core Settings'), ENT_QUOTES, 'UTF-8') ?></div>
                   <div class="row g-2">
                     <div class="col-md-6">
                       <div class="p-3 rounded border bg-light-subtle h-100">
-                        <div class="text-muted small mb-1">Provider</div>
+                        <div class="text-muted small mb-1"><?= htmlspecialchars($aiText('config_ai_chatbot_provider', 'Provider'), ENT_QUOTES, 'UTF-8') ?></div>
                         <div class="fw-semibold"><?= htmlspecialchars($aiProvider, ENT_QUOTES, 'UTF-8') ?></div>
                       </div>
                     </div>
                     <div class="col-md-6">
                       <div class="p-3 rounded border bg-light-subtle h-100">
-                        <div class="text-muted small mb-1">Model</div>
+                        <div class="text-muted small mb-1"><?= htmlspecialchars($aiText('config_ai_chatbot_model', 'Model'), ENT_QUOTES, 'UTF-8') ?></div>
                         <div class="fw-semibold"><?= htmlspecialchars($aiModel, ENT_QUOTES, 'UTF-8') ?></div>
                       </div>
                     </div>
                     <div class="col-md-6">
                       <div class="p-3 rounded border bg-light-subtle h-100">
-                        <div class="text-muted small mb-1">Access mode</div>
+                        <div class="text-muted small mb-1"><?= htmlspecialchars($aiText('config_ai_chatbot_access_mode', 'Access mode'), ENT_QUOTES, 'UTF-8') ?></div>
                         <div class="fw-semibold"><?= htmlspecialchars($aiAccessMode, ENT_QUOTES, 'UTF-8') ?></div>
                       </div>
                     </div>
@@ -134,16 +138,16 @@ $aiProviderDefaults = [
                   <div class="text-uppercase small fw-semibold text-muted mb-3">Activation</div>
                   <div class="form-check form-switch mb-2">
                     <input class="form-check-input" type="checkbox" id="ai_chatbot_enabled" name="ai_chatbot_enabled" value="1" <?= $aiChecked('enabled') ?>>
-                    <label class="form-check-label fw-semibold" for="ai_chatbot_enabled">Aktifkan AI Chatbot</label>
+                    <label class="form-check-label fw-semibold" for="ai_chatbot_enabled"><?= htmlspecialchars($aiText('config_ai_chatbot_enable', 'Aktifkan AI Chatbot'), ENT_QUOTES, 'UTF-8') ?></label>
                   </div>
                   <div class="text-muted small mb-3">Jika off, widget dan endpoint tidak akan aktif.</div>
-                  <label class="form-label fw-semibold" for="ai_chatbot_access_mode">Access mode</label>
+                  <label class="form-label fw-semibold" for="ai_chatbot_access_mode"><?= htmlspecialchars($aiText('config_ai_chatbot_access_mode', 'Access mode'), ENT_QUOTES, 'UTF-8') ?></label>
                   <select class="form-select mb-2" id="ai_chatbot_access_mode" name="ai_chatbot_access_mode">
                     <option value="super_admin_only" <?= $aiSelected('access_mode', 'super_admin_only', 'super_admin_only') ?>>Super admin only</option>
                     <option value="selected_groups" <?= $aiSelected('access_mode', 'selected_groups') ?>>Selected groups</option>
                     <option value="all_authenticated" <?= $aiSelected('access_mode', 'all_authenticated') ?>>All authenticated users</option>
                   </select>
-                  <label class="form-label fw-semibold" for="ai_chatbot_allowed_groups">Allowed groups</label>
+                  <label class="form-label fw-semibold" for="ai_chatbot_allowed_groups"><?= htmlspecialchars($aiText('config_ai_chatbot_allowed_groups', 'Allowed groups'), ENT_QUOTES, 'UTF-8') ?></label>
                   <input type="text" class="form-control" id="ai_chatbot_allowed_groups" name="ai_chatbot_allowed_groups" value="<?= $aiValue('allowed_groups') ?>" placeholder="ADM-SA, ADM-STAF atau ID group">
                 </div>
               </div>
@@ -154,7 +158,7 @@ $aiProviderDefaults = [
             <div class="auth-summary-box">
               <div class="row g-3">
                 <div class="col-md-4">
-                  <label class="form-label fw-semibold" for="ai_chatbot_provider">Provider</label>
+                  <label class="form-label fw-semibold" for="ai_chatbot_provider"><?= htmlspecialchars($aiText('config_ai_chatbot_provider', 'Provider'), ENT_QUOTES, 'UTF-8') ?></label>
                   <select class="form-select" id="ai_chatbot_provider" name="ai_chatbot_provider">
                     <option value="ollama" <?= $aiSelected('provider', 'ollama', 'ollama') ?>>Ollama</option>
                     <option value="openai" <?= $aiSelected('provider', 'openai') ?>>OpenAI</option>
@@ -166,19 +170,19 @@ $aiProviderDefaults = [
                   </select>
                 </div>
                 <div class="col-md-4">
-                  <label class="form-label fw-semibold" for="ai_chatbot_model">Model</label>
-                  <select class="form-select ai-chatbot-model-select" id="ai_chatbot_model" name="ai_chatbot_model" data-current-model="<?= htmlspecialchars($aiModel, ENT_QUOTES, 'UTF-8') ?>" data-placeholder="Pilih model">
+                  <label class="form-label fw-semibold" for="ai_chatbot_model"><?= htmlspecialchars($aiText('config_ai_chatbot_model', 'Model'), ENT_QUOTES, 'UTF-8') ?></label>
+                  <select class="form-select ai-chatbot-model-select" id="ai_chatbot_model" name="ai_chatbot_model" data-current-model="<?= htmlspecialchars($aiModel, ENT_QUOTES, 'UTF-8') ?>" data-placeholder="<?= htmlspecialchars($aiText('config_ai_chatbot_model_placeholder', 'Pilih model'), ENT_QUOTES, 'UTF-8') ?>">
                     <option value="<?= htmlspecialchars($aiModel, ENT_QUOTES, 'UTF-8') ?>" selected><?= $aiModel !== '' ? htmlspecialchars($aiModel, ENT_QUOTES, 'UTF-8') : 'Fetch models from provider' ?></option>
                   </select>
-                  <small class="text-muted" id="ai_chatbot_model_status">Model list akan difetch secara dynamic daripada provider yang dipilih.</small>
+                  <small class="text-muted" id="ai_chatbot_model_status"><?= htmlspecialchars($aiText('config_ai_chatbot_model_status_fetch', 'Model list akan difetch secara dynamic daripada provider yang dipilih.'), ENT_QUOTES, 'UTF-8') ?></small>
                 </div>
                 <div class="col-md-4">
-                  <label class="form-label fw-semibold" for="ai_chatbot_base_url">Provider base URL</label>
+                  <label class="form-label fw-semibold" for="ai_chatbot_base_url"><?= htmlspecialchars($aiText('config_ai_chatbot_base_url', 'Provider base URL'), ENT_QUOTES, 'UTF-8') ?></label>
                   <input type="url" class="form-control" id="ai_chatbot_base_url" name="ai_chatbot_base_url" value="<?= $aiValue('base_url', 'http://127.0.0.1:11434') ?>" placeholder="http://172.17.0.1:11436">
                 </div>
                 <div class="col-12">
-                  <label class="form-label fw-semibold" for="ai_chatbot_api_key">API key</label>
-                  <input type="password" class="form-control" id="ai_chatbot_api_key" name="ai_chatbot_api_key" value="" autocomplete="new-password" placeholder="<?= $apiKeyConfigured ? 'API key telah diset. Biarkan kosong untuk kekalkan nilai semasa.' : 'Masukkan API key jika provider memerlukan key.' ?>">
+                  <label class="form-label fw-semibold" for="ai_chatbot_api_key"><?= htmlspecialchars($aiText('config_ai_chatbot_api_key', 'API key'), ENT_QUOTES, 'UTF-8') ?></label>
+                  <input type="password" class="form-control" id="ai_chatbot_api_key" name="ai_chatbot_api_key" value="" autocomplete="new-password" placeholder="<?= htmlspecialchars($apiKeyConfigured ? $aiText('config_ai_chatbot_api_key_keep', 'API key telah diset. Biarkan kosong untuk kekalkan nilai semasa.') : $aiText('config_ai_chatbot_api_key_enter', 'Masukkan API key jika provider memerlukan key.'), ENT_QUOTES, 'UTF-8') ?>">
                   <small class="text-muted"><?= $apiKeyConfigured ? 'API key telah disimpan dalam tbl_m_config.' : 'Tiada API key disimpan dalam tbl_m_config.' ?></small>
                 </div>
               </div>
@@ -189,27 +193,27 @@ $aiProviderDefaults = [
             <div class="auth-summary-box">
               <div class="row g-3">
                 <div class="col-md-3">
-                  <label class="form-label fw-semibold" for="ai_chatbot_timeout_seconds">Timeout seconds</label>
+                  <label class="form-label fw-semibold" for="ai_chatbot_timeout_seconds"><?= htmlspecialchars($aiText('config_ai_chatbot_timeout_seconds', 'Timeout seconds'), ENT_QUOTES, 'UTF-8') ?></label>
                   <input type="number" min="1" max="120" class="form-control" id="ai_chatbot_timeout_seconds" name="ai_chatbot_timeout_seconds" value="<?= $aiValue('timeout_seconds', '30') ?>">
                 </div>
                 <div class="col-md-3">
-                  <label class="form-label fw-semibold" for="ai_chatbot_max_input_chars">Max input chars</label>
+                  <label class="form-label fw-semibold" for="ai_chatbot_max_input_chars"><?= htmlspecialchars($aiText('config_ai_chatbot_max_input_chars', 'Max input chars'), ENT_QUOTES, 'UTF-8') ?></label>
                   <input type="number" min="100" max="20000" class="form-control" id="ai_chatbot_max_input_chars" name="ai_chatbot_max_input_chars" value="<?= $aiValue('max_input_chars', '2000') ?>">
                 </div>
                 <div class="col-md-3">
-                  <label class="form-label fw-semibold" for="ai_chatbot_max_output_tokens">Max output tokens</label>
+                  <label class="form-label fw-semibold" for="ai_chatbot_max_output_tokens"><?= htmlspecialchars($aiText('config_ai_chatbot_max_output_tokens', 'Max output tokens'), ENT_QUOTES, 'UTF-8') ?></label>
                   <input type="number" min="64" max="8192" class="form-control" id="ai_chatbot_max_output_tokens" name="ai_chatbot_max_output_tokens" value="<?= $aiValue('max_output_tokens', '800') ?>">
                 </div>
                 <div class="col-md-3">
-                  <label class="form-label fw-semibold" for="ai_chatbot_rate_limit_per_minute">Rate/minute</label>
+                  <label class="form-label fw-semibold" for="ai_chatbot_rate_limit_per_minute"><?= htmlspecialchars($aiText('config_ai_chatbot_rate_per_minute', 'Rate/minute'), ENT_QUOTES, 'UTF-8') ?></label>
                   <input type="number" min="1" max="120" class="form-control" id="ai_chatbot_rate_limit_per_minute" name="ai_chatbot_rate_limit_per_minute" value="<?= $aiValue('rate_limit_per_minute', '10') ?>">
                 </div>
                 <div class="col-md-6">
-                  <label class="form-label fw-semibold" for="ai_chatbot_user_daily_request_limit">User daily request limit</label>
+                  <label class="form-label fw-semibold" for="ai_chatbot_user_daily_request_limit"><?= htmlspecialchars($aiText('config_ai_chatbot_user_daily_limit', 'User daily request limit'), ENT_QUOTES, 'UTF-8') ?></label>
                   <input type="number" min="0" max="10000" class="form-control" id="ai_chatbot_user_daily_request_limit" name="ai_chatbot_user_daily_request_limit" value="<?= $aiValue('user_daily_request_limit', '100') ?>">
                 </div>
                 <div class="col-md-6">
-                  <label class="form-label fw-semibold" for="ai_chatbot_global_daily_request_limit">Global daily request limit</label>
+                  <label class="form-label fw-semibold" for="ai_chatbot_global_daily_request_limit"><?= htmlspecialchars($aiText('config_ai_chatbot_global_daily_limit', 'Global daily request limit'), ENT_QUOTES, 'UTF-8') ?></label>
                   <input type="number" min="0" max="100000" class="form-control" id="ai_chatbot_global_daily_request_limit" name="ai_chatbot_global_daily_request_limit" value="<?= $aiValue('global_daily_request_limit', '1000') ?>">
                 </div>
               </div>
@@ -220,16 +224,16 @@ $aiProviderDefaults = [
             <div class="auth-summary-box">
               <div class="row g-3">
                 <div class="col-md-4">
-                  <label class="form-label fw-semibold" for="ai_chatbot_character_name">Character name</label>
+                  <label class="form-label fw-semibold" for="ai_chatbot_character_name"><?= htmlspecialchars($aiText('config_ai_chatbot_character_name', 'Character name'), ENT_QUOTES, 'UTF-8') ?></label>
                   <input type="text" class="form-control" id="ai_chatbot_character_name" name="ai_chatbot_character_name" value="<?= $aiValue('character_name', 'IQS Assistant') ?>">
                 </div>
                 <div class="col-md-8">
-                  <label class="form-label fw-semibold" for="ai_chatbot_character_avatar">Avatar path</label>
+                  <label class="form-label fw-semibold" for="ai_chatbot_character_avatar"><?= htmlspecialchars($aiText('config_ai_chatbot_avatar_path', 'Avatar path'), ENT_QUOTES, 'UTF-8') ?></label>
                   <input type="text" class="form-control" id="ai_chatbot_character_avatar" name="ai_chatbot_character_avatar" value="<?= $aiValue('character_avatar', 'assets/images/ai/assistant.png') ?>">
                   <small class="text-muted">Contoh: <code>assets/images/ai/assistant.png</code></small>
                 </div>
                 <div class="col-12">
-                  <label class="form-label fw-semibold" for="ai_chatbot_welcome_message">Welcome message</label>
+                  <label class="form-label fw-semibold" for="ai_chatbot_welcome_message"><?= htmlspecialchars($aiText('config_ai_chatbot_welcome_message', 'Welcome message'), ENT_QUOTES, 'UTF-8') ?></label>
                   <textarea class="form-control" id="ai_chatbot_welcome_message" name="ai_chatbot_welcome_message" rows="3"><?= $aiValue('welcome_message', 'Hai, saya boleh bantu tentang penggunaan sistem ini.') ?></textarea>
                 </div>
               </div>
@@ -242,28 +246,28 @@ $aiProviderDefaults = [
                 <div class="col-md-4">
                   <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" id="ai_chatbot_persist_usage" name="ai_chatbot_persist_usage" value="1" <?= $aiChecked('persist_usage', true) ?>>
-                    <label class="form-check-label fw-semibold" for="ai_chatbot_persist_usage">Persist usage</label>
+                    <label class="form-check-label fw-semibold" for="ai_chatbot_persist_usage"><?= htmlspecialchars($aiText('config_ai_chatbot_persist_usage', 'Persist usage'), ENT_QUOTES, 'UTF-8') ?></label>
                   </div>
                 </div>
                 <div class="col-md-4">
                   <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" id="ai_chatbot_store_conversations" name="ai_chatbot_store_conversations" value="1" <?= $aiChecked('store_conversations') ?>>
-                    <label class="form-check-label fw-semibold" for="ai_chatbot_store_conversations">Store conversations</label>
+                    <label class="form-check-label fw-semibold" for="ai_chatbot_store_conversations"><?= htmlspecialchars($aiText('config_ai_chatbot_store_conversations', 'Store conversations'), ENT_QUOTES, 'UTF-8') ?></label>
                   </div>
                 </div>
                 <div class="col-md-4">
                   <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" id="ai_chatbot_log_message_content" name="ai_chatbot_log_message_content" value="1" <?= $aiChecked('log_message_content') ?>>
-                    <label class="form-check-label fw-semibold" for="ai_chatbot_log_message_content">Log message content</label>
+                    <label class="form-check-label fw-semibold" for="ai_chatbot_log_message_content"><?= htmlspecialchars($aiText('config_ai_chatbot_log_message_content', 'Log message content'), ENT_QUOTES, 'UTF-8') ?></label>
                   </div>
                   <small class="text-danger">Aktifkan hanya untuk debugging terkawal.</small>
                 </div>
                 <div class="col-md-6">
-                  <label class="form-label fw-semibold" for="ai_chatbot_app_url">App URL</label>
+                  <label class="form-label fw-semibold" for="ai_chatbot_app_url"><?= htmlspecialchars($aiText('config_ai_chatbot_app_url', 'App URL'), ENT_QUOTES, 'UTF-8') ?></label>
                   <input type="url" class="form-control" id="ai_chatbot_app_url" name="ai_chatbot_app_url" value="<?= $aiValue('app_url', 'https://iqs-framework.dev') ?>">
                 </div>
                 <div class="col-md-6">
-                  <label class="form-label fw-semibold" for="ai_chatbot_app_title">App title</label>
+                  <label class="form-label fw-semibold" for="ai_chatbot_app_title"><?= htmlspecialchars($aiText('config_ai_chatbot_app_title', 'App title'), ENT_QUOTES, 'UTF-8') ?></label>
                   <input type="text" class="form-control" id="ai_chatbot_app_title" name="ai_chatbot_app_title" value="<?= $aiValue('app_title', 'IQS-Framework AI Chatbot') ?>">
                 </div>
               </div>
@@ -273,10 +277,10 @@ $aiProviderDefaults = [
 
         <div class="lang-settings-actions d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
           <div class="text-muted small">
-            <i class="ri-database-2-line me-1"></i> Semua tetapan AI Chatbot disimpan dalam <code>tbl_m_config</code> group <code>ai_chatbot</code>.
+            <i class="ri-database-2-line me-1"></i> <?= htmlspecialchars($aiText('config_ai_chatbot_storage_note', 'Semua tetapan AI Chatbot disimpan dalam tbl_m_config group ai_chatbot.'), ENT_QUOTES, 'UTF-8') ?>
           </div>
           <button type="submit" class="btn btn-primary px-4" id="btn-simpan-ai-chatbot">
-            <i class="ri-save-3-line me-2"></i> Simpan Tetapan AI Chatbot
+            <i class="ri-save-3-line me-2"></i> <?= htmlspecialchars($aiText('config_ai_chatbot_save_settings', 'Simpan Tetapan AI Chatbot'), ENT_QUOTES, 'UTF-8') ?>
           </button>
         </div>
       </div>
@@ -287,6 +291,11 @@ $aiProviderDefaults = [
 <script>
 (function () {
   var providerDefaults = <?= json_encode($aiProviderDefaults, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+  var i18n = <?= json_encode([
+      'modelPlaceholder' => $aiText('config_ai_chatbot_model_placeholder', 'Pilih model'),
+      'modelFetchFailed' => $aiText('config_ai_chatbot_model_fetch_failed', 'Gagal fetch senarai model. HTTP %s'),
+      'modelStatusFetch' => $aiText('config_ai_chatbot_model_status_fetch', 'Model list akan difetch secara dynamic daripada provider yang dipilih.'),
+  ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
   var providerEl = document.getElementById('ai_chatbot_provider');
   var modelEl = document.getElementById('ai_chatbot_model');
   var baseUrlEl = document.getElementById('ai_chatbot_base_url');
@@ -309,7 +318,7 @@ $aiProviderDefaults = [
 
     $model.select2({
       width: '100%',
-      placeholder: modelEl.getAttribute('data-placeholder') || 'Pilih model',
+      placeholder: modelEl.getAttribute('data-placeholder') || i18n.modelPlaceholder,
       dropdownParent: jQuery(document.body),
       dropdownCssClass: 'ai-chatbot-model-dropdown',
       minimumResultsForSearch: 0
@@ -431,7 +440,7 @@ $aiProviderDefaults = [
           } catch (ignore) {}
 
           if (!response.ok || !json || json.success !== true) {
-            throw new Error((json && json.message) || ('Gagal fetch model list. HTTP ' + response.status));
+            throw new Error((json && json.message) || String(i18n.modelFetchFailed || 'Gagal fetch senarai model. HTTP %s').replace('%s', response.status));
           }
           return json;
         });
@@ -444,7 +453,7 @@ $aiProviderDefaults = [
       .catch(function (error) {
         if (requestId !== lastRequestId) return;
         rebuildModelOptions([], currentModel);
-        setStatus(error && error.message ? error.message : 'Gagal fetch model list.', 'danger');
+        setStatus(error && error.message ? error.message : String(i18n.modelFetchFailed || 'Gagal fetch senarai model. HTTP %s').replace('%s', ''));
       })
       .finally(function () {
         if (requestId === lastRequestId) {

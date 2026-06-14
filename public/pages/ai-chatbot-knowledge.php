@@ -19,7 +19,13 @@ require_once __DIR__ . '/../classes/AiChatbotKnowledgeChunkService.php';
 require_once __DIR__ . '/../classes/AiChatbotPdfTextExtractor.php';
 
 $pdo = Database::getInstance('mysql')->getConnection();
-ensurePageGroupManagePermission($pdo, 'Anda tidak mempunyai kebenaran untuk mengurus AI Chatbot knowledge.');
+$permissionMessage = __('aiChatbotKnowledge_permission_denied');
+ensurePageGroupManagePermission(
+    $pdo,
+    ($permissionMessage === null || $permissionMessage === '' || $permissionMessage === 'aiChatbotKnowledge_permission_denied')
+        ? 'Anda tidak mempunyai kebenaran untuk mengurus AI Chatbot knowledge.'
+        : (string)$permissionMessage
+);
 
 if (!function_exists('h')) {
     function h($value): string
@@ -585,7 +591,33 @@ $pdfNotReadyCount = max(0, count($pdfSources) - $pdfReadyCount);
 
 $lang = (string)($_SESSION['lang'] ?? 'ms');
 $version = (string)($_ENV['APP_ASSET_VER'] ?? date('ymdHis'));
-$PAGE_TITLE = 'AI Chatbot Knowledge Manager';
+$PAGE_TITLE = ai_chatbot_knowledge_label('aiChatbotKnowledge_page_title', 'AI Chatbot Knowledge Manager');
+$knowledgeI18n = [
+    'createTitle' => ai_chatbot_knowledge_label('aiChatbotKnowledge_create_title', 'Create Knowledge Item'),
+    'editTitle' => ai_chatbot_knowledge_label('aiChatbotKnowledge_edit_title', 'Edit Knowledge Item'),
+    'show' => ai_chatbot_knowledge_label('aiChatbotKnowledge_show', 'Show'),
+    'hide' => ai_chatbot_knowledge_label('aiChatbotKnowledge_hide', 'Hide'),
+    'successTitle' => ai_chatbot_knowledge_label('aiChatbotKnowledge_swal_success_title', 'Berjaya'),
+    'errorTitle' => ai_chatbot_knowledge_label('aiChatbotKnowledge_swal_error_title', 'Tidak berjaya'),
+    'close' => ai_chatbot_knowledge_label('aiChatbotKnowledge_swal_close', 'Close'),
+    'cancel' => ai_chatbot_knowledge_label('aiChatbotKnowledge_cancel', 'Cancel'),
+    'deleteConfirmTitle' => ai_chatbot_knowledge_label('aiChatbotKnowledge_delete_confirm_title', 'Padam knowledge item?'),
+    'deleteConfirmText' => ai_chatbot_knowledge_label('aiChatbotKnowledge_delete_confirm_text', 'Tindakan ini tidak boleh dibatalkan.'),
+    'deleteConfirmButton' => ai_chatbot_knowledge_label('aiChatbotKnowledge_delete_confirm_button', 'Delete'),
+    'opening' => ai_chatbot_knowledge_label('aiChatbotKnowledge_loading_opening', 'Opening'),
+    'saving' => ai_chatbot_knowledge_label('aiChatbotKnowledge_loading_saving', 'Saving'),
+    'uploading' => ai_chatbot_knowledge_label('aiChatbotKnowledge_loading_uploading', 'Uploading'),
+    'reloadTableError' => ai_chatbot_knowledge_label('aiChatbotKnowledge_error_reload_table', 'Gagal memuat semula datatable.'),
+    'updateTableError' => ai_chatbot_knowledge_label('aiChatbotKnowledge_error_update_table', 'Datatable tidak dapat dikemas kini.'),
+    'actionFailed' => ai_chatbot_knowledge_label('aiChatbotKnowledge_error_action_failed', 'Tindakan tidak berjaya diproses.'),
+    'openFailed' => ai_chatbot_knowledge_label('aiChatbotKnowledge_error_open_failed', 'Knowledge item tidak dapat dibuka.'),
+    'saveFailed' => ai_chatbot_knowledge_label('aiChatbotKnowledge_error_save_failed', 'Knowledge item tidak berjaya disimpan.'),
+    'pdfFailed' => ai_chatbot_knowledge_label('aiChatbotKnowledge_error_pdf_failed', 'PDF source tidak berjaya diproses.'),
+    'actionSuccess' => ai_chatbot_knowledge_label('aiChatbotKnowledge_success_action', 'Tindakan berjaya diproses.'),
+    'saveSuccess' => ai_chatbot_knowledge_label('aiChatbotKnowledge_success_save', 'Knowledge item berjaya disimpan.'),
+    'pdfSuccess' => ai_chatbot_knowledge_label('aiChatbotKnowledge_success_pdf', 'PDF source berjaya diproses.'),
+    'searchPlaceholder' => ai_chatbot_knowledge_label('aiChatbotKnowledge_search_placeholder', 'Search knowledge...'),
+];
 ?>
 <!doctype html>
 <html lang="<?= h($lang) ?>" data-bs-theme="<?= h($_SESSION['theme.layout'] ?? 'light') ?>">
@@ -1039,12 +1071,12 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
         <div class="row mb-3">
           <div class="col-12">
             <div class="page-title-box d-flex justify-content-between align-items-center flex-wrap">
-              <h4 class="page-title"><i class="ri-chat-quote-line me-1"></i>AI Chatbot Knowledge Manager</h4>
+              <h4 class="page-title"><i class="ri-chat-quote-line me-1"></i><?= h($PAGE_TITLE) ?></h4>
               <div class="page-title-right">
                 <ol class="breadcrumb m-0">
                   <li class="breadcrumb-item"><a href="<?= h(base_url('pages/dashboard.php')) ?>"><?= h(ai_chatbot_knowledge_label('common_dashboard', 'Dashboard')) ?></a></li>
-                  <li class="breadcrumb-item"><a href="<?= h(base_url('pages/tetapan-sistem.php?tab=ai-chatbot')) ?>">AI Chatbot</a></li>
-                  <li class="breadcrumb-item active">Knowledge</li>
+                  <li class="breadcrumb-item"><a href="<?= h(base_url('pages/tetapan-sistem.php?tab=ai-chatbot')) ?>"><?= h(ai_chatbot_knowledge_label('config_ai_chatbot_title', 'AI Chatbot')) ?></a></li>
+                  <li class="breadcrumb-item active"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_breadcrumb_knowledge', 'Knowledge')) ?></li>
                 </ol>
               </div>
             </div>
@@ -1088,23 +1120,23 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
                 <div class="d-flex align-items-center gap-2">
                   <span class="ai-knowledge-icon bg-primary-subtle text-primary"><i class="ri-edit-box-line fs-5"></i></span>
                   <div>
-                    <h5 class="modal-title" id="aiKnowledgeEntryModalLabel"><?= $editRow ? 'Edit Knowledge Item' : 'Create Knowledge Item' ?></h5>
-                    <div class="text-muted small">Curated context mengikut visibility dan group.</div>
+                    <h5 class="modal-title" id="aiKnowledgeEntryModalLabel"><?= h($editRow ? $knowledgeI18n['editTitle'] : $knowledgeI18n['createTitle']) ?></h5>
+                    <div class="text-muted small"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_modal_subtitle', 'Curated context mengikut visibility dan group.')) ?></div>
                   </div>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_close', 'Close')) ?>"></button>
               </div>
               <div class="modal-body">
 
                 <ul class="nav nav-tabs ai-knowledge-entry-tabs" id="aiKnowledgeEntryTabs" role="tablist">
                   <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="manual-knowledge-tab" data-bs-toggle="tab" data-bs-target="#manual-knowledge-pane" type="button" role="tab" aria-controls="manual-knowledge-pane" aria-selected="true">
-                      <i class="ri-edit-box-line me-1"></i>Manual Text
+                      <i class="ri-edit-box-line me-1"></i><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_manual_tab', 'Manual Text')) ?>
                     </button>
                   </li>
                   <li class="nav-item" role="presentation">
                     <button class="nav-link" id="pdf-knowledge-tab" data-bs-toggle="tab" data-bs-target="#pdf-knowledge-pane" type="button" role="tab" aria-controls="pdf-knowledge-pane" aria-selected="false">
-                      <i class="ri-file-pdf-2-line me-1"></i>PDF Source
+                      <i class="ri-file-pdf-2-line me-1"></i><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_pdf_tab', 'PDF Source')) ?>
                     </button>
                   </li>
                 </ul>
@@ -1122,17 +1154,17 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
                   <ul class="nav nav-pills ai-knowledge-modal-subtabs" id="manualKnowledgeSubtabs" role="tablist">
                     <li class="nav-item" role="presentation">
                       <button class="nav-link active" id="manual-content-tab" data-bs-toggle="tab" data-bs-target="#manual-content-pane" type="button" role="tab" aria-controls="manual-content-pane" aria-selected="true">
-                        <i class="ri-file-text-line me-1"></i>Content
+                        <i class="ri-file-text-line me-1"></i><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_content_tab', 'Content')) ?>
                       </button>
                     </li>
                     <li class="nav-item" role="presentation">
                       <button class="nav-link" id="manual-access-tab" data-bs-toggle="tab" data-bs-target="#manual-access-pane" type="button" role="tab" aria-controls="manual-access-pane" aria-selected="false">
-                        <i class="ri-shield-user-line me-1"></i>Access
+                        <i class="ri-shield-user-line me-1"></i><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_access_tab', 'Access')) ?>
                       </button>
                     </li>
                     <li class="nav-item" role="presentation">
                       <button class="nav-link" id="manual-review-tab" data-bs-toggle="tab" data-bs-target="#manual-review-pane" type="button" role="tab" aria-controls="manual-review-pane" aria-selected="false">
-                        <i class="ri-calendar-check-line me-1"></i>Review
+                        <i class="ri-calendar-check-line me-1"></i><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_review_tab', 'Review')) ?>
                       </button>
                     </li>
                   </ul>
@@ -1141,22 +1173,22 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
                     <div class="tab-content ai-knowledge-subtab-content">
                     <div class="tab-pane fade show active ai-knowledge-modal-section" id="manual-content-pane" role="tabpanel" aria-labelledby="manual-content-tab" tabindex="0">
                   <div class="mb-3">
-                    <label class="form-label fw-semibold" for="knowledge_title">Title <span class="text-danger">*</span></label>
+                    <label class="form-label fw-semibold" for="knowledge_title"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_title_label', 'Title')) ?> <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="knowledge_title" name="title" maxlength="255" required value="<?= h((string)($editRow['f_title'] ?? '')) ?>">
                   </div>
 
                   <div class="mb-3">
-                    <label class="form-label fw-semibold" for="knowledge_question">Question</label>
+                    <label class="form-label fw-semibold" for="knowledge_question"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_question_label', 'Question')) ?></label>
                     <textarea class="form-control" id="knowledge_question" name="question" rows="2" maxlength="500"><?= h((string)($editRow['f_question'] ?? '')) ?></textarea>
                   </div>
 
                   <div class="mb-3">
-                    <label class="form-label fw-semibold" for="knowledge_answer">Answer <span class="text-danger">*</span></label>
+                    <label class="form-label fw-semibold" for="knowledge_answer"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_answer_label', 'Answer')) ?> <span class="text-danger">*</span></label>
                     <textarea class="form-control" id="knowledge_answer" name="answer" rows="8" required><?= h((string)($editRow['f_answer'] ?? '')) ?></textarea>
                   </div>
 
                   <div>
-                    <label class="form-label fw-semibold" for="knowledge_tags">Tags</label>
+                    <label class="form-label fw-semibold" for="knowledge_tags"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_tags_label', 'Tags')) ?></label>
                     <input type="text" class="form-control" id="knowledge_tags" name="tags" maxlength="500" placeholder="login, dashboard, sop" value="<?= h((string)($editRow['f_tags'] ?? '')) ?>">
                   </div>
                   </div>
@@ -1164,7 +1196,7 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
                     <div class="tab-pane fade ai-knowledge-modal-section" id="manual-access-pane" role="tabpanel" aria-labelledby="manual-access-tab" tabindex="0">
                   <div class="row g-2">
                     <div class="col-md-6">
-                      <label class="form-label fw-semibold" for="knowledge_language">Language</label>
+                      <label class="form-label fw-semibold" for="knowledge_language"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_language_label', 'Language')) ?></label>
                       <select class="form-select" id="knowledge_language" name="language">
                         <?php foreach ($languageOptions as $value => $label): ?>
                           <option value="<?= h($value) ?>" <?= ($selectedLanguage === $value) ? 'selected' : '' ?>><?= h($label) ?></option>
@@ -1172,7 +1204,7 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
                       </select>
                     </div>
                     <div class="col-md-6">
-                      <label class="form-label fw-semibold" for="knowledge_status">Status</label>
+                      <label class="form-label fw-semibold" for="knowledge_status"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_status_label', 'Status')) ?></label>
                       <select class="form-select" id="knowledge_status" name="status">
                         <?php foreach (['draft' => 'Draft', 'active' => 'Active', 'archived' => 'Archived'] as $value => $label): ?>
                           <option value="<?= h($value) ?>" <?= ((string)($editRow['f_status'] ?? 'draft') === $value) ? 'selected' : '' ?>><?= h($label) ?></option>
@@ -1183,7 +1215,7 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
 
                   <div class="row g-2 mt-1">
                     <div class="col-md-6">
-                      <label class="form-label fw-semibold" for="knowledge_visibility">Visibility</label>
+                      <label class="form-label fw-semibold" for="knowledge_visibility"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_visibility_label', 'Visibility')) ?></label>
                       <select class="form-select" id="knowledge_visibility" name="visibility">
                         <?php foreach (['selected_groups' => 'Selected groups', 'all_authenticated' => 'All authenticated', 'super_admin_only' => 'Super admin only'] as $value => $label): ?>
                           <option value="<?= h($value) ?>" <?= ((string)($editRow['f_visibility'] ?? 'selected_groups') === $value) ? 'selected' : '' ?>><?= h($label) ?></option>
@@ -1191,13 +1223,13 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
                       </select>
                     </div>
                     <div class="col-md-6">
-                      <label class="form-label fw-semibold" for="knowledge_priority">Priority</label>
+                      <label class="form-label fw-semibold" for="knowledge_priority"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_priority_label', 'Priority')) ?></label>
                       <input type="number" class="form-control" id="knowledge_priority" name="priority" min="1" max="9999" value="<?= h((string)($editRow['f_priority'] ?? 100)) ?>">
                     </div>
                   </div>
 
                   <div class="mb-3 mt-3">
-                    <label class="form-label fw-semibold">Allowed groups</label>
+                    <label class="form-label fw-semibold"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_allowed_groups_label', 'Allowed groups')) ?></label>
                     <div class="ai-knowledge-group-list">
                       <?php if ($groups === []): ?>
                         <div class="text-muted small">Tiada group ditemui.</div>
@@ -1215,7 +1247,7 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
                         </div>
                       <?php endforeach; ?>
                     </div>
-                    <div class="form-text">Wajib jika visibility ialah selected groups.</div>
+                    <div class="form-text"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_allowed_groups_help', 'Wajib jika visibility ialah selected groups.')) ?></div>
                   </div>
                     </div>
 
@@ -1224,21 +1256,21 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
                     <div class="d-flex align-items-center gap-2 mb-2">
                       <span class="ai-knowledge-icon bg-info-subtle text-info"><i class="ri-file-list-3-line fs-5"></i></span>
                       <div>
-                        <div class="fw-semibold">Source & Review</div>
-                        <div class="text-muted small">Metadata untuk versioning dan semakan berkala.</div>
+                        <div class="fw-semibold"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_source_review_title', 'Source & Review')) ?></div>
+                        <div class="text-muted small"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_source_review_help', 'Metadata untuk versioning dan semakan berkala.')) ?></div>
                       </div>
                     </div>
                     <div class="mb-3">
-                      <label class="form-label fw-semibold" for="knowledge_source_title">Source title</label>
+                      <label class="form-label fw-semibold" for="knowledge_source_title"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_source_title_label', 'Source title')) ?></label>
                       <input type="text" class="form-control" id="knowledge_source_title" name="source_title" maxlength="255" placeholder="Contoh: Polisi Login Pengguna v1" value="<?= h((string)($editRow['f_sourceTitle'] ?? '')) ?>">
                     </div>
                     <div class="row g-2">
                       <div class="col-md-6">
-                        <label class="form-label fw-semibold" for="knowledge_version">Version</label>
+                        <label class="form-label fw-semibold" for="knowledge_version"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_version_label', 'Version')) ?></label>
                         <input type="text" class="form-control" id="knowledge_version" name="version" maxlength="50" placeholder="v1.0" value="<?= h((string)($editRow['f_version'] ?? '')) ?>">
                       </div>
                       <div class="col-md-6">
-                        <label class="form-label fw-semibold" for="knowledge_review_status">Review status</label>
+                        <label class="form-label fw-semibold" for="knowledge_review_status"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_review_status_label', 'Review status')) ?></label>
                         <select class="form-select" id="knowledge_review_status" name="review_status">
                           <?php foreach ($reviewStatusOptions as $value => $label): ?>
                             <option value="<?= h($value) ?>" <?= ($selectedReviewStatus === $value) ? 'selected' : '' ?>><?= h($label) ?></option>
@@ -1248,11 +1280,11 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
                     </div>
                     <div class="row g-2 mt-1">
                       <div class="col-md-6">
-                        <label class="form-label fw-semibold" for="knowledge_effective_date">Effective date</label>
+                        <label class="form-label fw-semibold" for="knowledge_effective_date"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_effective_date_label', 'Effective date')) ?></label>
                         <input type="date" class="form-control" id="knowledge_effective_date" name="effective_date" value="<?= h((string)($editRow['f_effectiveDate'] ?? '')) ?>">
                       </div>
                       <div class="col-md-6">
-                        <label class="form-label fw-semibold" for="knowledge_review_due_date">Review due date</label>
+                        <label class="form-label fw-semibold" for="knowledge_review_due_date"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_review_due_date_label', 'Review due date')) ?></label>
                         <input type="date" class="form-control" id="knowledge_review_due_date" name="review_due_date" value="<?= h((string)($editRow['f_reviewDueDate'] ?? '')) ?>">
                       </div>
                     </div>
@@ -1269,7 +1301,7 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
                     <ul class="nav nav-pills ai-knowledge-modal-subtabs" id="pdfKnowledgeSubtabs" role="tablist">
                       <li class="nav-item" role="presentation">
                         <button class="nav-link active" id="pdf-upload-tab" data-bs-toggle="tab" data-bs-target="#pdf-upload-pane" type="button" role="tab" aria-controls="pdf-upload-pane" aria-selected="true">
-                          <i class="ri-upload-cloud-line me-1"></i>Upload
+                          <i class="ri-upload-cloud-line me-1"></i><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_upload_pdf', 'Upload PDF')) ?>
                         </button>
                       </li>
                       <li class="nav-item" role="presentation">
@@ -1291,24 +1323,24 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
                         <div class="d-flex align-items-start gap-2">
                           <span class="ai-knowledge-icon bg-danger-subtle text-danger"><i class="ri-file-pdf-2-line fs-5"></i></span>
                           <div>
-                            <div class="fw-semibold">Upload PDF policy or system flow</div>
-                            <div class="text-muted small">PDF sahaja. Saiz maksimum ikut Tetapan Sistem: <?= h((string)$pdfUploadMaxMb) ?> MB.</div>
+                            <div class="fw-semibold"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_pdf_upload_title', 'Upload PDF policy or system flow')) ?></div>
+                            <div class="text-muted small"><?= h(sprintf(ai_chatbot_knowledge_label('aiChatbotKnowledge_pdf_upload_help', 'PDF sahaja. Saiz maksimum ikut Tetapan Sistem: %s MB.'), (string)$pdfUploadMaxMb)) ?></div>
                           </div>
                         </div>
                         <div class="mt-3">
-                          <label class="form-label fw-semibold" for="knowledge_pdf_file">PDF file</label>
+                          <label class="form-label fw-semibold" for="knowledge_pdf_file"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_pdf_file_label', 'PDF file')) ?></label>
                           <input type="file" class="form-control" id="knowledge_pdf_file" name="knowledge_pdf_file" accept="application/pdf,.pdf" required <?= !$sourceTableAvailable ? 'disabled' : '' ?>>
                         </div>
                       </div>
 
                       <div class="mb-3">
-                        <label class="form-label fw-semibold" for="pdf_source_title">Source title <span class="text-danger">*</span></label>
+                        <label class="form-label fw-semibold" for="pdf_source_title"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_source_title_label', 'Source title')) ?> <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="pdf_source_title" name="source_title" maxlength="255" placeholder="Contoh: Polisi Keselamatan Sistem" required <?= !$sourceTableAvailable ? 'disabled' : '' ?>>
                       </div>
 
                       <div class="row g-2">
                         <div class="col-md-6">
-                          <label class="form-label fw-semibold" for="pdf_language">Language</label>
+                          <label class="form-label fw-semibold" for="pdf_language"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_language_label', 'Language')) ?></label>
                           <select class="form-select" id="pdf_language" name="language" <?= !$sourceTableAvailable ? 'disabled' : '' ?>>
                             <?php foreach ($languageOptions as $value => $label): ?>
                               <option value="<?= h($value) ?>"><?= h($label) ?></option>
@@ -1316,14 +1348,14 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
                           </select>
                         </div>
                         <div class="col-md-6">
-                          <label class="form-label fw-semibold" for="pdf_priority">Priority</label>
+                          <label class="form-label fw-semibold" for="pdf_priority"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_priority_label', 'Priority')) ?></label>
                           <input type="number" class="form-control" id="pdf_priority" name="priority" min="1" max="9999" value="100" <?= !$sourceTableAvailable ? 'disabled' : '' ?>>
                         </div>
                       </div>
 
                       <div class="row g-2 mt-1">
                         <div class="col-md-6">
-                          <label class="form-label fw-semibold" for="pdf_visibility">Visibility</label>
+                          <label class="form-label fw-semibold" for="pdf_visibility"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_visibility_label', 'Visibility')) ?></label>
                           <select class="form-select" id="pdf_visibility" name="visibility" <?= !$sourceTableAvailable ? 'disabled' : '' ?>>
                             <option value="selected_groups">Selected groups</option>
                             <option value="all_authenticated">All authenticated</option>
@@ -1331,13 +1363,13 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
                           </select>
                         </div>
                         <div class="col-md-6">
-                          <label class="form-label fw-semibold" for="pdf_version">Version</label>
+                          <label class="form-label fw-semibold" for="pdf_version"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_version_label', 'Version')) ?></label>
                           <input type="text" class="form-control" id="pdf_version" name="version" maxlength="50" placeholder="v1.0" <?= !$sourceTableAvailable ? 'disabled' : '' ?>>
                         </div>
                       </div>
 
                       <div class="mb-3 mt-3">
-                        <label class="form-label fw-semibold">Allowed groups</label>
+                        <label class="form-label fw-semibold"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_allowed_groups_label', 'Allowed groups')) ?></label>
                         <div class="ai-knowledge-group-list">
                           <?php if ($groups === []): ?>
                             <div class="text-muted small">Tiada group ditemui.</div>
@@ -1358,29 +1390,29 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
 
                       <div class="row g-2">
                         <div class="col-md-6">
-                          <label class="form-label fw-semibold" for="pdf_effective_date">Effective date</label>
+                          <label class="form-label fw-semibold" for="pdf_effective_date"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_effective_date_label', 'Effective date')) ?></label>
                           <input type="date" class="form-control" id="pdf_effective_date" name="effective_date" <?= !$sourceTableAvailable ? 'disabled' : '' ?>>
                         </div>
                         <div class="col-md-6">
-                          <label class="form-label fw-semibold" for="pdf_review_due_date">Review due date</label>
+                          <label class="form-label fw-semibold" for="pdf_review_due_date"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_review_due_date_label', 'Review due date')) ?></label>
                           <input type="date" class="form-control" id="pdf_review_due_date" name="review_due_date" <?= !$sourceTableAvailable ? 'disabled' : '' ?>>
                         </div>
                       </div>
 
                       <div class="mb-3 mt-3">
-                        <label class="form-label fw-semibold" for="pdf_tags">Tags</label>
+                        <label class="form-label fw-semibold" for="pdf_tags"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_tags_label', 'Tags')) ?></label>
                         <input type="text" class="form-control" id="pdf_tags" name="tags" maxlength="500" placeholder="policy, sop, workflow" <?= !$sourceTableAvailable ? 'disabled' : '' ?>>
                       </div>
 
                       <div class="ai-knowledge-upload-note mb-3">
                         <i class="ri-information-line me-1"></i>
-                        PDF akan disimpan sebagai draft source. Sistem akan cuba extract text dan jana chunk draft selepas upload.
+                        <?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_pdf_note', 'PDF akan disimpan sebagai draft source. Sistem akan cuba extract text dan jana chunk draft selepas upload.')) ?>
                       </div>
 
                       <?php if (!$sourceTableAvailable): ?>
-                        <div class="alert alert-warning mb-3">Table PDF source belum tersedia. Sila pastikan migration schema PDF sudah dijalankan.</div>
+                        <div class="alert alert-warning mb-3"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_pdf_source_missing', 'Table PDF source belum tersedia. Sila pastikan migration schema PDF sudah dijalankan.')) ?></div>
                       <?php elseif (!$chunkTableAvailable): ?>
-                        <div class="alert alert-warning mb-3">Table PDF chunk belum tersedia. Upload dan extraction boleh berjalan, tetapi chunk tidak akan dijana.</div>
+                        <div class="alert alert-warning mb-3"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_pdf_chunk_missing', 'Table PDF chunk belum tersedia. Upload dan extraction boleh berjalan, tetapi chunk tidak akan dijana.')) ?></div>
                       <?php endif; ?>
                     </form>
                       </div>
@@ -1389,8 +1421,8 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
                     <div>
                       <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
                         <div>
-                          <div class="fw-semibold">Uploaded PDF Sources</div>
-                          <div class="text-muted small">Text yang berjaya diekstrak disimpan sebagai sidecar `.txt`; chunk hanya digunakan oleh chatbot selepas PDF source diaktifkan.</div>
+                          <div class="fw-semibold"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_uploaded_pdf_title', 'Uploaded PDF Sources')) ?></div>
+                          <div class="text-muted small"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_uploaded_pdf_help', 'Text yang berjaya diekstrak disimpan sebagai sidecar .txt; chunk hanya digunakan oleh chatbot selepas PDF source diaktifkan.')) ?></div>
                         </div>
                         <span class="badge bg-primary-subtle text-primary"><?= h((string)count($pdfSources)) ?></span>
                       </div>
@@ -1398,16 +1430,16 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
                         <table class="table table-sm table-striped ai-knowledge-table mb-0">
                           <thead>
                             <tr>
-                              <th>Title</th>
+                              <th><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_table_title', 'Title')) ?></th>
                               <th>File</th>
-                              <th>Status</th>
-                              <th>Retrieval</th>
-                              <th class="text-end">Actions</th>
+                              <th><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_status_label', 'Status')) ?></th>
+                              <th><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_table_retrieval', 'Retrieval')) ?></th>
+                              <th class="text-end"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_table_actions', 'Actions')) ?></th>
                             </tr>
                           </thead>
                           <tbody>
                             <?php if ($pdfSources === []): ?>
-                              <tr><td colspan="5" class="text-muted text-center">Tiada PDF source dimuat naik.</td></tr>
+                              <tr><td colspan="5" class="text-muted text-center"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_no_pdf_source', 'Tiada PDF source dimuat naik.')) ?></td></tr>
                             <?php endif; ?>
                             <?php foreach (array_slice($pdfSources, 0, 8) as $source): ?>
                               <?php
@@ -1493,15 +1525,15 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
               </div>
               <div class="modal-footer">
                 <div class="text-muted small">
-                  <i class="ri-lock-line me-1"></i>Content hanya digunakan selepas status dan visibility membenarkan retrieval.
+                  <i class="ri-lock-line me-1"></i><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_footer_note', 'Content hanya digunakan selepas status dan visibility membenarkan retrieval.')) ?>
                 </div>
                 <div class="ai-knowledge-modal-actions">
-                  <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Close</button>
+                  <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_close', 'Close')) ?></button>
                   <button type="submit" class="btn btn-primary px-4" form="manualKnowledgeForm" id="manualKnowledgeSubmit" <?= !$tableAvailable ? 'disabled' : '' ?>>
-                    <i class="ri-save-line me-1"></i><?= $editRow ? 'Update Knowledge' : 'Save Knowledge' ?>
+                    <i class="ri-save-line me-1"></i><?= h($editRow ? ai_chatbot_knowledge_label('aiChatbotKnowledge_update', 'Update Knowledge') : ai_chatbot_knowledge_label('aiChatbotKnowledge_save', 'Save Knowledge')) ?>
                   </button>
                   <button type="submit" class="btn btn-primary px-4 d-none" form="pdfKnowledgeForm" id="pdfKnowledgeSubmit" <?= !$sourceTableAvailable ? 'disabled' : '' ?>>
-                    <i class="ri-upload-cloud-line me-1"></i>Upload PDF
+                    <i class="ri-upload-cloud-line me-1"></i><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_upload_pdf', 'Upload PDF')) ?>
                   </button>
                 </div>
               </div>
@@ -1514,15 +1546,15 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
               <div class="card-header">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                   <div>
-                    <h5 class="card-title mb-1">Knowledge Registry</h5>
-                    <p class="text-muted mb-0">Active items sahaja dihantar kepada provider selepas filter language dan visibility.</p>
+                    <h5 class="card-title mb-1"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_registry_title', 'Knowledge Registry')) ?></h5>
+                    <p class="text-muted mb-0"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_registry_subtitle', 'Active items sahaja dihantar kepada provider selepas filter language dan visibility.')) ?></p>
                   </div>
                   <div class="d-flex flex-wrap gap-2">
                     <button type="button" class="btn btn-primary px-4" id="aiKnowledgeCreateButton" data-bs-toggle="modal" data-bs-target="#aiKnowledgeEntryModal">
-                      <i class="ri-add-line me-1"></i>Create Knowledge Item
+                      <i class="ri-add-line me-1"></i><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_create_button', 'Create Knowledge Item')) ?>
                     </button>
                     <a class="btn btn-outline-secondary px-4" id="aiKnowledgeSettingsButton" href="<?= h(base_url('pages/tetapan-sistem.php?tab=ai-chatbot')) ?>">
-                      <i class="ri-settings-3-line me-1"></i>AI Chatbot Settings
+                      <i class="ri-settings-3-line me-1"></i><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_settings_button', 'AI Chatbot Settings')) ?>
                     </a>
                   </div>
                 </div>
@@ -1533,12 +1565,12 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
                   <table class="table table-striped ai-knowledge-table" id="aiKnowledgeTable">
                     <thead>
                       <tr>
-                        <th>Title</th>
-                        <th>Context</th>
-                        <th>Visibility</th>
-                        <th>Status</th>
-                        <th>Retrieval</th>
-                        <th class="text-end">Actions</th>
+                        <th><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_table_title', 'Title')) ?></th>
+                        <th><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_table_context', 'Context')) ?></th>
+                        <th><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_visibility_label', 'Visibility')) ?></th>
+                        <th><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_status_label', 'Status')) ?></th>
+                        <th><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_table_retrieval', 'Retrieval')) ?></th>
+                        <th class="text-end"><?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_table_actions', 'Actions')) ?></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1576,7 +1608,7 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
                                 <div class="small text-muted"><?= h((string)($row['f_question'] ?? '')) ?></div>
                               <?php endif; ?>
                             </div>
-                            <button type="button" class="ai-knowledge-expand d-none" data-knowledge-toggle>Show</button>
+                            <button type="button" class="ai-knowledge-expand d-none" data-knowledge-toggle><?= h($knowledgeI18n['show']) ?></button>
                           </div>
                         </td>
                         <td class="ai-knowledge-answer align-top">
@@ -1588,7 +1620,7 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
                                 <div class="small text-muted mt-1">Source: <?= h($sourceTitle !== '' ? $sourceTitle : '-') ?><?= $version !== '' ? ' / ' . h($version) : '' ?></div>
                               <?php endif; ?>
                             </div>
-                            <button type="button" class="ai-knowledge-expand d-none" data-knowledge-toggle>Show</button>
+                            <button type="button" class="ai-knowledge-expand d-none" data-knowledge-toggle><?= h($knowledgeI18n['show']) ?></button>
                           </div>
                         </td>
                         <td class="align-top">
@@ -1609,7 +1641,7 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
                         </td>
                         <td class="align-top">
                           <div class="ai-knowledge-actions">
-                            <button type="button" class="btn btn-sm btn-outline-primary ai-knowledge-action-btn" data-ai-knowledge-edit="<?= h($publicId) ?>" data-bs-toggle="tooltip" data-bs-title="Edit knowledge">
+                            <button type="button" class="btn btn-sm btn-outline-primary ai-knowledge-action-btn" data-ai-knowledge-edit="<?= h($publicId) ?>" data-bs-toggle="tooltip" data-bs-title="<?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_edit_tooltip', 'Edit knowledge')) ?>">
                               <i class="ri-pencil-line" aria-hidden="true"></i><span class="visually-hidden">Edit</span>
                             </button>
                             <?php foreach (['active' => 'Activate', 'draft' => 'Draft', 'archived' => 'Archive'] as $action => $label): ?>
@@ -1636,7 +1668,7 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
                               <input type="hidden" name="csrf_token" value="<?= h((string)$_SESSION['csrf_token']) ?>">
                               <input type="hidden" name="public_id" value="<?= h($publicId) ?>">
                               <input type="hidden" name="action" value="delete">
-                              <button type="submit" class="btn btn-sm btn-outline-danger ai-knowledge-action-btn" data-bs-toggle="tooltip" data-bs-title="Delete knowledge">
+                              <button type="submit" class="btn btn-sm btn-outline-danger ai-knowledge-action-btn" data-bs-toggle="tooltip" data-bs-title="<?= h(ai_chatbot_knowledge_label('aiChatbotKnowledge_delete_tooltip', 'Delete knowledge')) ?>">
                                 <i class="ri-delete-bin-line" aria-hidden="true"></i><span class="visually-hidden">Delete</span>
                               </button>
                             </form>
@@ -1664,6 +1696,7 @@ $PAGE_TITLE = 'AI Chatbot Knowledge Manager';
 <?php include __DIR__ . '/../includes/script.php'; ?>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  var i18n = <?= json_encode($knowledgeI18n, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
   var knowledgeTable = null;
   var entryModal = document.getElementById('aiKnowledgeEntryModal');
   var manualForm = document.getElementById('manualKnowledgeForm');
@@ -1696,9 +1729,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (window.Swal && typeof window.Swal.fire === 'function') {
       return window.Swal.fire({
         icon: type || 'success',
-        title: type === 'error' ? 'Tidak berjaya' : 'Berjaya',
+        title: type === 'error' ? i18n.errorTitle : i18n.successTitle,
         text: message || '',
-        confirmButtonText: 'Close',
+        confirmButtonText: i18n.close,
         customClass: {
           confirmButton: 'btn btn-primary px-4'
         },
@@ -1730,7 +1763,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
       }
       clamp.classList.remove('is-expanded');
-      toggle.textContent = 'Show';
+      toggle.textContent = i18n.show;
       window.requestAnimationFrame(function () {
         var isOverflowing = clamp.scrollHeight > clamp.clientHeight + 2;
         toggle.classList.toggle('d-none', !isOverflowing);
@@ -1741,7 +1774,7 @@ document.addEventListener('DOMContentLoaded', function () {
       toggle.dataset.bound = '1';
       toggle.addEventListener('click', function () {
         var expanded = clamp.classList.toggle('is-expanded');
-        toggle.textContent = expanded ? 'Hide' : 'Show';
+        toggle.textContent = expanded ? i18n.hide : i18n.show;
         if (knowledgeTable && typeof knowledgeTable.columns === 'function') {
           knowledgeTable.columns.adjust();
         }
@@ -1762,7 +1795,7 @@ document.addEventListener('DOMContentLoaded', function () {
           pageLength: 10,
           order: [],
           responsive: true,
-          searchPlaceholder: 'Search knowledge...'
+          searchPlaceholder: i18n.searchPlaceholder || 'Search knowledge...'
         })
       : {
           dom: knowledgeDom,
@@ -1777,7 +1810,7 @@ document.addEventListener('DOMContentLoaded', function () {
     knowledgeTable = jQuery('#aiKnowledgeTable').DataTable(options);
     if (window.DataTableStandard) {
       window.DataTableStandard.decorate('#aiKnowledgeTable', {
-        searchPlaceholder: 'Search knowledge...'
+        searchPlaceholder: i18n.searchPlaceholder || 'Search knowledge...'
       });
     }
   }
@@ -1797,7 +1830,7 @@ document.addEventListener('DOMContentLoaded', function () {
     })
       .then(function (response) {
         if (!response.ok) {
-          throw new Error('Gagal memuat semula datatable.');
+          throw new Error(i18n.reloadTableError);
         }
         return response.text();
       })
@@ -1806,7 +1839,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var nextBody = parsed.querySelector('#aiKnowledgeTable tbody');
         var currentBody = document.querySelector('#aiKnowledgeTable tbody');
         if (!nextBody || !currentBody) {
-          throw new Error('Datatable tidak dapat dikemas kini.');
+          throw new Error(i18n.updateTableError);
         }
         destroyKnowledgeDataTable();
         currentBody.innerHTML = nextBody.innerHTML;
@@ -1834,7 +1867,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }).then(function (response) {
       return response.json().then(function (payload) {
         if (!response.ok || !payload.ok) {
-          throw new Error(payload.message || 'Tindakan tidak berjaya diproses.');
+          throw new Error(payload.message || i18n.actionFailed);
         }
         return payload;
       });
@@ -1933,10 +1966,10 @@ document.addEventListener('DOMContentLoaded', function () {
     var isEdit = mode === 'edit';
     var title = document.getElementById('aiKnowledgeEntryModalLabel');
     if (title) {
-      title.textContent = isEdit ? 'Edit Knowledge Item' : 'Create Knowledge Item';
+      title.textContent = isEdit ? i18n.editTitle : i18n.createTitle;
     }
     if (manualSubmit) {
-      manualSubmit.innerHTML = '<i class="ri-save-line me-1"></i>' + (isEdit ? 'Update Knowledge' : 'Save Knowledge');
+      manualSubmit.innerHTML = '<i class="ri-save-line me-1"></i>' + (isEdit ? <?= json_encode(ai_chatbot_knowledge_label('aiChatbotKnowledge_update', 'Update Knowledge'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?> : <?= json_encode(ai_chatbot_knowledge_label('aiChatbotKnowledge_save', 'Save Knowledge'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
     }
   }
 
@@ -2002,7 +2035,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var settingsButton = document.getElementById('aiKnowledgeSettingsButton');
   if (createButton) {
     createButton.addEventListener('click', function () {
-      var stopCreateLoading = setButtonLoading(createButton, true, 'Opening');
+      var stopCreateLoading = setButtonLoading(createButton, true, i18n.opening);
       if (entryModal) {
         entryModal.addEventListener('shown.bs.modal', function handleCreateShown() {
           entryModal.removeEventListener('shown.bs.modal', handleCreateShown);
@@ -2016,7 +2049,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   if (settingsButton) {
     settingsButton.addEventListener('click', function () {
-      setButtonLoading(settingsButton, true, 'Opening');
+      setButtonLoading(settingsButton, true, i18n.opening);
     });
   }
 
@@ -2048,7 +2081,7 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function (response) {
         return response.json().then(function (payload) {
           if (!response.ok || !payload.ok) {
-            throw new Error(payload.message || 'Knowledge item tidak dapat dibuka.');
+            throw new Error(payload.message || i18n.openFailed);
           }
           return payload.item || {};
         });
@@ -2058,7 +2091,7 @@ document.addEventListener('DOMContentLoaded', function () {
         openKnowledgeModal();
       })
       .catch(function (error) {
-        void fireKnowledgeAlert('error', error.message || 'Knowledge item tidak dapat dibuka.');
+        void fireKnowledgeAlert('error', error.message || i18n.openFailed);
       })
       .finally(function () {
         stopEditLoading();
@@ -2073,12 +2106,12 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       var originalButtonHtml = manualSubmit ? manualSubmit.innerHTML : '';
       if (manualSubmit) {
-        manualSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Saving';
+        manualSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>' + i18n.saving;
       }
 
       postKnowledgeForm(manualForm)
         .then(function (payload) {
-          return fireKnowledgeAlert(payload.type || 'success', payload.message || 'Knowledge item berjaya disimpan.').then(function () {
+          return fireKnowledgeAlert(payload.type || 'success', payload.message || i18n.saveSuccess).then(function () {
             if (window.history && window.location.search.indexOf('edit=') !== -1) {
               window.history.replaceState({}, document.title, window.location.pathname);
             }
@@ -2090,7 +2123,7 @@ document.addEventListener('DOMContentLoaded', function () {
           });
         })
         .catch(function (error) {
-          return fireKnowledgeAlert('error', error.message || 'Knowledge item tidak berjaya disimpan.');
+          return fireKnowledgeAlert('error', error.message || i18n.saveFailed);
         })
         .finally(function () {
           if (manualSubmit) {
@@ -2110,17 +2143,17 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       var originalButtonHtml = pdfSubmit ? pdfSubmit.innerHTML : '';
       if (pdfSubmit) {
-        pdfSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Uploading';
+        pdfSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>' + i18n.uploading;
       }
       postKnowledgeForm(pdfForm)
         .then(function (payload) {
-          return fireKnowledgeAlert(payload.type || 'success', payload.message || 'PDF source berjaya diproses.').then(function () {
+          return fireKnowledgeAlert(payload.type || 'success', payload.message || i18n.pdfSuccess).then(function () {
             pdfForm.reset();
             return refreshKnowledgeTable();
           });
         })
         .catch(function (error) {
-          return fireKnowledgeAlert('error', error.message || 'PDF source tidak berjaya diproses.');
+          return fireKnowledgeAlert('error', error.message || i18n.pdfFailed);
         })
         .finally(function () {
           if (pdfSubmit) {
@@ -2148,12 +2181,12 @@ document.addEventListener('DOMContentLoaded', function () {
       var stopActionLoading = setIconButtonLoading(submitter, true);
       postKnowledgeForm(form)
         .then(function (payload) {
-          return fireKnowledgeAlert(payload.type || 'success', payload.message || 'Tindakan berjaya diproses.').then(function () {
+          return fireKnowledgeAlert(payload.type || 'success', payload.message || i18n.actionSuccess).then(function () {
             return refreshKnowledgeTable();
           });
         })
         .catch(function (error) {
-          return fireKnowledgeAlert('error', error.message || 'Tindakan tidak berjaya diproses.');
+          return fireKnowledgeAlert('error', error.message || i18n.actionFailed);
         })
         .finally(function () {
           stopActionLoading();
@@ -2163,11 +2196,11 @@ document.addEventListener('DOMContentLoaded', function () {
     if (confirmDelete && window.Swal && typeof window.Swal.fire === 'function') {
       window.Swal.fire({
         icon: 'warning',
-        title: 'Padam knowledge item?',
-        text: 'Tindakan ini tidak boleh dibatalkan.',
+        title: i18n.deleteConfirmTitle,
+        text: i18n.deleteConfirmText,
         showCancelButton: true,
-        confirmButtonText: 'Delete',
-        cancelButtonText: 'Cancel',
+        confirmButtonText: i18n.deleteConfirmButton,
+        cancelButtonText: i18n.cancel,
         customClass: {
           confirmButton: 'btn btn-danger px-4',
           cancelButton: 'btn btn-outline-secondary px-4 ms-2'
