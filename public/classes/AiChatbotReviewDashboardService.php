@@ -144,6 +144,15 @@ final class AiChatbotReviewDashboardService
                 'blocked_detail' => $this->boolValue($meta['blocked_detail'] ?? false),
                 'knowledge_items_in_prompt' => $this->intValue($meta['knowledge_items_in_prompt'] ?? null),
                 'requires_grounded_answer' => $this->boolValue($meta['requires_grounded_answer'] ?? false),
+                'project_context' => is_array($meta['project_context'] ?? null) ? $meta['project_context'] : [],
+                'project_provider' => (string)($meta['project_context']['provider'] ?? ''),
+                'project_provider_label' => (string)($meta['project_context']['provider_label'] ?? ''),
+                'project_match_score' => $this->intValue($meta['project_context']['match_score'] ?? null),
+                'project_intent' => (string)($meta['project_context']['intent'] ?? ''),
+                'project_scope' => (string)($meta['project_context']['scope'] ?? ''),
+                'project_row_count' => $this->intValue($meta['project_context']['row_count'] ?? null),
+                'project_has_records' => $this->boolValue($meta['project_context']['has_records'] ?? false),
+                'project_denied_reason' => (string)($meta['project_context']['denied_reason'] ?? ''),
             ];
         }
 

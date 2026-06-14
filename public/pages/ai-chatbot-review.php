@@ -85,6 +85,12 @@ function ai_review_render_rows(array $rows, bool $showError = false): void
           <td>
             <div>Knowledge: <?= h((string)((int)($row['knowledge_items_in_prompt'] ?? 0))) ?></div>
             <div class="small text-muted">Msg len: <?= h((string)((int)($row['message_length'] ?? 0))) ?></div>
+            <?php if (!empty($row['project_provider_label']) || !empty($row['project_provider'])): ?>
+              <div class="mt-1">Project: <span class="fw-semibold"><?= h((string)($row['project_provider_label'] ?: $row['project_provider'])) ?></span></div>
+              <div class="small text-muted">Intent: <?= h((string)($row['project_intent'] ?? '')) ?> • Rows: <?= h((string)((int)($row['project_row_count'] ?? 0))) ?></div>
+            <?php elseif (!empty($row['project_denied_reason'])): ?>
+              <div class="mt-1"><span class="text-danger small">Project context denied: <?= h((string)($row['project_denied_reason'])) ?></span></div>
+            <?php endif; ?>
           </td>
           <?php if ($showError): ?>
             <td>

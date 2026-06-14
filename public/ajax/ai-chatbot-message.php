@@ -198,9 +198,12 @@ try {
     if ($knowledgeContext !== []) {
         $actor['knowledge_context'] = $knowledgeContext;
     }
-    $projectContext = AiChatbotProjectContextRegistry::default()->build($message, $profile, $actor);
-    if ($projectContext !== []) {
-        $actor['project_context'] = $projectContext;
+    $projectContext = [];
+    if (empty($classification['blocked_detail'])) {
+        $projectContext = AiChatbotProjectContextRegistry::default()->build($message, $profile, $actor);
+        if ($projectContext !== []) {
+            $actor['project_context'] = $projectContext;
+        }
     }
     $projectContextMeta = ai_chatbot_project_context_meta($projectContext);
     $suggestedActions = (new AiChatbotActionSuggestionService())->build($message, $systemContext, $classification);
@@ -214,6 +217,40 @@ try {
         'project_context_status' => $projectContextMeta['status'] ?? null,
         'project_context_provider' => $projectContextMeta['provider'] ?? null,
     ];
+
+    // Runtime observability: audit project-context metadata (no raw records)
+    if (function_exists('audit_event')) {
+        $outcome = 'none';
+        if (!empty($projectContextMeta['has_records'])) {
+            $outcome = 'provided';
+        } elseif (!empty($projectContextMeta['denied_reason'])) {
+            $outcome = 'denied';
+        } elseif (($projectContextMeta['status'] ?? '') === 'not_built') {
+            $outcome = 'skipped';
+        }
+
+        audit_event([
+            'event_type' => 'AI_CHATBOT_PROJECT_CONTEXT',
+            'severity' => 'INFO',
+            'outcome' => strtoupper($outcome),
+            'target_type' => 'ai_chatbot',
+            'target_id' => 'prototype',
+            'target_label' => 'AI Chatbot Prototype',
+            'message' => 'Project context metadata emitted for request (no raw rows).',
+            'user_id' => $userId,
+            'actor_label' => $_SESSION['user']['f_nama'] ?? $_SESSION['f_nama'] ?? null,
+            'meta' => [
+                'provider' => $projectContextMeta['provider'] ?? null,
+                'provider_label' => $projectContextMeta['provider_label'] ?? null,
+                'match_score' => $projectContextMeta['match_score'] ?? null,
+                'intent' => $projectContextMeta['intent'] ?? null,
+                'scope' => $projectContextMeta['scope'] ?? null,
+                'row_count' => $projectContextMeta['row_count'] ?? 0,
+                'has_records' => !empty($projectContextMeta['has_records']),
+                'denied_reason' => $projectContextMeta['denied_reason'] ?? null,
+            ],
+        ]);
+    }
 
     $result = $service->sendMessage($message, $actor);
     if (!empty($publicConfig['store_conversations']) && $conversationSessionId) {

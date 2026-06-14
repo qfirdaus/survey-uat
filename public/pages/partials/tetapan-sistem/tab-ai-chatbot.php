@@ -368,6 +368,19 @@ $aiProviderDefaults = [
                     </div>
                   </div>
                 </div>
+                <div class="col-lg-4">
+                  <div class="p-3 rounded border bg-light-subtle h-100">
+                    <div class="text-muted small mb-1">Provider context status</div>
+                    <div class="fw-semibold text-break"><?= htmlspecialchars((string)($projectContextDiagnostic['provider_context_status'] ?? ''), ENT_QUOTES, 'UTF-8') ?: '-' ?></div>
+                  </div>
+                </div>
+                <div class="col-lg-4">
+                  <div class="p-3 rounded border bg-light-subtle h-100">
+                    <div class="text-muted small mb-1">Project rows (sample cap)</div>
+                    <div class="fw-semibold"><?= (int)($projectContextDiagnostic['row_count'] ?? 0) ?></div>
+                    <div class="small text-muted">Denied: <?= htmlspecialchars((string)($projectContextDiagnostic['denied_reason'] ?? '-'), ENT_QUOTES, 'UTF-8') ?></div>
+                  </div>
+                </div>
               </div>
 
               <div class="table-responsive rounded border">
