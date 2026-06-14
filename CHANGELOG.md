@@ -6,6 +6,30 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+## [1.8.3] - 2026-06-14
+
+### Added
+- Added AI Chatbot Knowledge Manager at `public/pages/ai-chatbot-knowledge.php` for maintaining manual curated knowledge with language, visibility, allowed groups, review metadata, status controls, AJAX save/edit/status/delete flows, SweetAlert feedback, local loading states, and compact DataTables presentation.
+- Added PDF knowledge source support with `tbl_ai_chat_knowledge_source`, `tbl_ai_chat_knowledge_chunk`, PDF-only upload validation, text extraction, draft chunk generation, source/chunk activation controls, and filtered retrieval from active PDF chunks.
+- Added AI Chatbot Review Dashboard at `public/pages/ai-chatbot-review.php` for metadata-only governance review of no-knowledge questions, review queues, provider failures, outcomes, categories, and latency.
+- Added optional conversation persistence through `AiChatbotConversationRepository` for chatbot sessions and messages, with raw message content controlled by storage settings.
+- Added controlled chatbot implementation and database documentation, including PDF schema, core knowledge seed, implementation readiness notes, and Docker-based read-only DB inspection guidance.
+
+### Changed
+- Changed AI Chatbot knowledge retrieval to hybrid keyword-ranked matching across manual knowledge and active PDF chunks while preserving language, visibility, group, and super-admin filters before provider prompt construction.
+- Changed AI Chatbot widget responses to show answer text only, removing suggested navigation action links from the user-facing chat bubble.
+- Changed AI Chatbot usage persistence to degrade safely when optional usage tables are not installed.
+- Changed System Settings > AI Chatbot links to expose Knowledge Manager and Review Dashboard entry points.
+- Changed Knowledge Manager UI to use modal-based create/edit, SweetAlert feedback above modals, no full-page refresh for supported actions, icon actions with tooltips/loaders, compact cards, and standardized two-line row clamping.
+- Changed project release metadata to lock the application version at `1.8.3`.
+
+### Fixed
+- Fixed chatbot knowledge activation controls so manual and PDF knowledge cannot be activated when language, visibility, allowed groups, extraction, or chunk readiness requirements are not satisfied.
+- Fixed PDF chunk retrieval so chunks are sent to the provider only when both source and chunk rows are active and extraction is processed.
+- Fixed duplicate PDO named placeholders in knowledge retrieval queries by generating unique term placeholders.
+- Fixed Knowledge Manager SweetAlert stacking so alerts appear above the modal.
+- Fixed Knowledge Manager modal behavior so successful saves keep the modal open until the user explicitly closes it.
+
 ## [1.8.2] - 2026-06-12
 
 ### Added

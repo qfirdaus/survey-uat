@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.8.2`
+- Current version: `1.8.3`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -102,6 +102,8 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 ### AI Chatbot Core
 
 - Core AI Chatbot page exists at `public/pages/ai-chatbot.php`.
+- AI Chatbot Knowledge Manager exists at `public/pages/ai-chatbot-knowledge.php`.
+- AI Chatbot Review Dashboard exists at `public/pages/ai-chatbot-review.php`.
 - Floating AI Chatbot widget is included through `public/includes/ai-chatbot-widget.php` and uses `public/assets/js/ai-chatbot-widget.js` plus `public/assets/css/ai-chatbot-widget.css`.
 - Chat requests are handled by `public/ajax/ai-chatbot-message.php`, with widget event tracking through `public/ajax/ai-chatbot-event.php`.
 - Provider integration is handled through `AiChatbotService.php`, `AiChatbotProviderRegistry.php`, and provider classes under `public/classes/AiChatbotProviders/`.
@@ -110,8 +112,13 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Usage/session/message persistence is supported through `tbl_ai_chat_session`, `tbl_ai_chat_message`, and `tbl_ai_chat_usage` when the table script in `docs/ai-chatbot-tables-2026-06-11.sql` has been applied.
 - Role-aware answers are guided by safe runtime context, active group context, visible module/menu context, permission-filtered retrieval policy, and governance classification metadata.
 - Optional curated FAQ/SOP/manual knowledge retrieval is supported through `tbl_ai_chat_knowledge` when `docs/ai-chatbot-knowledge-tables-2026-06-12.sql` has been applied.
+- Manual knowledge can be maintained through the Knowledge Manager with language, visibility, allowed groups, tags, source/version, review dates, status controls, AJAX save/edit/status/delete, SweetAlert feedback, and local loading states.
+- PDF-only knowledge source upload is supported when `docs/ai-chatbot-knowledge-pdf-schema-2026-06-13.sql` has been applied; uploaded text PDFs are extracted into draft chunks before activation.
+- Knowledge retrieval uses hybrid keyword-ranked matching across active manual items and active processed PDF chunks, while filtering by language, visibility, allowed group, and super-admin scope before content is sent to any AI provider.
+- The Review Dashboard uses `tbl_ai_chat_usage` metadata to highlight review queues, no-knowledge candidates, provider failures, outcome/category volume, and provider latency without requiring raw message content.
+- The widget presents answer text only; navigation/action suggestion links are not rendered in chatbot responses.
 - The chatbot does not execute model-generated SQL, does not expose unrestricted database records, and must ground system-specific answers in approved runtime, visible system, or curated knowledge context.
-- Implementation guidance is documented in `docs/ai-chatbot-core-blueprint-2026-06-11.md` and `docs/ai-chatbot-production-runbook-2026-06-11.md`.
+- Implementation guidance is documented in `docs/ai-chatbot-core-blueprint-2026-06-11.md`, `docs/ai-chatbot-production-runbook-2026-06-11.md`, `docs/ai-chatbot-implementation-readiness-2026-06-13.md`, and `docs/db-inspection-guideline-2026-06-13.md`.
 
 ### System Cache Maintenance
 
@@ -218,6 +225,8 @@ The active page files under `public/pages` are:
 
 - `access-matrix.php`
 - `ai-chatbot.php`
+- `ai-chatbot-knowledge.php`
+- `ai-chatbot-review.php`
 - `audit-center.php`
 - `dashboard.php`
 - `developer-guide.php`
