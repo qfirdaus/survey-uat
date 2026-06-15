@@ -67,9 +67,10 @@ final class AiChatbotEPmsContextProvider implements AiChatbotProjectContextProvi
             ];
         }
 
-        $scope = $this->scopeForIntent($intent);
+        $isPrivilegedProjectAdmin = !empty($actor['is_privileged_project_admin']);
+        $scope = $this->scopeForIntent($intent, $isPrivilegedProjectAdmin);
         $staffId = $this->staffId($profile, $actor);
-        if ($intent !== self::INTENT_LATEST_ANNOUNCEMENTS && $staffId === '') {
+        if ($intent !== self::INTENT_LATEST_ANNOUNCEMENTS && !$isPrivilegedProjectAdmin && $staffId === '') {
             return [
                 'provider' => $this->code(),
                 'provider_label' => $this->label(),
@@ -96,11 +97,11 @@ final class AiChatbotEPmsContextProvider implements AiChatbotProjectContextProvi
             }
 
             $items = match ($intent) {
-                self::INTENT_MY_PROJECTS => $this->myProjects($staffId),
-                self::INTENT_MY_ACTIVITIES => $this->myActivities($staffId),
-                self::INTENT_PROJECT_PROGRESS => $this->projectProgress($staffId),
+                self::INTENT_MY_PROJECTS => $this->myProjects($staffId, $isPrivilegedProjectAdmin),
+                self::INTENT_MY_ACTIVITIES => $this->myActivities($staffId, $isPrivilegedProjectAdmin),
+                self::INTENT_PROJECT_PROGRESS => $this->projectProgress($staffId, $isPrivilegedProjectAdmin),
                 self::INTENT_LATEST_ANNOUNCEMENTS => $this->latestAnnouncements(),
-                self::INTENT_FEEDBACK_SUMMARY => $this->feedbackSummary($staffId),
+                self::INTENT_FEEDBACK_SUMMARY => $this->feedbackSummary($staffId, $isPrivilegedProjectAdmin),
                 default => [],
             };
         } catch (Throwable $e) {
@@ -123,8 +124,8 @@ final class AiChatbotEPmsContextProvider implements AiChatbotProjectContextProvi
             'status' => 'ready',
             'intent' => $intent,
             'scope' => $scope,
-            'requires_staff_scope' => $intent !== self::INTENT_LATEST_ANNOUNCEMENTS,
-            'staff_id_available' => $staffId !== '',
+            'requires_staff_scope' => $intent !== self::INTENT_LATEST_ANNOUNCEMENTS && !$isPrivilegedProjectAdmin,
+            'staff_id_available' => $staffId !== '' || $isPrivilegedProjectAdmin,
             'row_count' => count($items),
             'items' => $items,
             'records' => $items,
@@ -135,8 +136,45 @@ final class AiChatbotEPmsContextProvider implements AiChatbotProjectContextProvi
     /**
      * @return array<int,array<string,mixed>>
      */
-    private function myProjects(string $staffId): array
+    private function myProjects(string $staffId, bool $isSuperAdmin = false): array
     {
+        if ($isSuperAdmin) {
+            $sql = "
+                SELECT
+                    p.f_projectID AS project_id,
+                    p.f_projectName AS project_name,
+                    t.f_kodTeras AS teras_code,
+                    t.f_namaTeras AS teras_name,
+                    p.f_startDate AS start_date,
+                    p.f_endDate AS end_date,
+                    p.f_status AS status,
+                    CASE WHEN TRIM(COALESCE(p.f_ownerStafID, '')) = ? THEN 1 ELSE 0 END AS is_primary_owner,
+                    CASE WHEN TRIM(COALESCE(p.f_picStafID, '')) = ? THEN 1 ELSE 0 END AS is_primary_pic,
+                    CASE WHEN po.f_stafID IS NULL THEN 0 ELSE 1 END AS is_owner,
+                    CASE WHEN pp.f_stafID IS NULL THEN 0 ELSE 1 END AS is_pic
+                FROM tbl_monitoring_project p
+                LEFT JOIN tbl_monitoring_teras t ON t.f_terasID = p.f_terasID
+                LEFT JOIN tbl_monitoring_project_owner po
+                    ON po.f_projectID = p.f_projectID AND TRIM(COALESCE(po.f_stafID, '')) = ?
+                LEFT JOIN tbl_monitoring_project_pic pp
+                    ON pp.f_projectID = p.f_projectID AND TRIM(COALESCE(pp.f_stafID, '')) = ?
+                WHERE {$this->activeStatusSql('p')}
+                ORDER BY COALESCE(p.f_endDate, p.f_startDate) ASC, p.f_projectName ASC
+                LIMIT " . self::MAX_ROWS;
+
+            return array_map(fn(array $row): array => [
+                'type' => 'project',
+                'project_id' => (int)($row['project_id'] ?? 0),
+                'project_name' => $this->cleanText($row['project_name'] ?? '', 180),
+                'teras_code' => $this->cleanText($row['teras_code'] ?? '', 40),
+                'teras_name' => $this->cleanText($row['teras_name'] ?? '', 160),
+                'role' => $this->projectRole($row),
+                'start_date' => $this->dateOrNull($row['start_date'] ?? null),
+                'end_date' => $this->dateOrNull($row['end_date'] ?? null),
+                'status' => $this->cleanText($row['status'] ?? '', 60),
+            ], $this->fetchAll($sql, [$staffId, $staffId, $staffId, $staffId]));
+        }
+
         $sql = "
             SELECT
                 p.f_projectID AS project_id,
@@ -182,8 +220,41 @@ final class AiChatbotEPmsContextProvider implements AiChatbotProjectContextProvi
     /**
      * @return array<int,array<string,mixed>>
      */
-    private function myActivities(string $staffId): array
+    private function myActivities(string $staffId, bool $isSuperAdmin = false): array
     {
+        if ($isSuperAdmin) {
+            $sql = "
+                SELECT
+                    a.f_aktivitiID AS activity_id,
+                    a.f_namaAktiviti AS activity_name,
+                    a.f_targetDate AS target_date,
+                    a.f_weightage AS weightage,
+                    a.f_status AS activity_status,
+                    p.f_projectID AS project_id,
+                    p.f_projectName AS project_name
+                FROM tbl_monitoring_aktiviti a
+                INNER JOIN tbl_monitoring_project p ON p.f_projectID = a.f_projectID
+                LEFT JOIN tbl_monitoring_project_owner po
+                    ON po.f_projectID = p.f_projectID AND TRIM(COALESCE(po.f_stafID, '')) = ?
+                LEFT JOIN tbl_monitoring_project_pic pp
+                    ON pp.f_projectID = p.f_projectID AND TRIM(COALESCE(pp.f_stafID, '')) = ?
+                WHERE {$this->activeStatusSql('a')}
+                  AND {$this->activeStatusSql('p')}
+                ORDER BY COALESCE(a.f_targetDate, a.f_endDate, a.f_startDate) ASC, a.f_namaAktiviti ASC
+                LIMIT " . self::MAX_ROWS;
+
+            return array_map(fn(array $row): array => [
+                'type' => 'activity',
+                'activity_id' => (int)($row['activity_id'] ?? 0),
+                'activity_name' => $this->cleanText($row['activity_name'] ?? '', 180),
+                'project_id' => (int)($row['project_id'] ?? 0),
+                'project_name' => $this->cleanText($row['project_name'] ?? '', 180),
+                'target_date' => $this->dateOrNull($row['target_date'] ?? null),
+                'weightage' => $this->numberOrNull($row['weightage'] ?? null),
+                'status' => $this->cleanText($row['activity_status'] ?? '', 60),
+            ], $this->fetchAll($sql, [$staffId, $staffId]));
+        }
+
         $sql = "
             SELECT
                 a.f_aktivitiID AS activity_id,
@@ -226,8 +297,45 @@ final class AiChatbotEPmsContextProvider implements AiChatbotProjectContextProvi
     /**
      * @return array<int,array<string,mixed>>
      */
-    private function projectProgress(string $staffId): array
+    private function projectProgress(string $staffId, bool $isSuperAdmin = false): array
     {
+        if ($isSuperAdmin) {
+            $sql = "
+                SELECT
+                    p.f_projectID AS project_id,
+                    p.f_projectName AS project_name,
+                    a.f_aktivitiID AS activity_id,
+                    a.f_namaAktiviti AS activity_name,
+                    l.f_bulan AS report_month,
+                    l.f_tahun AS report_year,
+                    l.f_percentComplete AS percent_complete,
+                    l.f_statusKemajuan AS progress_status,
+                    l.f_submitteddt AS submitted_at
+                FROM tbl_monitoring_laporan l
+                INNER JOIN tbl_monitoring_aktiviti a ON a.f_aktivitiID = l.f_aktivitiID
+                INNER JOIN tbl_monitoring_project p ON p.f_projectID = a.f_projectID
+                LEFT JOIN tbl_monitoring_project_owner po
+                    ON po.f_projectID = p.f_projectID AND TRIM(COALESCE(po.f_stafID, '')) = ?
+                LEFT JOIN tbl_monitoring_project_pic pp
+                    ON pp.f_projectID = p.f_projectID AND TRIM(COALESCE(pp.f_stafID, '')) = ?
+                WHERE {$this->activeStatusSql('a')}
+                  AND {$this->activeStatusSql('p')}
+                ORDER BY CAST(l.f_tahun AS UNSIGNED) DESC, CAST(l.f_bulan AS UNSIGNED) DESC, l.f_submitteddt DESC
+                LIMIT " . self::MAX_ROWS;
+
+            return array_map(fn(array $row): array => [
+                'type' => 'progress',
+                'project_id' => (int)($row['project_id'] ?? 0),
+                'project_name' => $this->cleanText($row['project_name'] ?? '', 180),
+                'activity_id' => (int)($row['activity_id'] ?? 0),
+                'activity_name' => $this->cleanText($row['activity_name'] ?? '', 180),
+                'period' => $this->period((int)($row['report_month'] ?? 0), (int)($row['report_year'] ?? 0)),
+                'percent_complete' => $this->numberOrNull($row['percent_complete'] ?? null),
+                'progress_status' => $this->cleanText($row['progress_status'] ?? '', 40),
+                'submitted_at' => $this->dateOrNull($row['submitted_at'] ?? null),
+            ], $this->fetchAll($sql, [$staffId, $staffId]));
+        }
+
         $sql = "
             SELECT
                 p.f_projectID AS project_id,
@@ -307,8 +415,38 @@ final class AiChatbotEPmsContextProvider implements AiChatbotProjectContextProvi
     /**
      * @return array<int,array<string,mixed>>
      */
-    private function feedbackSummary(string $staffId): array
+    private function feedbackSummary(string $staffId, bool $isSuperAdmin = false): array
     {
+        if ($isSuperAdmin) {
+            $sql = "
+                SELECT
+                    p.f_projectID AS project_id,
+                    p.f_projectName AS project_name,
+                    COUNT(f.f_feedbackID) AS feedback_count,
+                    SUM(CASE WHEN COALESCE(f.f_isAcknowledged, 0) IN (0, '0') THEN 1 ELSE 0 END) AS unacknowledged_count,
+                    MAX(f.f_createdDt) AS latest_feedback_date
+                FROM tbl_monitoring_project_feedback f
+                INNER JOIN tbl_monitoring_project p ON p.f_projectID = f.f_projectID
+                LEFT JOIN tbl_monitoring_project_owner po
+                    ON po.f_projectID = p.f_projectID AND TRIM(COALESCE(po.f_stafID, '')) = ?
+                LEFT JOIN tbl_monitoring_project_pic pp
+                    ON pp.f_projectID = p.f_projectID AND TRIM(COALESCE(pp.f_stafID, '')) = ?
+                WHERE {$this->activeStatusSql('p')}
+                GROUP BY p.f_projectID, p.f_projectName
+                ORDER BY unacknowledged_count DESC, latest_feedback_date DESC
+                LIMIT " . self::MAX_ROWS;
+
+            return array_map(fn(array $row): array => [
+                'type' => 'feedback_summary',
+                'project_id' => (int)($row['project_id'] ?? 0),
+                'project_name' => $this->cleanText($row['project_name'] ?? '', 180),
+                'feedback_count' => (int)($row['feedback_count'] ?? 0),
+                'unacknowledged_count' => (int)($row['unacknowledged_count'] ?? 0),
+                'latest_feedback_date' => $this->dateOrNull($row['latest_feedback_date'] ?? null),
+                'raw_comments_included' => false,
+            ], $this->fetchAll($sql, [$staffId, $staffId]));
+        }
+
         $sql = "
             SELECT
                 p.f_projectID AS project_id,
@@ -412,8 +550,19 @@ final class AiChatbotEPmsContextProvider implements AiChatbotProjectContextProvi
         return self::INTENT_UNSUPPORTED;
     }
 
-    private function scopeForIntent(string $intent): string
+    private function scopeForIntent(string $intent, bool $isSuperAdmin): string
     {
+        if ($isSuperAdmin) {
+            return match ($intent) {
+                self::INTENT_MY_PROJECTS => 'all_projects',
+                self::INTENT_MY_ACTIVITIES => 'all_activities',
+                self::INTENT_PROJECT_PROGRESS => 'all_project_progress',
+                self::INTENT_FEEDBACK_SUMMARY => 'all_feedback_summary',
+                self::INTENT_LATEST_ANNOUNCEMENTS => 'active_announcements',
+                default => 'none',
+            };
+        }
+
         return match ($intent) {
             self::INTENT_MY_PROJECTS,
             self::INTENT_PROJECT_PROGRESS,

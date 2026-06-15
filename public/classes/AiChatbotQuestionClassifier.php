@@ -14,7 +14,7 @@ final class AiChatbotQuestionClassifier
     /**
      * @return array<string,mixed>
      */
-    public function classify(string $message): array
+    public function classify(string $message, bool $isPrivilegedProjectAdmin = false): array
     {
         $text = $this->normalize($message);
 
@@ -27,15 +27,20 @@ final class AiChatbotQuestionClassifier
             'drop table', 'dump database', 'database dump', 'schema database',
             'database schema', 'struktur table', 'struktur database', 'nama table',
             'senarai table', 'table monitoring', 'column database', 'kolum database', 'api key',
-            'orang lain', 'pengguna lain', 'user lain', 'staf lain', 'semua owner',
-            'semua staf', 'semua pengguna', 'semua projek', 'komen feedback',
-            'raw feedback', 'feedback comment', 'dokumen laporan', 'document path',
-            'laluan dokumen', 'file laporan',
             'token', 'csrf', 'cookie', 'password', 'kata laluan', 'elevate', 'escalate',
             'role escalation', 'permission escalation', 'hidden route', 'route tersembunyi',
             'akses tersembunyi', 'cara masuk admin', 'super admin password',
         ])) {
             return $this->result('sensitive_blocked', 'high', true, 'sensitive_or_bypass_request');
+        }
+
+        if (!$isPrivilegedProjectAdmin && $this->containsAny($text, [
+            'orang lain', 'pengguna lain', 'user lain', 'staf lain', 'semua owner',
+            'semua staf', 'semua pengguna', 'semua projek', 'komen feedback',
+            'raw feedback', 'feedback comment', 'dokumen laporan', 'document path',
+            'laluan dokumen', 'file laporan',
+        ])) {
+            return $this->result('sensitive_blocked', 'high', true, 'cross_user_data_request');
         }
 
         if ($this->containsAny($text, ['error', 'ralat', 'gagal', 'failed', 'cannot', 'tak boleh', 'tidak boleh', 'problem', 'masalah'])) {

@@ -108,7 +108,8 @@ try {
     $pagePath = ai_chatbot_context_path($runtimeContext['page_path'] ?? '');
     $pageTitle = ai_chatbot_context_string($runtimeContext['page_title'] ?? '', 160);
     $pageUiContext = ai_chatbot_page_ui_context($runtimeContext['page_ui'] ?? []);
-    $classification = (new AiChatbotQuestionClassifier())->classify($message);
+    $isSuperAdmin = function_exists('is_user_super_admin') ? is_user_super_admin($profile, $pdo) : false;
+    $classification = (new AiChatbotQuestionClassifier())->classify($message, $isSuperAdmin);
     $conversationContext = [
         'user_id' => $userId,
         'login_id' => $loginId,
@@ -183,6 +184,7 @@ try {
         'active_group_id' => (string)((int)($_SESSION['group_active_id'] ?? ($profile['f_groupID'] ?? 0))),
         'active_group_code' => (string)($_SESSION['group_active_code'] ?? ($profile['f_groupKod'] ?? '')),
         'is_super_admin' => function_exists('is_user_super_admin') ? is_user_super_admin($profile, $pdo) : false,
+        'is_privileged_project_admin' => $isPrivilegedProjectAdmin,
         'access_mode' => (string)($publicConfig['access_mode'] ?? ''),
         'app_title' => (string)($publicConfig['app_title'] ?? 'IQS-Framework AI Chatbot'),
         'current_page_path' => $pagePath,
