@@ -12,6 +12,7 @@ require_once __DIR__ . '/EmailTemplate.php';
 require_once __DIR__ . '/EmailPlaceholder.php';
 require_once __DIR__ . '/EmailTemplateRenderService.php';
 require_once __DIR__ . '/Mailer.php';
+require_once __DIR__ . '/ExternalServiceException.php';
 require_once __DIR__ . '/../setting/helper/audit_helper.php';
 
 final class EmailTemplateDeliveryService
@@ -122,7 +123,7 @@ final class EmailTemplateDeliveryService
         );
 
         if (!$sent) {
-            throw new RuntimeException($mailer->getLastError() ?: 'Email could not be sent.');
+            throw $mailer->lastFailureAsExternalServiceException('Email could not be sent.');
         }
 
         if (function_exists('audit_event')) {

@@ -10,6 +10,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../AiChatbotProviderInterface.php';
+require_once __DIR__ . '/../ExternalHttpClient.php';
 
 final class AnthropicProvider implements AiChatbotProviderInterface
 {
@@ -40,7 +41,7 @@ final class AnthropicProvider implements AiChatbotProviderInterface
         }
 
         if ($apiKey === '') {
-            throw new InvalidArgumentException('Anthropic API key is not configured.');
+            throw new ExternalServiceAuthenticationException('Anthropic API key is not configured.', 'anthropic');
         }
 
         $system = '';
@@ -74,7 +75,7 @@ final class AnthropicProvider implements AiChatbotProviderInterface
         $response = $this->postJson($this->messagesEndpoint($baseUrl), $payload, $timeout, $apiKey);
         $content = $this->extractText($response);
         if ($content === '') {
-            throw new RuntimeException('Anthropic returned an empty response.');
+            throw new ExternalServiceInvalidResponseException('Anthropic returned an empty response.', 'anthropic', $this->messagesEndpoint($baseUrl));
         }
 
         return [
@@ -102,85 +103,29 @@ final class AnthropicProvider implements AiChatbotProviderInterface
      */
     private function postJson(string $url, array $payload, int $timeout, string $apiKey): array
     {
-        $body = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        if (!is_string($body)) {
-            throw new RuntimeException('Unable to encode Anthropic request payload.');
-        }
-
         $headers = [
             'Content-Type: application/json',
             'x-api-key: ' . $apiKey,
             'anthropic-version: 2023-06-01',
         ];
 
-        if (function_exists('curl_init')) {
-            $ch = curl_init($url);
-            if ($ch === false) {
-                throw new RuntimeException('Unable to initialize HTTP client.');
-            }
-
-            curl_setopt_array($ch, [
-                CURLOPT_POST => true,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER => $headers,
-                CURLOPT_POSTFIELDS => $body,
-                CURLOPT_CONNECTTIMEOUT => min(5, $timeout),
-                CURLOPT_TIMEOUT => $timeout,
-            ]);
-
-            $raw = curl_exec($ch);
-            $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-            $error = curl_error($ch);
-            curl_close($ch);
-
-            if (!is_string($raw)) {
-                throw new RuntimeException($error !== '' ? $error : 'Anthropic request failed.');
-            }
-
-            return $this->decodeResponse($raw, $status);
-        }
-
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => implode("\r\n", $headers) . "\r\n",
-                'content' => $body,
-                'timeout' => $timeout,
-                'ignore_errors' => true,
-            ],
-        ]);
-
-        $raw = @file_get_contents($url, false, $context);
-        $status = 0;
-        if (isset($http_response_header) && is_array($http_response_header)) {
-            foreach ($http_response_header as $header) {
-                if (preg_match('/^HTTP\/\S+\s+(\d{3})/', (string)$header, $matches)) {
-                    $status = (int)$matches[1];
-                    break;
-                }
-            }
-        }
-
-        if (!is_string($raw)) {
-            throw new RuntimeException('Anthropic request failed.');
-        }
-
-        return $this->decodeResponse($raw, $status);
+        $response = (new ExternalHttpClient('anthropic', $timeout))->postJson($url, $payload, $headers, $timeout);
+        return $this->decodeResponse($response->body(), $response->statusCode(), $url);
     }
 
     /**
      * @return array<string,mixed>
      */
-    private function decodeResponse(string $raw, int $status): array
+    private function decodeResponse(string $raw, int $status, ?string $endpoint = null): array
     {
         $decoded = json_decode($raw, true);
         if (!is_array($decoded)) {
-            throw new RuntimeException('Anthropic returned invalid JSON.');
+            throw new ExternalServiceInvalidResponseException('Anthropic returned invalid JSON.', 'anthropic', $endpoint, $status);
         }
 
         if ($status >= 400) {
             $message = (string)($decoded['error']['message'] ?? $decoded['error'] ?? 'Anthropic provider error.');
-            throw new RuntimeException($message);
+            throw new ExternalServiceException($message, 'anthropic', $endpoint, $status, 'provider_error', $status >= 500);
         }
 
         return $decoded;

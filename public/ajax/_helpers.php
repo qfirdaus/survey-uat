@@ -49,6 +49,54 @@ function jsonErrorResponse(string $message, int $status = 400): never {
 }
 
 /**
+ * Standard JSON exception response for AJAX endpoints.
+ *
+ * ExternalServiceException is intentionally not treated as HTTP 500. Native
+ * Throwable/RuntimeException keeps the existing internal-error behaviour.
+ *
+ * @param array<string,mixed> $logContext
+ */
+function jsonExceptionResponse(Throwable $exception, ?string $fallbackMessage = null, array $logContext = []): never {
+    $skipLog = !empty($logContext['_skip_log']);
+    unset($logContext['_skip_log']);
+
+    if (class_exists(FrameworkExceptionHandler::class)) {
+        if ($skipLog) {
+            while (ob_get_level() > 0) {
+                @ob_end_clean();
+            }
+
+            $status = FrameworkExceptionHandler::httpStatusFor($exception);
+            http_response_code($status);
+            header('Content-Type: application/json; charset=utf-8');
+
+            $payload = [
+                'success' => false,
+                'error' => true,
+                'message' => FrameworkExceptionHandler::publicMessageFor($exception, $fallbackMessage),
+            ];
+
+            if ($exception instanceof ExternalServiceException) {
+                $payload['external_service_error'] = true;
+                $payload['provider'] = $exception->provider();
+                $payload['category'] = $exception->category();
+                $payload['retryable'] = $exception->retryable();
+            }
+
+            echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            exit;
+        }
+
+        FrameworkExceptionHandler::json($exception, $fallbackMessage, $logContext);
+    }
+
+    if (!$skipLog) {
+        error_log('[' . get_class($exception) . '] ' . $exception->getMessage());
+    }
+    jsonErrorResponse($fallbackMessage ?: 'Ralat sistem semasa memproses permintaan.', 500);
+}
+
+/**
  * Standard JSON success response for admin AJAX endpoints.
  *
  * @param array<string,mixed> $data

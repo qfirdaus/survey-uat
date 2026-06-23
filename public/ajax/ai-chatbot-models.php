@@ -67,6 +67,10 @@ try {
         'provider' => $provider,
         'models' => $models,
     ]);
+} catch (ExternalServiceException $e) {
+    jsonExceptionResponse($e, 'Tidak dapat mengambil senarai model provider buat masa ini.', [
+        'endpoint' => 'ai-chatbot-models',
+    ]);
 } catch (Throwable $e) {
     error_log('[ai-chatbot-models] ' . $e->getMessage());
     jsonErrorResponse($e->getMessage(), 500);
@@ -81,10 +85,10 @@ function ai_chatbot_fetch_provider_models(string $provider, string $baseUrl, str
         'ollama' => ai_chatbot_fetch_ollama_models($baseUrl),
         'gemini' => ai_chatbot_fetch_gemini_models($baseUrl, $apiKey),
         'anthropic' => ai_chatbot_fetch_anthropic_models($baseUrl, $apiKey),
-        'openrouter' => ai_chatbot_fetch_openai_compatible_models($baseUrl !== '' ? $baseUrl : 'https://openrouter.ai/api/v1', $apiKey, false),
-        'openai' => ai_chatbot_fetch_openai_compatible_models($baseUrl !== '' ? $baseUrl : 'https://api.openai.com/v1', $apiKey, true),
-        'grok' => ai_chatbot_fetch_openai_compatible_models($baseUrl !== '' ? $baseUrl : 'https://api.x.ai/v1', $apiKey, true),
-        'openai_compatible' => ai_chatbot_fetch_openai_compatible_models($baseUrl, $apiKey, false),
+        'openrouter' => ai_chatbot_fetch_openai_compatible_models('openrouter', $baseUrl !== '' ? $baseUrl : 'https://openrouter.ai/api/v1', $apiKey, false),
+        'openai' => ai_chatbot_fetch_openai_compatible_models('openai', $baseUrl !== '' ? $baseUrl : 'https://api.openai.com/v1', $apiKey, true),
+        'grok' => ai_chatbot_fetch_openai_compatible_models('grok', $baseUrl !== '' ? $baseUrl : 'https://api.x.ai/v1', $apiKey, true),
+        'openai_compatible' => ai_chatbot_fetch_openai_compatible_models('openai_compatible', $baseUrl, $apiKey, false),
         default => [],
     };
 }
@@ -99,7 +103,7 @@ function ai_chatbot_fetch_ollama_models(string $baseUrl): array
         $baseUrl = substr($baseUrl, 0, -3);
     }
 
-    $decoded = ai_chatbot_http_json('GET', $baseUrl . '/api/tags', [], null, 10);
+    $decoded = ai_chatbot_http_json('ollama', 'GET', $baseUrl . '/api/tags', [], null, 10);
     $models = [];
     foreach ((array)($decoded['models'] ?? []) as $model) {
         if (is_array($model)) {
@@ -116,10 +120,10 @@ function ai_chatbot_fetch_ollama_models(string $baseUrl): array
 /**
  * @return array<int,string>
  */
-function ai_chatbot_fetch_openai_compatible_models(string $baseUrl, string $apiKey, bool $requireKey): array
+function ai_chatbot_fetch_openai_compatible_models(string $provider, string $baseUrl, string $apiKey, bool $requireKey): array
 {
     if ($requireKey && $apiKey === '') {
-        throw new RuntimeException('API key diperlukan untuk fetch senarai model provider ini.');
+        throw new ExternalServiceAuthenticationException('API key diperlukan untuk fetch senarai model provider ini.', $provider);
     }
 
     $baseUrl = rtrim($baseUrl !== '' ? $baseUrl : 'https://api.openai.com/v1', '/');
@@ -134,7 +138,7 @@ function ai_chatbot_fetch_openai_compatible_models(string $baseUrl, string $apiK
         $headers[] = 'Authorization: Bearer ' . $apiKey;
     }
 
-    $decoded = ai_chatbot_http_json('GET', $endpoint, $headers, null, 15);
+    $decoded = ai_chatbot_http_json($provider, 'GET', $endpoint, $headers, null, 15);
     $models = [];
     foreach ((array)($decoded['data'] ?? []) as $model) {
         if (is_array($model)) {
@@ -154,7 +158,7 @@ function ai_chatbot_fetch_openai_compatible_models(string $baseUrl, string $apiK
 function ai_chatbot_fetch_gemini_models(string $baseUrl, string $apiKey): array
 {
     if ($apiKey === '') {
-        throw new RuntimeException('API key diperlukan untuk fetch senarai model Gemini.');
+        throw new ExternalServiceAuthenticationException('API key diperlukan untuk fetch senarai model Gemini.', 'gemini');
     }
 
     $baseUrl = rtrim($baseUrl !== '' ? $baseUrl : 'https://generativelanguage.googleapis.com/v1beta', '/');
@@ -167,7 +171,7 @@ function ai_chatbot_fetch_gemini_models(string $baseUrl, string $apiKey): array
         : $baseUrl . '/models';
     $endpoint .= (str_contains($endpoint, '?') ? '&' : '?') . 'key=' . rawurlencode($apiKey);
 
-    $decoded = ai_chatbot_http_json('GET', $endpoint, [], null, 15);
+    $decoded = ai_chatbot_http_json('gemini', 'GET', $endpoint, [], null, 15);
     $models = [];
     foreach ((array)($decoded['models'] ?? []) as $model) {
         if (!is_array($model)) {
@@ -193,7 +197,7 @@ function ai_chatbot_fetch_gemini_models(string $baseUrl, string $apiKey): array
 function ai_chatbot_fetch_anthropic_models(string $baseUrl, string $apiKey): array
 {
     if ($apiKey === '') {
-        throw new RuntimeException('API key diperlukan untuk fetch senarai model Anthropic.');
+        throw new ExternalServiceAuthenticationException('API key diperlukan untuk fetch senarai model Anthropic.', 'anthropic');
     }
 
     $baseUrl = rtrim($baseUrl !== '' ? $baseUrl : 'https://api.anthropic.com/v1', '/');
@@ -202,7 +206,7 @@ function ai_chatbot_fetch_anthropic_models(string $baseUrl, string $apiKey): arr
     }
 
     $endpoint = str_ends_with($baseUrl, '/models') ? $baseUrl : $baseUrl . '/models';
-    $decoded = ai_chatbot_http_json('GET', $endpoint, [
+    $decoded = ai_chatbot_http_json('anthropic', 'GET', $endpoint, [
         'x-api-key: ' . $apiKey,
         'anthropic-version: 2023-06-01',
     ], null, 15);
@@ -225,86 +229,30 @@ function ai_chatbot_fetch_anthropic_models(string $baseUrl, string $apiKey): arr
  * @param array<string,mixed>|null $payload
  * @return array<string,mixed>
  */
-function ai_chatbot_http_json(string $method, string $url, array $headers = [], ?array $payload = null, int $timeout = 15): array
+function ai_chatbot_http_json(string $provider, string $method, string $url, array $headers = [], ?array $payload = null, int $timeout = 15): array
 {
     $headers[] = 'Accept: application/json';
-    if ($payload !== null) {
-        $headers[] = 'Content-Type: application/json';
-    }
+    $client = new ExternalHttpClient($provider, $timeout);
+    $response = $payload === null
+        ? $client->request($method, $url, $headers, null, $timeout)
+        : $client->postJson($url, $payload, $headers, $timeout);
 
-    $body = $payload !== null
-        ? json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
-        : null;
-
-    if (function_exists('curl_init')) {
-        $ch = curl_init($url);
-        if ($ch === false) {
-            throw new RuntimeException('Unable to initialize HTTP client.');
-        }
-
-        curl_setopt_array($ch, [
-            CURLOPT_CUSTOMREQUEST => strtoupper($method),
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_CONNECTTIMEOUT => min(5, $timeout),
-            CURLOPT_TIMEOUT => $timeout,
-        ]);
-        if (is_string($body)) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
-        }
-
-        $raw = curl_exec($ch);
-        $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-        $error = curl_error($ch);
-        curl_close($ch);
-
-        if (!is_string($raw)) {
-            throw new RuntimeException($error !== '' ? $error : 'Provider model request failed.');
-        }
-
-        return ai_chatbot_decode_http_json($raw, $status);
-    }
-
-    $context = stream_context_create([
-        'http' => [
-            'method' => strtoupper($method),
-            'header' => implode("\r\n", $headers) . "\r\n",
-            'content' => is_string($body) ? $body : '',
-            'timeout' => $timeout,
-            'ignore_errors' => true,
-        ],
-    ]);
-    $raw = @file_get_contents($url, false, $context);
-    $status = 0;
-    if (isset($http_response_header) && is_array($http_response_header)) {
-        foreach ($http_response_header as $header) {
-            if (preg_match('/^HTTP\/\S+\s+(\d{3})/', (string)$header, $matches)) {
-                $status = (int)$matches[1];
-                break;
-            }
-        }
-    }
-
-    if (!is_string($raw)) {
-        throw new RuntimeException('Provider model request failed.');
-    }
-
-    return ai_chatbot_decode_http_json($raw, $status);
+    return ai_chatbot_decode_http_json($provider, $url, $response->body(), $response->statusCode());
 }
 
 /**
  * @return array<string,mixed>
  */
-function ai_chatbot_decode_http_json(string $raw, int $status): array
+function ai_chatbot_decode_http_json(string $provider, string $endpoint, string $raw, int $status): array
 {
     $decoded = json_decode($raw, true);
     if (!is_array($decoded)) {
-        throw new RuntimeException('Provider returned invalid JSON while fetching models.');
+        throw new ExternalServiceInvalidResponseException('Provider returned invalid JSON while fetching models.', $provider, $endpoint, $status);
     }
 
     if ($status >= 400) {
         $message = (string)($decoded['error']['message'] ?? $decoded['error'] ?? 'Provider returned an error while fetching models.');
-        throw new RuntimeException($message);
+        throw new ExternalServiceException($message, $provider, $endpoint, $status, 'provider_error', $status >= 500);
     }
 
     return $decoded;

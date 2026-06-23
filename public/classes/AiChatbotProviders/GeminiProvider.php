@@ -10,6 +10,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../AiChatbotProviderInterface.php';
+require_once __DIR__ . '/../ExternalHttpClient.php';
 
 final class GeminiProvider implements AiChatbotProviderInterface
 {
@@ -40,7 +41,7 @@ final class GeminiProvider implements AiChatbotProviderInterface
         }
 
         if ($apiKey === '') {
-            throw new InvalidArgumentException('Gemini API key is not configured.');
+            throw new ExternalServiceAuthenticationException('Gemini API key is not configured.', 'gemini');
         }
 
         $systemText = '';
@@ -82,7 +83,7 @@ final class GeminiProvider implements AiChatbotProviderInterface
         $response = $this->postJson($endpoint, $payload, $timeout);
         $content = $this->extractText($response);
         if ($content === '') {
-            throw new RuntimeException('Gemini returned an empty response.');
+            throw new ExternalServiceInvalidResponseException('Gemini returned an empty response.', 'gemini', $endpoint);
         }
 
         return [
@@ -114,79 +115,23 @@ final class GeminiProvider implements AiChatbotProviderInterface
      */
     private function postJson(string $url, array $payload, int $timeout): array
     {
-        $body = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        if (!is_string($body)) {
-            throw new RuntimeException('Unable to encode Gemini request payload.');
-        }
-
-        if (function_exists('curl_init')) {
-            $ch = curl_init($url);
-            if ($ch === false) {
-                throw new RuntimeException('Unable to initialize HTTP client.');
-            }
-
-            curl_setopt_array($ch, [
-                CURLOPT_POST => true,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-                CURLOPT_POSTFIELDS => $body,
-                CURLOPT_CONNECTTIMEOUT => min(5, $timeout),
-                CURLOPT_TIMEOUT => $timeout,
-            ]);
-
-            $raw = curl_exec($ch);
-            $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-            $error = curl_error($ch);
-            curl_close($ch);
-
-            if (!is_string($raw)) {
-                throw new RuntimeException($error !== '' ? $error : 'Gemini request failed.');
-            }
-
-            return $this->decodeResponse($raw, $status);
-        }
-
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => "Content-Type: application/json\r\n",
-                'content' => $body,
-                'timeout' => $timeout,
-                'ignore_errors' => true,
-            ],
-        ]);
-
-        $raw = @file_get_contents($url, false, $context);
-        $status = 0;
-        if (isset($http_response_header) && is_array($http_response_header)) {
-            foreach ($http_response_header as $header) {
-                if (preg_match('/^HTTP\/\S+\s+(\d{3})/', (string)$header, $matches)) {
-                    $status = (int)$matches[1];
-                    break;
-                }
-            }
-        }
-
-        if (!is_string($raw)) {
-            throw new RuntimeException('Gemini request failed.');
-        }
-
-        return $this->decodeResponse($raw, $status);
+        $response = (new ExternalHttpClient('gemini', $timeout))->postJson($url, $payload, [], $timeout);
+        return $this->decodeResponse($response->body(), $response->statusCode(), $url);
     }
 
     /**
      * @return array<string,mixed>
      */
-    private function decodeResponse(string $raw, int $status): array
+    private function decodeResponse(string $raw, int $status, ?string $endpoint = null): array
     {
         $decoded = json_decode($raw, true);
         if (!is_array($decoded)) {
-            throw new RuntimeException('Gemini returned invalid JSON.');
+            throw new ExternalServiceInvalidResponseException('Gemini returned invalid JSON.', 'gemini', $endpoint, $status);
         }
 
         if ($status >= 400) {
             $message = (string)($decoded['error']['message'] ?? $decoded['error'] ?? 'Gemini provider error.');
-            throw new RuntimeException($message);
+            throw new ExternalServiceException($message, 'gemini', $endpoint, $status, 'provider_error', $status >= 500);
         }
 
         return $decoded;

@@ -6,6 +6,26 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+## [1.8.4] - 2026-06-23
+
+### Added
+- Added framework-level external service exception hierarchy for distinguishing provider/API failures from internal application failures.
+- Added `ExternalHttpClient` and `ExternalHttpResponse` for reusable outbound HTTP integration handling with provider-aware exception mapping.
+- Added shared AJAX `jsonExceptionResponse()` handling so `ExternalServiceException` responses no longer default to HTTP 500.
+- Added standardized `[ExternalService]` logging with redaction for common API key, token, authorization, and password values.
+- Added external service failure handling documentation and Developer Guide examples for future integrations.
+
+### Changed
+- Changed AI Chatbot provider calls for OpenAI-compatible providers, Gemini, Anthropic, and Ollama to use the shared external HTTP client.
+- Changed AI Chatbot model fetching and message handling so provider auth, rate limit, timeout, unavailable, and invalid-response failures return service-level statuses instead of hardcoded HTTP 500.
+- Changed SMTP/email delivery handling so HTTP-facing flows can classify SMTP authentication, timeout, connection, TLS/SSL, and delivery failures as external service failures.
+- Changed email submit and email template test-send flows to use external-service response handling for SMTP failures.
+- Changed project release metadata to lock the application version at `1.8.4`.
+
+### Fixed
+- Fixed misleading Internal Server Error reporting for AI provider failures that are caused by upstream provider/API conditions.
+- Fixed misleading Internal Server Error reporting for SMTP delivery failures in email test and submit flows.
+
 ## [1.8.3] - 2026-06-14
 
 ### Added

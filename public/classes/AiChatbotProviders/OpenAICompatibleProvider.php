@@ -10,6 +10,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../AiChatbotProviderInterface.php';
+require_once __DIR__ . '/../ExternalHttpClient.php';
 
 class OpenAICompatibleProvider implements AiChatbotProviderInterface
 {
@@ -50,7 +51,7 @@ class OpenAICompatibleProvider implements AiChatbotProviderInterface
         }
 
         if ($apiKey === '') {
-            throw new InvalidArgumentException($this->providerCode . ' API key is not configured.');
+            throw new ExternalServiceAuthenticationException($this->providerCode . ' API key is not configured.', $this->providerCode);
         }
 
         $endpoint = $this->chatCompletionsEndpoint($baseUrl);
@@ -66,7 +67,7 @@ class OpenAICompatibleProvider implements AiChatbotProviderInterface
         $content = trim((string)($response['choices'][0]['message']['content'] ?? ''));
 
         if ($content === '') {
-            throw new RuntimeException($this->providerCode . ' returned an empty response.');
+            throw new ExternalServiceInvalidResponseException($this->providerCode . ' returned an empty response.', $this->providerCode, $endpoint);
         }
 
         return [
@@ -109,81 +110,23 @@ class OpenAICompatibleProvider implements AiChatbotProviderInterface
      */
     protected function postJson(string $url, array $payload, int $timeout, string $apiKey): array
     {
-        $body = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        if (!is_string($body)) {
-            throw new RuntimeException('Unable to encode ' . $this->providerCode . ' request payload.');
-        }
-
-        $headers = $this->headers($apiKey);
-
-        if (function_exists('curl_init')) {
-            $ch = curl_init($url);
-            if ($ch === false) {
-                throw new RuntimeException('Unable to initialize HTTP client.');
-            }
-
-            curl_setopt_array($ch, [
-                CURLOPT_POST => true,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER => $headers,
-                CURLOPT_POSTFIELDS => $body,
-                CURLOPT_CONNECTTIMEOUT => min(5, $timeout),
-                CURLOPT_TIMEOUT => $timeout,
-            ]);
-
-            $raw = curl_exec($ch);
-            $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-            $error = curl_error($ch);
-            curl_close($ch);
-
-            if (!is_string($raw)) {
-                throw new RuntimeException($error !== '' ? $error : $this->providerCode . ' request failed.');
-            }
-
-            return $this->decodeResponse($raw, $status);
-        }
-
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => implode("\r\n", $headers) . "\r\n",
-                'content' => $body,
-                'timeout' => $timeout,
-                'ignore_errors' => true,
-            ],
-        ]);
-
-        $raw = @file_get_contents($url, false, $context);
-        $status = 0;
-        if (isset($http_response_header) && is_array($http_response_header)) {
-            foreach ($http_response_header as $header) {
-                if (preg_match('/^HTTP\/\S+\s+(\d{3})/', (string)$header, $matches)) {
-                    $status = (int)$matches[1];
-                    break;
-                }
-            }
-        }
-
-        if (!is_string($raw)) {
-            throw new RuntimeException($this->providerCode . ' request failed.');
-        }
-
-        return $this->decodeResponse($raw, $status);
+        $response = (new ExternalHttpClient($this->providerCode, $timeout))->postJson($url, $payload, $this->headers($apiKey), $timeout);
+        return $this->decodeResponse($response->body(), $response->statusCode(), $url);
     }
 
     /**
      * @return array<string,mixed>
      */
-    protected function decodeResponse(string $raw, int $status): array
+    protected function decodeResponse(string $raw, int $status, ?string $endpoint = null): array
     {
         $decoded = json_decode($raw, true);
         if (!is_array($decoded)) {
-            throw new RuntimeException($this->providerCode . ' returned invalid JSON.');
+            throw new ExternalServiceInvalidResponseException($this->providerCode . ' returned invalid JSON.', $this->providerCode, $endpoint, $status);
         }
 
         if ($status >= 400) {
             $message = (string)($decoded['error']['message'] ?? $decoded['error'] ?? $this->providerCode . ' provider error.');
-            throw new RuntimeException($message);
+            throw new ExternalServiceException($message, $this->providerCode, $endpoint, $status, 'provider_error', $status >= 500);
         }
 
         return $decoded;

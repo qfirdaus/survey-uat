@@ -148,3 +148,48 @@ if (!function_exists('app_error_log')) {
         app_log($message, 'ERROR');
     }
 }
+
+if (!function_exists('app_log_redact_external_value')) {
+    function app_log_redact_external_value(string $value): string {
+        $value = preg_replace('/(authorization:\s*bearer\s+)[^\s]+/i', '$1[redacted]', $value) ?? $value;
+        $value = preg_replace('/([?&](?:key|api_key|token|access_token|password)=)[^&\s]+/i', '$1[redacted]', $value) ?? $value;
+        return $value;
+    }
+}
+
+if (!function_exists('app_log_external_service')) {
+    /**
+     * @param array<string,mixed> $extra
+     */
+    function app_log_external_service(ExternalServiceException $exception, array $extra = []): void {
+        $parts = [
+            '[ExternalService]',
+            'Provider=' . app_log_redact_external_value($exception->provider()),
+            'Category=' . app_log_redact_external_value($exception->category()),
+            'Retryable=' . ($exception->retryable() ? 'true' : 'false'),
+        ];
+
+        if ($exception->endpoint() !== null && $exception->endpoint() !== '') {
+            $parts[] = 'Endpoint=' . app_log_redact_external_value($exception->endpoint());
+        }
+        if ($exception->httpStatus() !== null) {
+            $parts[] = 'HTTPStatus=' . (string)$exception->httpStatus();
+        }
+
+        foreach (array_merge($exception->context(), $extra) as $key => $value) {
+            $key = preg_replace('/[^A-Za-z0-9_:-]+/', '_', (string)$key) ?? 'context';
+            if (in_array(strtolower($key), ['authorization', 'api_key', 'token', 'access_token', 'password'], true)) {
+                $value = '[redacted]';
+            } elseif (is_scalar($value) || $value === null) {
+                $value = app_log_redact_external_value((string)$value);
+            } else {
+                $encoded = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                $value = app_log_redact_external_value(is_string($encoded) ? $encoded : '[unserializable]');
+            }
+            $parts[] = $key . '=' . str_replace(["\r", "\n"], ' ', (string)$value);
+        }
+
+        $parts[] = 'Message=' . str_replace(["\r", "\n"], ' ', app_log_redact_external_value($exception->getMessage()));
+        app_log(implode(' ', $parts), $exception->retryable() ? 'WARN' : 'ERROR');
+    }
+}

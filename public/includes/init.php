@@ -73,6 +73,13 @@ require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Config.php';
 require_once __DIR__ . '/../classes/SystemConfigConstants.php';
+require_once __DIR__ . '/../classes/FrameworkException.php';
+require_once __DIR__ . '/../classes/ApplicationException.php';
+require_once __DIR__ . '/../classes/ValidationException.php';
+require_once __DIR__ . '/../classes/ExternalServiceException.php';
+require_once __DIR__ . '/../classes/FrameworkExceptionHandler.php';
+require_once __DIR__ . '/../classes/ExternalHttpResponse.php';
+require_once __DIR__ . '/../classes/ExternalHttpClient.php';
 
 // 4) Autoload helpers dalam setting/helper
 $loader = new HelperLoader(__DIR__ . '/../setting/helper');

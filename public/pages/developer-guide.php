@@ -59,6 +59,7 @@ $docLinks = [
     ['icon' => 'ri-layout-grid-line', 'title' => 'Page Generator Roadmap', 'path' => 'docs/page-template-generator-roadmap-2026-03-27.md'],
     ['icon' => 'ri-shield-check-line', 'title' => 'Core File Protection', 'path' => 'docs/core-file-protection-standard-2026-06-04.md'],
     ['icon' => 'ri-file-shield-2-line', 'title' => 'Protected Files Registry', 'path' => 'docs/core-protected-files.md'],
+    ['icon' => 'ri-cloud-line', 'title' => 'External Service Failures', 'path' => 'docs/external-service-failure-handling-2026-06-23.md'],
 ];
 
 $coreBoundaries = [
@@ -196,6 +197,47 @@ try {
 } catch (Throwable $e) {
     error_log('[my-module] ' . $e->getMessage());
     jsonErrorResponse('Unable to save record.', 500);
+}
+PHP,
+    ],
+    'ajax-external-service' => [
+        'title' => 'External Service Failure Handling',
+        'code' => <<<'PHP'
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/../includes/init.php';
+require_login();
+require_page_access('pages/my-module.php');
+require_once __DIR__ . '/_helpers.php';
+
+try {
+    $client = new ExternalHttpClient('PaymentGateway', 15);
+    $response = $client->postJson(
+        'https://provider.example/api/lookup',
+        ['reference_no' => $referenceNo],
+        ['Authorization' => 'Bearer ' . $apiKey],
+        15
+    );
+
+    $data = $response->json();
+    if ($data === []) {
+        throw new ExternalServiceInvalidResponseException(
+            'PaymentGateway returned invalid JSON.',
+            'PaymentGateway',
+            'https://provider.example/api/lookup',
+            $response->statusCode()
+        );
+    }
+
+    jsonSuccessResponse(['provider_data' => $data]);
+} catch (ExternalServiceException $e) {
+    jsonExceptionResponse($e, 'Perkhidmatan luaran tidak tersedia buat masa ini.', [
+        'endpoint' => 'my-module-provider-lookup',
+    ]);
+} catch (Throwable $e) {
+    error_log('[my-module-provider-lookup] ' . $e->getMessage());
+    jsonErrorResponse('Ralat sistem semasa memproses permintaan.', 500);
 }
 PHP,
     ],
@@ -867,6 +909,7 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
                                     <div class="nav dg-subtabs" id="dg-ajax-subtabs" role="tablist">
                                         <button class="nav-link active" id="dg-ajax-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-ajax-pane-rules" type="button" role="tab" aria-controls="dg-ajax-pane-rules" aria-selected="true">Rules</button>
                                         <button class="nav-link" id="dg-ajax-subtab-endpoint" data-bs-toggle="pill" data-bs-target="#dg-ajax-pane-endpoint" type="button" role="tab" aria-controls="dg-ajax-pane-endpoint" aria-selected="false">Endpoint</button>
+                                        <button class="nav-link" id="dg-ajax-subtab-external" data-bs-toggle="pill" data-bs-target="#dg-ajax-pane-external" type="button" role="tab" aria-controls="dg-ajax-pane-external" aria-selected="false">External Service</button>
                                         <button class="nav-link" id="dg-ajax-subtab-fetch" data-bs-toggle="pill" data-bs-target="#dg-ajax-pane-fetch" type="button" role="tab" aria-controls="dg-ajax-pane-fetch" aria-selected="false">Fetch</button>
                                         <button class="nav-link" id="dg-ajax-subtab-datatable" data-bs-toggle="pill" data-bs-target="#dg-ajax-pane-datatable" type="button" role="tab" aria-controls="dg-ajax-pane-datatable" aria-selected="false">DataTable</button>
                                     </div>
@@ -877,11 +920,15 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
                                                 <li>Page-specific AJAX endpoints must call `require_page_access('pages/parent-page.php')` so direct AJAX access follows the same menu/group permission as the parent page.</li>
                                                 <li>Every write endpoint must use CSRF validation.</li>
                                                 <li>Return JSON through shared response helpers.</li>
+                                                <li>Use `jsonExceptionResponse()` for `ExternalServiceException` so provider/API failures are not reported as HTTP 500.</li>
                                                 <li>Log internal errors, but return safe user-facing messages.</li>
                                             </ul>
                                         </div>
                                         <div class="tab-pane fade" id="dg-ajax-pane-endpoint" role="tabpanel" aria-labelledby="dg-ajax-subtab-endpoint">
                                             <?php renderCodeCard('ajax-basic', $samples); ?>
+                                        </div>
+                                        <div class="tab-pane fade" id="dg-ajax-pane-external" role="tabpanel" aria-labelledby="dg-ajax-subtab-external">
+                                            <?php renderCodeCard('ajax-external-service', $samples); ?>
                                         </div>
                                         <div class="tab-pane fade" id="dg-ajax-pane-fetch" role="tabpanel" aria-labelledby="dg-ajax-subtab-fetch">
                                             <?php renderCodeCard('frontend-fetch', $samples); ?>
@@ -1033,7 +1080,9 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
                                                 <li>Manage reusable templates through `template-emel.php`.</li>
                                                 <li>Keep module-specific variables in service/controller code.</li>
                                                 <li>Avoid hardcoded long email bodies inside business pages.</li>
+                                                <li>Handle SMTP delivery failures with `lastFailureAsExternalServiceException()` and `jsonExceptionResponse()` in HTTP-facing code.</li>
                                             </ul>
+                                            <div class="dg-callout mt-3">Reference: `docs/external-service-failure-handling-2026-06-23.md`.</div>
                                         </div>
                                         <div class="tab-pane fade" id="dg-email-pane-template" role="tabpanel" aria-labelledby="dg-email-subtab-template">
                                             <?php renderCodeCard('email-template', $samples); ?>

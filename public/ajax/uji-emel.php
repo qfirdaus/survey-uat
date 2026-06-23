@@ -206,6 +206,16 @@ try {
     ], JSON_UNESCAPED_UNICODE);
     tetapan_uji_emel_debug('success');
 } catch (Exception $e) {
+    if (class_exists(FrameworkExceptionHandler::class) && class_exists(Mailer::class)) {
+        FrameworkExceptionHandler::log(
+            Mailer::externalServiceExceptionForSmtpFailure(
+                $e->getMessage(),
+                'smtp://' . trim((string)$host) . ((int)$port > 0 ? ':' . (int)$port : ''),
+                $e
+            ),
+            ['endpoint' => 'uji-emel']
+        );
+    }
     tetapan_uji_emel_debug('mailer_exception', [
         'error' => $e->getMessage(),
     ]);

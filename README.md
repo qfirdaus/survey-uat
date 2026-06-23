@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.8.3`
+- Current version: `1.8.4`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -119,6 +119,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - The widget presents answer text only; navigation/action suggestion links are not rendered in chatbot responses.
 - The chatbot does not execute model-generated SQL, does not expose unrestricted database records, and must ground system-specific answers in approved runtime, visible system, or curated knowledge context.
 - Implementation guidance is documented in `docs/ai-chatbot-core-blueprint-2026-06-11.md`, `docs/ai-chatbot-production-runbook-2026-06-11.md`, `docs/ai-chatbot-implementation-readiness-2026-06-13.md`, and `docs/db-inspection-guideline-2026-06-13.md`.
+- External provider/API failures are classified through the framework external-service failure pattern documented in `docs/external-service-failure-handling-2026-06-23.md`.
 
 ### System Cache Maintenance
 
@@ -166,6 +167,7 @@ Do not hardcode DSN, username, or password inside page/controller code.
 - Email template management page exists at `public/pages/template-emel.php`.
 - Template operations are handled by `EmailTemplateController.php`, `Mailer.php`, `EmailTemplate*.php`, and AJAX endpoints under `public/ajax/email-*` and `public/ajax/email-template-*`.
 - Supported UI operations include listing, preview/testing, creating, updating, duplicating, archiving/restoring, deleting, and seeding templates where available.
+- SMTP delivery failures are classified through the framework external-service failure pattern documented in `docs/external-service-failure-handling-2026-06-23.md`.
 
 ### Template Generator
 

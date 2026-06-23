@@ -344,7 +344,14 @@ try {
     $fallback = function_exists('__') ? __('aiChatbot_error_invalid_action') : null;
     jsonErrorResponse(($fallback && $fallback !== 'aiChatbot_error_invalid_action') ? (string)$fallback : 'Permintaan chatbot tidak sah.', 422);
 } catch (Throwable $e) {
-    error_log('[ai-chatbot-message] ' . $e->getMessage());
+    if ($e instanceof ExternalServiceException) {
+        FrameworkExceptionHandler::log($e, [
+            'endpoint' => 'ai-chatbot-message',
+            'model' => $publicConfig['model'] ?? null,
+        ]);
+    } else {
+        error_log('[ai-chatbot-message] ' . $e->getMessage());
+    }
     if (isset($service, $usageRepository)) {
         $errorMessageId = null;
         if (!empty($publicConfig['store_conversations']) && !empty($conversationSessionId) && isset($conversationRepository)) {
@@ -377,7 +384,7 @@ try {
     if (function_exists('audit_event')) {
         audit_event([
             'event_type' => 'AI_CHATBOT_MESSAGE',
-            'severity' => 'ERROR',
+            'severity' => $e instanceof ExternalServiceException ? 'WARN' : 'ERROR',
             'outcome' => 'FAIL',
             'target_type' => 'ai_chatbot',
             'target_id' => 'prototype',
@@ -393,7 +400,11 @@ try {
         ]);
     }
     $fallback = function_exists('__') ? __('aiChatbot_error_generic') : null;
-    jsonErrorResponse(($fallback && $fallback !== 'aiChatbot_error_generic') ? (string)$fallback : 'AI Chatbot tidak dapat menjawab buat masa ini.', 500);
+    jsonExceptionResponse(
+        $e,
+        ($fallback && $fallback !== 'aiChatbot_error_generic') ? (string)$fallback : 'AI Chatbot tidak dapat menjawab buat masa ini.',
+        ['_skip_log' => true]
+    );
 }
 
 /**

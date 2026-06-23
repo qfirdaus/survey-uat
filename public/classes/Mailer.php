@@ -9,6 +9,8 @@
  */// classes/Mailer.php
 declare(strict_types=1);
 
+require_once __DIR__ . '/ExternalServiceException.php';
+
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
@@ -25,6 +27,8 @@ class Mailer
 
     /** @var string */
     private string $lastError = '';
+
+    private ?ExternalServiceException $lastExternalServiceException = null;
 
     private static function currentAppEnv(): string
     {
@@ -219,6 +223,7 @@ class Mailer
         array $opts = [] // ['cc'=>[], 'bcc'=>[], 'attachments'=>['/path/a.pdf'=> 'a.pdf']]
     ): bool {
         $this->lastError = '';
+        $this->lastExternalServiceException = null;
         try {
             $m = $this->m;
             $m->clearAllRecipients();
@@ -249,12 +254,14 @@ class Mailer
             $ok = $m->send();
             if (!$ok) {
                 $this->lastError = trim($m->ErrorInfo ?: 'Unknown mailer error');
+                $this->lastExternalServiceException = $this->buildExternalServiceException($this->lastError);
                 self::appendLog('mail_error.log', sprintf('[%s] send() failed: %s', date('Y-m-d H:i:s'), $this->lastError));
             }
             return $ok;
 
         } catch (\Throwable $e) {
             $this->lastError = $e->getMessage();
+            $this->lastExternalServiceException = $this->buildExternalServiceException($this->lastError, $e);
             self::appendLog('mail_error.log', sprintf('[%s] EXC: %s', date('Y-m-d H:i:s'), $this->lastError));
             return false;
         }
@@ -403,5 +410,71 @@ class Mailer
     public function getLastError(): string
     {
         return $this->lastError;
+    }
+
+    public function getLastExternalServiceException(): ?ExternalServiceException
+    {
+        return $this->lastExternalServiceException;
+    }
+
+    public function lastFailureAsExternalServiceException(?string $fallbackMessage = null): ExternalServiceException
+    {
+        return $this->lastExternalServiceException
+            ?? $this->buildExternalServiceException($fallbackMessage ?: ($this->lastError ?: 'Email could not be sent.'));
+    }
+
+    private function buildExternalServiceException(string $message, ?\Throwable $previous = null): ExternalServiceException
+    {
+        return self::externalServiceExceptionForSmtpFailure($message, $this->smtpEndpoint(), $previous);
+    }
+
+    public static function externalServiceExceptionForSmtpFailure(string $message, ?string $endpoint = null, ?\Throwable $previous = null): ExternalServiceException
+    {
+        $message = trim($message) !== '' ? trim($message) : 'Email could not be sent.';
+        $endpoint = trim((string)$endpoint) !== '' ? trim((string)$endpoint) : 'smtp://unknown';
+        $lower = strtolower($message);
+        $context = ['transport' => 'smtp'];
+
+        if (
+            str_contains($lower, 'authenticate')
+            || str_contains($lower, 'authentication')
+            || str_contains($lower, 'username')
+            || str_contains($lower, 'password')
+            || str_contains($lower, 'credentials')
+            || str_contains($lower, '535')
+        ) {
+            return new ExternalServiceAuthenticationException($message, 'SMTP', $endpoint, null, $context, $previous);
+        }
+
+        if (str_contains($lower, 'timed out') || str_contains($lower, 'timeout')) {
+            return new ExternalServiceTimeoutException($message, 'SMTP', $endpoint, null, $context, $previous);
+        }
+
+        if (
+            str_contains($lower, 'connection refused')
+            || str_contains($lower, 'could not connect')
+            || str_contains($lower, 'failed to connect')
+            || str_contains($lower, 'network')
+            || str_contains($lower, 'dns')
+            || str_contains($lower, 'getaddrinfo')
+            || str_contains($lower, 'ssl')
+            || str_contains($lower, 'tls')
+            || str_contains($lower, 'certificate')
+        ) {
+            return new ExternalServiceUnavailableException($message, 'SMTP', $endpoint, null, $context, $previous);
+        }
+
+        return new ExternalServiceException($message, 'SMTP', $endpoint, null, 'smtp_delivery', true, $context, 0, $previous);
+    }
+
+    private function smtpEndpoint(): string
+    {
+        $host = trim((string)($this->m->Host ?? ''));
+        $port = (int)($this->m->Port ?? 0);
+        if ($host === '') {
+            return 'smtp://unknown';
+        }
+
+        return 'smtp://' . $host . ($port > 0 ? ':' . $port : '');
     }
 }
