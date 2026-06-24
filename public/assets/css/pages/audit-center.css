@@ -621,6 +621,7 @@
 
 .audit-center-table {
     margin-bottom: 0;
+    min-width: 920px;
     vertical-align: top;
 }
 
@@ -640,6 +641,22 @@
     font-size: 0.84rem;
     vertical-align: top;
     line-height: 1.55;
+}
+
+.audit-center-table:not(.audit-center-table--nested) > tbody > tr:not(.audit-center-detail-row) > td {
+    white-space: nowrap;
+}
+
+.audit-center-col-datetime,
+.audit-center-cell-datetime {
+    width: 172px;
+    min-width: 172px;
+    white-space: nowrap;
+}
+
+.audit-center-table td > .audit-center-line-clamp-1,
+.audit-center-table td > .text-truncate {
+    max-width: 100%;
 }
 
 .audit-center-detail-row td {

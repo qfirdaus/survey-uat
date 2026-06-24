@@ -380,15 +380,15 @@ ob_start();
   <?php if ($rows === []): ?>
     <div class="audit-center-empty"><i class="ri-inbox-archive-line"></i><div><?= h(ac('events_empty', 'Tiada event audit ditemui untuk paparan semasa.')) ?></div></div>
   <?php else: ?>
-    <div class="table-responsive"><table class="table audit-center-table"><thead><tr><th style="width:44px;"></th><th style="width:140px;"><?= h(ac('col_occurred', 'Occurred')) ?></th><th style="width:280px;"><?= h(ac('col_event', 'Event')) ?></th><th style="width:120px;"><?= h(ac('col_outcome', 'Outcome')) ?></th><th style="width:180px;"><?= h(ac('col_actor', 'Actor')) ?></th><th style="width:180px;"><?= h(ac('col_target', 'Target')) ?></th></tr></thead><tbody>
+    <div class="table-responsive"><table class="table audit-center-table"><thead><tr><th style="width:44px;"></th><th class="audit-center-col-datetime"><?= h(ac('col_occurred', 'Occurred')) ?></th><th style="width:280px;"><?= h(ac('col_event', 'Event')) ?></th><th style="width:120px;"><?= h(ac('col_outcome', 'Outcome')) ?></th><th style="width:180px;"><?= h(ac('col_actor', 'Actor')) ?></th><th style="width:180px;"><?= h(ac('col_target', 'Target')) ?></th></tr></thead><tbody>
     <?php foreach ($rows as $index => $row): $outcome = strtoupper(trim((string)($row['outcome'] ?? ''))); $severity = strtoupper(trim((string)($row['severity'] ?? ''))); $target = trim((string)($row['target_label'] ?? $row['target_type'] ?? '')); $detailId = 'event-detail-' . ($row['id'] ?? $index); ?>
       <tr>
         <td><button type="button" class="btn btn-sm btn-outline-secondary audit-center-expand-btn" data-target="<?= h($detailId) ?>" aria-expanded="false">+</button></td>
-        <td><?= h(fmt_dt($row['occurred_at'] ?? null)) ?></td>
+        <td class="audit-center-cell-datetime"><?= h(fmt_dt($row['occurred_at'] ?? null)) ?></td>
         <td><div class="fw-semibold"><?= h((string)($row['event_type'] ?? '—')) ?></div><div class="audit-center-muted small audit-center-line-clamp-1"><?= h((string)($row['message'] ?? '—')) ?></div></td>
         <td><span class="<?= h(audit_badge_class($outcome, ['SUCCESS'], ['FAIL', 'FAILURE', 'ERROR'], ['BLOCKED', 'LOCKED'], ['INFO'])) ?>"><?= h($outcome !== '' ? $outcome : '—') ?></span></td>
-        <td><?= h((string)($row['actor_label'] ?? '—')) ?></td>
-        <td><?= $target !== '' ? h($target) : '—' ?></td>
+        <td><div class="audit-center-line-clamp-1" title="<?= h((string)($row['actor_label'] ?? '—')) ?>"><?= h((string)($row['actor_label'] ?? '—')) ?></div></td>
+        <td><div class="audit-center-line-clamp-1" title="<?= h($target !== '' ? $target : '—') ?>"><?= $target !== '' ? h($target) : '—' ?></div></td>
       </tr>
       <tr id="<?= h($detailId) ?>" class="audit-center-detail-row d-none">
         <td colspan="6"><?= render_detail_grid([
@@ -416,12 +416,12 @@ ob_start();
   <?php if ($rows === []): ?>
     <div class="audit-center-empty"><i class="ri-route-line"></i><div><?= h(ac('requests_empty', 'Tiada request trace ditemui untuk paparan semasa.')) ?></div></div>
   <?php else: ?>
-    <div class="table-responsive"><table class="table audit-center-table"><thead><tr><th style="width:44px;"></th><th style="width:140px;"><?= h(ac('col_started', 'Started')) ?></th><th style="width:320px;"><?= h(ac('col_route', 'Route')) ?></th><th style="width:110px;"><?= h(ac('col_method', 'Method')) ?></th><th style="width:110px;"><?= h(ac('col_status', 'Status')) ?></th><th style="width:110px;"><?= h(ac('col_duration', 'Duration')) ?></th></tr></thead><tbody>
+    <div class="table-responsive"><table class="table audit-center-table"><thead><tr><th style="width:44px;"></th><th class="audit-center-col-datetime"><?= h(ac('col_started', 'Started')) ?></th><th style="width:320px;"><?= h(ac('col_route', 'Route')) ?></th><th style="width:110px;"><?= h(ac('col_method', 'Method')) ?></th><th style="width:110px;"><?= h(ac('col_status', 'Status')) ?></th><th style="width:110px;"><?= h(ac('col_duration', 'Duration')) ?></th></tr></thead><tbody>
     <?php foreach ($rows as $index => $row): $statusCode = trim((string)($row['status_code'] ?? '')); $statusClass = 'audit-center-badge audit-center-badge--muted'; if ($statusCode !== '') { $statusInt = (int)$statusCode; $statusClass = $statusInt >= 500 ? 'audit-center-badge audit-center-badge--danger' : ($statusInt >= 400 ? 'audit-center-badge audit-center-badge--warning' : ($statusInt >= 200 ? 'audit-center-badge audit-center-badge--info' : $statusClass)); } $detailId = 'request-detail-' . ($row['id'] ?? $index); ?>
       <tr>
         <td><button type="button" class="btn btn-sm btn-outline-secondary audit-center-expand-btn" data-target="<?= h($detailId) ?>" aria-expanded="false">+</button></td>
-        <td><?= h(fmt_dt($row['started_at'] ?? null)) ?></td>
-        <td><div class="fw-semibold"><?= h((string)($row['route'] ?? '—')) ?></div></td>
+        <td class="audit-center-cell-datetime"><?= h(fmt_dt($row['started_at'] ?? null)) ?></td>
+        <td><div class="fw-semibold audit-center-line-clamp-1" title="<?= h((string)($row['route'] ?? '—')) ?>"><?= h((string)($row['route'] ?? '—')) ?></div></td>
         <td><span class="audit-center-badge audit-center-badge--muted"><?= h((string)($row['method'] ?? '—')) ?></span></td>
         <td><span class="<?= h($statusClass) ?>"><?= h($statusCode !== '' ? $statusCode : '—') ?></span></td>
         <td><?= h(fmt_duration_ms($row['duration_ms'] ?? null)) ?></td>
@@ -450,7 +450,7 @@ ob_start();
   <?php if ($rows === []): ?>
     <div class="audit-center-empty"><i class="ri-fingerprint-line"></i><div><?= h(ac('sessions_empty', 'Tiada sesi audit ditemui untuk paparan semasa.')) ?></div></div>
   <?php else: ?>
-    <div class="table-responsive"><table class="table audit-center-table"><thead><tr><th style="width:44px;"></th><th style="width:140px;"><?= h(ac('col_started', 'Started')) ?></th><th style="width:220px;"><?= h(ac('col_user', 'User')) ?></th><th style="width:220px;"><?= h(ac('col_session_id', 'Session ID')) ?></th><th style="width:110px;"><?= h(ac('col_duration', 'Duration')) ?></th><th style="width:150px;"><?= h(ac('detail_ip', 'IP')) ?></th></tr></thead><tbody>
+    <div class="table-responsive"><table class="table audit-center-table"><thead><tr><th style="width:44px;"></th><th class="audit-center-col-datetime"><?= h(ac('col_started', 'Started')) ?></th><th style="width:300px;"><?= h(ac('col_user', 'User')) ?></th><th style="width:220px;"><?= h(ac('col_session_id', 'Session ID')) ?></th><th style="width:110px;"><?= h(ac('col_duration', 'Duration')) ?></th><th style="width:150px;"><?= h(ac('detail_ip', 'IP')) ?></th></tr></thead><tbody>
     <?php foreach ($rows as $index => $row): $detailId = 'session-detail-' . ($row['id'] ?? $index); ?>
       <?php
         $displayName = trim((string)($row['display_name'] ?? ''));
@@ -461,8 +461,8 @@ ob_start();
       ?>
       <tr>
         <td><button type="button" class="btn btn-sm btn-outline-secondary audit-center-expand-btn" data-target="<?= h($detailId) ?>" aria-expanded="false">+</button></td>
-        <td><?= h(fmt_dt($row['started_at'] ?? null)) ?></td>
-        <td><div class="text-truncate"><?= h($userSummary) ?></div></td>
+        <td class="audit-center-cell-datetime"><?= h(fmt_dt($row['started_at'] ?? null)) ?></td>
+        <td><div class="audit-center-line-clamp-1" title="<?= h($userSummary) ?>"><?= h($userSummary) ?></div></td>
         <td><?php if (!empty($row['session_id'])): ?><span class="audit-center-code"><?= h($row['session_id']) ?></span><?php else: ?>—<?php endif; ?></td>
         <td><?= h(fmt_duration_seconds($row['duration_seconds'] ?? null)) ?></td>
         <td><?php if (!empty($row['ip_text'])): ?><span class="audit-center-code"><?= h($row['ip_text']) ?></span><?php else: ?>—<?php endif; ?></td>
@@ -499,7 +499,7 @@ ob_start();
   <?php if ($rows === []): ?>
     <div class="audit-center-empty"><i class="ri-git-commit-line"></i><div><?= h(ac('changes_empty', 'Tiada change set ditemui untuk paparan semasa.')) ?></div></div>
   <?php else: ?>
-    <div class="table-responsive"><table class="table audit-center-table"><thead><tr><th style="width:44px;"></th><th style="width:152px;"><?= h(ac('col_changed_at', 'Changed At')) ?></th><th style="width:170px;"><?= h(ac('col_target', 'Target')) ?></th><th style="width:230px;"><?= h(ac('col_event', 'Event')) ?></th><th style="width:150px;"><?= h(ac('col_actor', 'Actor')) ?></th><th style="width:88px;"><?= h(ac('col_fields', 'Fields')) ?></th><th style="width:220px;"><?= h(ac('col_reason', 'Reason')) ?></th></tr></thead><tbody>
+    <div class="table-responsive"><table class="table audit-center-table"><thead><tr><th style="width:44px;"></th><th class="audit-center-col-datetime"><?= h(ac('col_changed_at', 'Changed At')) ?></th><th style="width:170px;"><?= h(ac('col_target', 'Target')) ?></th><th style="width:230px;"><?= h(ac('col_event', 'Event')) ?></th><th style="width:150px;"><?= h(ac('col_actor', 'Actor')) ?></th><th style="width:88px;"><?= h(ac('col_fields', 'Fields')) ?></th><th style="width:220px;"><?= h(ac('col_reason', 'Reason')) ?></th></tr></thead><tbody>
     <?php foreach ($rows as $index => $row): $detailId = 'change-detail-' . ($row['id'] ?? $index); ?>
       <?php
         $targetType = trim((string)($row['target_type'] ?? ''));
@@ -510,12 +510,12 @@ ob_start();
       ?>
       <tr>
         <td><button type="button" class="btn btn-sm btn-outline-secondary audit-center-expand-btn" data-target="<?= h($detailId) ?>" aria-expanded="false">+</button></td>
-        <td><?= h(fmt_dt($row['occurred_at'] ?? null)) ?></td>
-        <td><div class="fw-semibold audit-center-line-clamp-1"><?= h($targetSummary !== '' ? $targetSummary : '—') ?></div></td>
-        <td><div class="fw-semibold audit-center-line-clamp-1"><?= h((string)($row['event_type'] ?? '—')) ?></div><div class="audit-center-muted small audit-center-line-clamp-1"><?= h((string)($row['message'] ?? '—')) ?></div></td>
-        <td><div class="audit-center-line-clamp-1"><?= h((string)($row['actor_label'] ?? '—')) ?></div></td>
+        <td class="audit-center-cell-datetime"><?= h(fmt_dt($row['occurred_at'] ?? null)) ?></td>
+        <td><div class="fw-semibold audit-center-line-clamp-1" title="<?= h($targetSummary !== '' ? $targetSummary : '—') ?>"><?= h($targetSummary !== '' ? $targetSummary : '—') ?></div></td>
+        <td><div class="fw-semibold audit-center-line-clamp-1" title="<?= h((string)($row['event_type'] ?? '—')) ?>"><?= h((string)($row['event_type'] ?? '—')) ?></div><div class="audit-center-muted small audit-center-line-clamp-1" title="<?= h((string)($row['message'] ?? '—')) ?>"><?= h((string)($row['message'] ?? '—')) ?></div></td>
+        <td><div class="audit-center-line-clamp-1" title="<?= h((string)($row['actor_label'] ?? '—')) ?>"><?= h((string)($row['actor_label'] ?? '—')) ?></div></td>
         <td><span class="audit-center-badge audit-center-badge--info"><?= h((string)($row['field_count'] ?? '0')) ?></span></td>
-        <td><div class="audit-center-line-clamp-1"><?= h($changeReasonSummary) ?></div></td>
+        <td><div class="audit-center-line-clamp-1" title="<?= h($changeReasonSummary) ?>"><?= h($changeReasonSummary) ?></div></td>
       </tr>
       <tr id="<?= h($detailId) ?>" class="audit-center-detail-row d-none">
         <td colspan="7">
@@ -553,14 +553,14 @@ ob_start();
         <?php if ($payload['events']['rows'] === []): ?>
           <div class="audit-center-empty"><i class="ri-alarm-warning-line"></i><div><?= h(ac('security_events_empty', 'Tiada event keselamatan ditemui.')) ?></div></div>
         <?php else: ?>
-          <div class="table-responsive"><table class="table audit-center-table"><thead><tr><th style="width:44px;"></th><th style="width:140px;"><?= h(ac('col_occurred', 'Occurred')) ?></th><th style="width:260px;"><?= h(ac('col_event', 'Event')) ?></th><th style="width:120px;"><?= h(ac('col_outcome', 'Outcome')) ?></th><th style="width:180px;"><?= h(ac('col_actor', 'Actor')) ?></th></tr></thead><tbody>
+          <div class="table-responsive"><table class="table audit-center-table"><thead><tr><th style="width:44px;"></th><th class="audit-center-col-datetime"><?= h(ac('col_occurred', 'Occurred')) ?></th><th style="width:260px;"><?= h(ac('col_event', 'Event')) ?></th><th style="width:120px;"><?= h(ac('col_outcome', 'Outcome')) ?></th><th style="width:180px;"><?= h(ac('col_actor', 'Actor')) ?></th></tr></thead><tbody>
           <?php foreach ($payload['events']['rows'] as $index => $row): $outcome = strtoupper(trim((string)($row['outcome'] ?? ''))); $detailId = 'security-event-detail-' . ($row['id'] ?? $index); ?>
             <tr>
               <td><button type="button" class="btn btn-sm btn-outline-secondary audit-center-expand-btn" data-target="<?= h($detailId) ?>" aria-expanded="false">+</button></td>
-              <td><?= h(fmt_dt($row['occurred_at'] ?? null)) ?></td>
-              <td><div class="fw-semibold"><?= h((string)($row['event_type'] ?? '—')) ?></div></td>
+              <td class="audit-center-cell-datetime"><?= h(fmt_dt($row['occurred_at'] ?? null)) ?></td>
+              <td><div class="fw-semibold audit-center-line-clamp-1" title="<?= h((string)($row['event_type'] ?? '—')) ?>"><?= h((string)($row['event_type'] ?? '—')) ?></div></td>
               <td><span class="<?= h(audit_badge_class($outcome, ['SUCCESS'], ['FAIL', 'FAILURE', 'ERROR'], ['BLOCKED', 'LOCKED'])) ?>"><?= h($outcome !== '' ? $outcome : '—') ?></span></td>
-              <td><?= h((string)($row['actor_label'] ?? '—')) ?></td>
+              <td><div class="audit-center-line-clamp-1" title="<?= h((string)($row['actor_label'] ?? '—')) ?>"><?= h((string)($row['actor_label'] ?? '—')) ?></div></td>
             </tr>
             <tr id="<?= h($detailId) ?>" class="audit-center-detail-row d-none">
               <td colspan="5"><?= render_detail_grid([
@@ -584,13 +584,13 @@ ob_start();
         <?php if ($payload['lockouts']['rows'] === []): ?>
           <div class="audit-center-empty"><i class="ri-lock-password-line"></i><div><?= h(ac('security_lockouts_empty', 'Tiada lockout aktif ditemui.')) ?></div></div>
         <?php else: ?>
-          <div class="table-responsive"><table class="table audit-center-table"><thead><tr><th style="width:44px;"></th><th style="width:180px;"><?= h(ac('detail_login_id', 'Login ID')) ?></th><th style="width:100px;"><?= h(ac('col_attempts', 'Attempts')) ?></th><th style="width:150px;"><?= h(ac('col_locked_until', 'Locked Until')) ?></th><th style="width:150px;"><?= h(ac('detail_ip', 'IP')) ?></th></tr></thead><tbody>
+          <div class="table-responsive"><table class="table audit-center-table"><thead><tr><th style="width:44px;"></th><th style="width:180px;"><?= h(ac('detail_login_id', 'Login ID')) ?></th><th style="width:100px;"><?= h(ac('col_attempts', 'Attempts')) ?></th><th class="audit-center-col-datetime"><?= h(ac('col_locked_until', 'Locked Until')) ?></th><th style="width:150px;"><?= h(ac('detail_ip', 'IP')) ?></th></tr></thead><tbody>
           <?php foreach ($payload['lockouts']['rows'] as $index => $row): $detailId = 'lockout-detail-' . ($row['id'] ?? $index); ?>
             <tr>
               <td><button type="button" class="btn btn-sm btn-outline-secondary audit-center-expand-btn" data-target="<?= h($detailId) ?>" aria-expanded="false">+</button></td>
               <td><?php if (!empty($row['f_loginID'])): ?><span class="audit-center-code"><?= h($row['f_loginID']) ?></span><?php else: ?>—<?php endif; ?></td>
               <td><?= h((string)($row['f_failed_attempts'] ?? '0')) ?></td>
-              <td><?= h(fmt_dt($row['f_locked_until'] ?? null)) ?></td>
+              <td class="audit-center-cell-datetime"><?= h(fmt_dt($row['f_locked_until'] ?? null)) ?></td>
               <td><?php if (!empty($row['f_last_ip'])): ?><span class="audit-center-code"><?= h($row['f_last_ip']) ?></span><?php else: ?>—<?php endif; ?></td>
             </tr>
             <tr id="<?= h($detailId) ?>" class="audit-center-detail-row d-none">
@@ -621,14 +621,14 @@ ob_start();
         <?php if ($payload['throttles']['rows'] === []): ?>
           <div class="audit-center-empty"><i class="ri-radar-line"></i><div><?= h(ac('security_throttles_empty', 'Tiada throttle aktif ditemui.')) ?></div></div>
         <?php else: ?>
-          <div class="table-responsive"><table class="table audit-center-table"><thead><tr><th style="width:44px;"></th><th style="width:120px;"><?= h(ac('col_scope', 'Scope')) ?></th><th style="width:260px;"><?= h(ac('col_scope_key', 'Scope Key')) ?></th><th style="width:100px;"><?= h(ac('col_attempts', 'Attempts')) ?></th><th style="width:150px;"><?= h(ac('col_locked_until', 'Locked Until')) ?></th></tr></thead><tbody>
+          <div class="table-responsive"><table class="table audit-center-table"><thead><tr><th style="width:44px;"></th><th style="width:120px;"><?= h(ac('col_scope', 'Scope')) ?></th><th style="width:260px;"><?= h(ac('col_scope_key', 'Scope Key')) ?></th><th style="width:100px;"><?= h(ac('col_attempts', 'Attempts')) ?></th><th class="audit-center-col-datetime"><?= h(ac('col_locked_until', 'Locked Until')) ?></th></tr></thead><tbody>
           <?php foreach ($payload['throttles']['rows'] as $index => $row): $scopeType = strtoupper(trim((string)($row['f_scope_type'] ?? ''))); $detailId = 'throttle-detail-' . ($row['id'] ?? $index); ?>
             <tr>
               <td><button type="button" class="btn btn-sm btn-outline-secondary audit-center-expand-btn" data-target="<?= h($detailId) ?>" aria-expanded="false">+</button></td>
               <td><span class="<?= h(audit_badge_class($scopeType, [], ['IP'], ['LOGIN_IP'])) ?>"><?= h($scopeType !== '' ? $scopeType : '—') ?></span></td>
               <td><?php if (!empty($row['f_scope_key'])): ?><span class="audit-center-code"><?= h($row['f_scope_key']) ?></span><?php else: ?>—<?php endif; ?></td>
               <td><?= h((string)($row['f_failed_attempts'] ?? '0')) ?></td>
-              <td><?= h(fmt_dt($row['f_locked_until'] ?? null)) ?></td>
+              <td class="audit-center-cell-datetime"><?= h(fmt_dt($row['f_locked_until'] ?? null)) ?></td>
             </tr>
             <tr id="<?= h($detailId) ?>" class="audit-center-detail-row d-none">
               <td colspan="5"><?= render_detail_grid([
