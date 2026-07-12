@@ -14,7 +14,9 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 ## Runtime Baseline
 
 - PHP: `8.3.30`
-- Docker image: `php:8.3.30-apache`
+- Host environment: WSL 2 with Ubuntu 24.04
+- Web server: Nginx with PHP-FPM
+- Runtime model: native WSL; Docker, Docker Compose, and container-specific Apache assets are no longer maintained in this repository
 - Main database: MySQL `8.x`
 - External database support: Sybase through ODBC/DBLIB, plus additional PDO connections configured from the system UI
 
@@ -218,6 +220,7 @@ Do not hardcode DSN, username, or password inside page/controller code.
 
 - `sync-updates.sh` distributes collected updates to the registered downstream project list, including `e-prestasi` and `upnm30`.
 - `sync-updates.sh` and `update-files.sh` support `.sync-update-ignore` so selected files can be excluded from `updates/` and project sync flows.
+- `sync-updates.sh` reports results directly in the terminal and no longer creates the unused `sync.log` or `conflict.log` files.
 - Core file protection docs and `tools/core-file-protection-audit.php` are included in framework update collection.
 - `public/lang/custom/*` remains protected from overwrite during update distribution.
 
@@ -298,13 +301,10 @@ iqs-framework/
 |   |-- includes/          # Bootstrap/init/shared includes
 |   |-- pages/             # Authenticated application pages
 |   |-- setting/           # Helpers, constants, language/config support
-|-- docker/                # Apache, SSL, and PHP runtime config
 |-- docs/                  # Project documentation assets
 |-- tools/                 # CLI maintenance tools
 |-- updates/               # Update/deployment support files
 |-- .env.example           # Example runtime environment
-|-- docker-compose.yml     # Docker runtime service
-|-- Dockerfile             # PHP Apache image
 |-- VERSION                # Application version
 |-- CHANGELOG.md           # Release notes
 |-- README.md              # This file
@@ -312,25 +312,34 @@ iqs-framework/
 
 ## Setup
 
+The repository now runs directly in WSL with Nginx and PHP-FPM. The retired Docker image, Compose service, Apache container configuration, and development TLS assets have been removed and are not part of the supported setup.
+
 1. Prepare environment file.
 
    Copy `.env.example` to `.env` and configure the MySQL and Sybase values required by your environment.
 
-2. Start with Docker.
+2. Install the required PHP runtime and extensions in WSL.
+
+   The application baseline is PHP `8.3.30` with PHP-FPM. Required extensions are `pdo`, `pdo_mysql`, `mysqli`, `pdo_odbc`, `pdo_dblib`, `gd`, `zip`, and `opcache`. Enable any additional PDO driver required by connections configured through the system UI.
+
+3. Configure the Nginx virtual host.
+
+   Set the document root to `/var/www/app/iqs-framework/public`, route PHP requests to the installed PHP-FPM socket, disable directory listing, and deny access to hidden or sensitive files. Keep the Nginx configuration outside this repository under normal system administration controls.
+
+4. Confirm filesystem permissions.
+
+   The Nginx/PHP-FPM runtime user needs read access to the application and write access only to runtime directories that require it, such as `public/cache`, `public/log`, and approved upload paths.
+
+5. Confirm PHP-FPM and Nginx are running, then validate the runtime.
 
    ```bash
-   docker compose up -d --build
+   php -v
+   php -m
    ```
 
-3. Confirm Apache document root.
+   Confirm the application can read `.env` from the project root and `VERSION` from the same repository. The application resolves `VERSION` directly from the project root when `APP_VERSION_FILE` is not set.
 
-   Docker maps `./public` to `/var/www/html`, so application entry files are served from the `public` directory.
-
-4. Confirm version visibility.
-
-   The container mounts `./VERSION` to `/var/www/VERSION` so the runtime version label can read the same release value.
-
-5. Confirm database setup.
+6. Confirm database setup.
 
    Ensure the required application tables exist before login and administration testing. For additional database connections, ensure `tbl_m_db_connection` and `tbl_m_db_connection_env` exist in every deployment environment.
 
