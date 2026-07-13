@@ -7,14 +7,16 @@ This changelog follows a release-style summary based on major project milestones
 ## [Unreleased]
 
 ### Changed
-- Changed the documented runtime from Docker/Apache to WSL 2 Ubuntu with Nginx and PHP-FPM.
-- Updated database inspection guidance to use the native WSL PHP runtime.
-- Updated setup guidance to make the native WSL runtime the only maintained local deployment path.
-- Changed `sync-updates.sh` to report sync results in the terminal without initializing unused log files.
+- Changed project documentation and setup paths from the IQS Framework template to the Survey native WSL runtime.
+- Expanded `.gitignore` coverage for environment files, runtime data, uploads, IDE files, temporary files, and test artifacts.
+- Added a sanitized `.env.example` containing supported Survey environment keys without runtime credentials.
+- Changed the runtime environment label from e-Base to Survey.
+- Changed user-upload handling so generated data is not tracked by Git while security files remain trackable.
 
 ### Removed
 - Removed the retired Dockerfile, Compose service, Apache/PHP container configuration, Docker ignore rules, and development TLS key material.
-- Removed unused `sync.log` and `conflict.log` initialization and references from the update sync workflow.
+- Removed obsolete npm metadata and the unmaintained Tailwind/PostCSS dependency definition while retaining the compiled stylesheet used by the application.
+- Removed obsolete shared PHP/Xdebug editor configuration.
 
 ## [1.8.4] - 2026-06-23
 

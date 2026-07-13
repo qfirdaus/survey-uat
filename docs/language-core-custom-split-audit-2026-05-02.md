@@ -3,6 +3,8 @@
 Date: 2026-05-02  
 Scope: Phase 1 audit and implementation roadmap for separating framework-owned language files from project-owned language overrides.
 
+> Historical note: references to `sync-updates.sh` and `update-files.sh` describe the IQS Framework workflow at the time of this audit. Those scripts are not part of the current Survey repository and are not current Survey operational instructions.
+
 ## Objective
 
 The framework is shared across multiple downstream systems. Current translation files are stored directly under:

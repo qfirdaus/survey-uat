@@ -2,6 +2,8 @@
 
 Date: 2026-04-23
 
+> Historical note: Docker runtime references below describe the environment assessed on the audit date. The current Survey repository uses the native WSL, Nginx, and PHP-FPM runtime documented in `README.md`.
+
 Scope:
 - Repository audit for upgrade readiness from PHP 8.3.30 to PHP 8.4
 - Workspace only: `D:\WWW\iqs-framework`

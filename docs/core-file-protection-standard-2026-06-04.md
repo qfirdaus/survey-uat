@@ -93,14 +93,13 @@ The tool checks active core pages, active core controllers, current framework AJ
 
 ## Release Checklist
 
-Before collecting or syncing framework updates:
+Before reviewing or applying framework updates:
 
-1. Run `php tools/core-file-protection-audit.php --strict`.
+1. Run `php tools/core-file-protection-audit.php` and review downstream project files reported without core markers.
 2. Run `php tools/language-split-tool.php validate` when language files changed.
-3. Run `bash -n sync-updates.sh` and `bash -n update-files.sh` when update scripts changed.
-4. Confirm `public/lang/custom/*` remains project-specific and is not added to update packages.
-5. Confirm generated project files use `PROJECT GENERATED FILE`, not `IQS FRAMEWORK CORE FILE`.
-6. Document any approved downstream exception before editing a protected core file.
+3. Confirm `public/lang/custom/*` remains project-specific during the update review.
+4. Confirm generated project files use `PROJECT GENERATED FILE`, not `IQS FRAMEWORK CORE FILE`.
+5. Document any approved downstream exception before editing a protected core file.
 
 ## Current Phase
 

@@ -1,16 +1,57 @@
+# Dependencies
 /vendor/
+node_modules/
+
+# Environment and secrets
 .env
 env
+.env.*
+!.env.example
+!*.env.example
+
+# Runtime files
 *.log
 *.sqlite
-node_modules/
-.idea/
-.DS_Store
+/.last_update_check
 app/cache/
-app/cache/*
 public/cache/
-public_backup_*
+public/tmp/
 
-# staging deploy
+# User uploads
+/public/uploads/**
+!/public/uploads/**/
+!/public/uploads/**/.htaccess
+!/public/uploads/**/.gitkeep
+
+# Deployment staging
 updates/
 _updates_archive/
+public_backup_*
+
+# IDE, workspace and local scratch files
+.idea/
+.vscode/
+.cursor/
+scratch/
+*.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Temporary and backup files
+*.swp
+*.swo
+*~
+*.bak
+*.backup
+*.tmp
+*.temp
+*.orig
+*.rej
+
+# Test and coverage artifacts
+.phpunit.result.cache
+.phpunit.cache/
+coverage/
