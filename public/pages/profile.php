@@ -208,10 +208,41 @@ $PAGE_TITLE = tr('profile_title','Profil Pengguna');
           $gred      = $profileView['gred']       ?? '';
           $jabatan   = $profileView['jabatan']    ?? '';
           $stafID    = $profileView['stafID']     ?? '';
+          $loginID   = $profileView['loginID']    ?? '';
           $nopek     = $profileView['nopekerja']  ?? '';
           $emel      = $profileView['emel']       ?? '';
-          $categoryUser = strtoupper(trim((string)($profileView['categoryUser'] ?? '')));
-          $isStudentProfile = in_array($categoryUser, ['PELAJAR', 'STUDENT'], true) || !empty($_SESSION['student_profile']);
+          $categoryCandidates = [
+            $profileView['categoryUser'] ?? null,
+            $profileView['f_categoryUser'] ?? null,
+            $_SESSION['f_categoryUser'] ?? null,
+            $_SESSION['user']['f_categoryUser'] ?? null,
+          ];
+          $categoryUser = '';
+          foreach ($categoryCandidates as $categoryCandidate) {
+            $categoryCandidate = strtoupper(trim((string)$categoryCandidate));
+            $normalizedCategory = match ($categoryCandidate) {
+              'STUDENT' => 'PELAJAR',
+              'PUBLIC' => 'UMUM',
+              default => $categoryCandidate,
+            };
+            if (in_array($normalizedCategory, ['STAF', 'PELAJAR', 'UMUM'], true)) {
+              $categoryUser = $normalizedCategory;
+              break;
+            }
+          }
+          if ($categoryUser === '') {
+            $identityCandidate = trim((string)($loginID !== '' ? $loginID : $stafID));
+            if (!empty($_SESSION['student_profile'])) {
+              $categoryUser = 'PELAJAR';
+            } elseif (trim((string)$nopek) !== '' || preg_match('/^\d{4}-\d{2}$/', $identityCandidate) === 1) {
+              $categoryUser = 'STAF';
+            } elseif ($identityCandidate !== '' && !str_contains($identityCandidate, '@')) {
+              $categoryUser = 'PELAJAR';
+            } else {
+              $categoryUser = 'UMUM';
+            }
+          }
+          $isStudentProfile = $categoryUser === 'PELAJAR';
           $isPublicProfile = in_array($categoryUser, ['UMUM', 'PUBLIC'], true);
           $isStaffProfile = !$isStudentProfile && !$isPublicProfile;
           $identityValue = ($isStaffProfile || $isStudentProfile) ? trim((string)$stafID) : '';
@@ -223,6 +254,18 @@ $PAGE_TITLE = tr('profile_title','Profil Pengguna');
             : tr('profile_no_staf', 'No. Staf');
           $showIdentityStat = $identityValue !== '';
           $showEmployeeStat = $isStaffProfile && trim((string)$nopek) !== '';
+          $positionLabel = $isStudentProfile
+            ? tr('profile_program', 'Program')
+            : tr('profile_jawatan', 'Jawatan');
+          $departmentLabel = $isStudentProfile
+            ? tr('profile_faculty', 'Fakulti')
+            : tr('profile_jabatan', 'Jabatan');
+          $emptyPositionLabel = $isStudentProfile
+            ? tr('profile_no_program_info', 'Tiada maklumat program')
+            : tr('profile_no_job_info', 'Tiada maklumat jawatan');
+          $emptyDepartmentLabel = $isStudentProfile
+            ? tr('profile_no_faculty_info', 'Tiada maklumat fakulti')
+            : tr('profile_no_department_info', 'Tiada maklumat jabatan');
           $selectedLang = $profileView['lang']    ?? ($lang ?? 'ms');
           $jawGred   = trim($jawatan . ($gred ? ' • '.$gred : ''));
           $activeProfileTab = (string)($_GET['tab'] ?? 'profil-pengguna');
@@ -306,7 +349,7 @@ $PAGE_TITLE = tr('profile_title','Profil Pengguna');
                           <div class="profile-identity-chips">
                             <?php if ($jawGred !== ''): ?>
                               <span class="chip">
-                                <i class="ri-briefcase-2-line"></i><?= h($jawGred) ?>
+                                <i class="<?= $isStudentProfile ? 'ri-graduation-cap-line' : 'ri-briefcase-2-line' ?>"></i><?= h($jawGred) ?>
                               </span>
                             <?php endif; ?>
                             <?php if ($jabatan !== ''): ?>
@@ -365,17 +408,17 @@ $PAGE_TITLE = tr('profile_title','Profil Pengguna');
 
                     <div class="profile-detail-list">
                       <div class="profile-detail-item">
-                        <div class="profile-detail-icon"><i class="ri-briefcase-4-line"></i></div>
+                        <div class="profile-detail-icon"><i class="<?= $isStudentProfile ? 'ri-graduation-cap-line' : 'ri-briefcase-4-line' ?>"></i></div>
                         <div>
-                          <div class="profile-detail-label"><?= h(tr('profile_jawatan','Jawatan')) ?></div>
-                          <div class="profile-detail-value"><?= h($jawatan !== '' ? $jawatan : tr('profile_no_job_info','Tiada maklumat jawatan')) ?></div>
+                          <div class="profile-detail-label"><?= h($positionLabel) ?></div>
+                          <div class="profile-detail-value"><?= h($jawatan !== '' ? $jawatan : $emptyPositionLabel) ?></div>
                         </div>
                       </div>
                       <div class="profile-detail-item">
                         <div class="profile-detail-icon"><i class="ri-building-line"></i></div>
                         <div>
-                          <div class="profile-detail-label"><?= h(tr('profile_jabatan','Jabatan')) ?></div>
-                          <div class="profile-detail-value"><?= h($jabatan !== '' ? $jabatan : tr('profile_no_department_info','Tiada maklumat jabatan')) ?></div>
+                          <div class="profile-detail-label"><?= h($departmentLabel) ?></div>
+                          <div class="profile-detail-value"><?= h($jabatan !== '' ? $jabatan : $emptyDepartmentLabel) ?></div>
                         </div>
                       </div>
                       <div class="profile-detail-item">

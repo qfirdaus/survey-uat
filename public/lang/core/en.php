@@ -546,6 +546,10 @@
 'profile_no_job_info'           => 'No job information',
 'profile_no_department_info'    => 'No department information',
 'profile_jawatan'               => 'Position',
+'profile_program'               => 'Programme',
+'profile_faculty'               => 'Faculty',
+'profile_no_program_info'       => 'No programme information',
+'profile_no_faculty_info'       => 'No faculty information',
 
 // =========================
 // Developer Guide
@@ -2398,6 +2402,14 @@
 
 'sidebar_profile_empty'       => 'Profile not found',
 'sidebar_loading'             => 'Loading...',
+'sidebar_search_label'        => 'Search menu',
+'sidebar_search_placeholder'  => 'Search menu...',
+'sidebar_search_loading'      => 'Searching...',
+'sidebar_search_empty'        => 'No matching menu found.',
+'sidebar_search_error'        => 'Unable to search menus.',
+'sidebar_search_clear'        => 'Clear menu search',
+'sidebar_search_open'         => 'Open menu search',
+'sidebar_search_query_too_long' => 'Search text is too long.',
 
 /* =========================
  * FOOTER

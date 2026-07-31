@@ -804,6 +804,168 @@ html[data-bs-theme="dark"] .sidebar-loading-text {
     color: var(--ct-menu-item-active-color);
     background: linear-gradient(90deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.025));
 }
+.sidebar-menu-search {
+    position: relative;
+    z-index: 6;
+    padding: 12px 14px 4px;
+}
+.sidebar-menu-search-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.sidebar-menu-search-field > .sidebar-search-leading {
+    position: absolute;
+    left: 12px;
+    z-index: 1;
+    color: var(--ct-menu-item-color);
+    pointer-events: none;
+}
+.sidebar-menu-search-input {
+    width: 100%;
+    height: 38px;
+    padding: 7px 38px 7px 36px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 9px;
+    outline: none;
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--ct-menu-item-active-color);
+    font-size: 13px;
+    transition: border-color .18s ease, background-color .18s ease, box-shadow .18s ease;
+}
+.sidebar-menu-search-input::placeholder {
+    color: var(--ct-menu-item-color);
+    opacity: .8;
+}
+.sidebar-menu-search-input:focus {
+    border-color: rgba(var(--ct-primary-rgb), .75);
+    background: rgba(255, 255, 255, 0.11);
+    box-shadow: 0 0 0 3px rgba(var(--ct-primary-rgb), .14);
+}
+.sidebar-menu-search-clear {
+    position: absolute;
+    right: 6px;
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--ct-menu-item-color);
+}
+.sidebar-menu-search-clear:hover,
+.sidebar-menu-search-clear:focus-visible {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--ct-menu-item-active-color);
+}
+.sidebar-menu-search-clear[hidden],
+.sidebar-menu-search-results[hidden] {
+    display: none !important;
+}
+.sidebar-menu-search-results {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 14px;
+    right: 14px;
+    z-index: 20;
+    max-height: 310px;
+    overflow-y: auto;
+    padding: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 10px;
+    background: var(--ct-menu-bg);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, .28);
+}
+.sidebar-search-result {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 8px;
+    border-radius: 7px;
+    color: var(--ct-menu-item-color);
+}
+.sidebar-search-result:hover,
+.sidebar-search-result:focus-visible,
+.sidebar-search-result.is-active {
+    background: rgba(255, 255, 255, .09);
+    color: var(--ct-menu-item-active-color);
+}
+.sidebar-search-result > i:first-child {
+    flex: 0 0 auto;
+    font-size: 17px;
+}
+.sidebar-search-result-copy {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+}
+.sidebar-search-result-copy strong,
+.sidebar-search-result-copy small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.sidebar-search-result-copy strong {
+    color: inherit;
+    font-size: 13px;
+    font-weight: 600;
+}
+.sidebar-search-result-copy small {
+    opacity: .72;
+    font-size: 11px;
+}
+.sidebar-search-result-arrow {
+    flex: 0 0 auto;
+    opacity: .55;
+}
+.sidebar-search-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 8px;
+    color: var(--ct-menu-item-color);
+    font-size: 12px;
+}
+.sidebar-search-message.is-loading i {
+    animation: sidebar-spin .8s linear infinite;
+}
+.sidebar-search-message.is-error {
+    color: var(--ct-danger);
+}
+.sidebar-menu-search-compact {
+    display: none;
+    width: 42px;
+    height: 42px;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    padding: 0;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--ct-menu-item-color);
+    font-size: 20px;
+}
+.sidebar-menu-search-compact:hover,
+.sidebar-menu-search-compact:focus-visible {
+    background: rgba(255, 255, 255, .09);
+    color: var(--ct-menu-item-active-color);
+}
+html[data-sidenav-size="condensed"]:not([data-layout="topnav"]) .sidebar-menu-search {
+    padding-right: 0;
+    padding-left: 0;
+}
+html[data-sidenav-size="condensed"]:not([data-layout="topnav"]) .sidebar-menu-search-expanded {
+    display: none;
+}
+html[data-sidenav-size="condensed"]:not([data-layout="topnav"]) .sidebar-menu-search-compact {
+    display: flex;
+}
 </style>
 <div class="sidebar-loading-overlay">
     <div class="sidebar-loading-spinner"></div>
@@ -866,6 +1028,55 @@ html[data-bs-theme="dark"] .sidebar-loading-text {
                 </a>
             <?php endif; ?>
         </div>
+
+        <div class="sidebar-menu-search" id="sidebar-menu-search">
+            <div class="sidebar-menu-search-expanded">
+                <label for="sidebar-menu-search-input" class="visually-hidden"><?= htmlspecialchars(__('sidebar_search_label') ?: 'Cari menu', ENT_QUOTES, 'UTF-8') ?></label>
+                <div class="sidebar-menu-search-field">
+                    <i class="ri-search-line sidebar-search-leading" aria-hidden="true"></i>
+                    <input type="search"
+                           id="sidebar-menu-search-input"
+                           class="sidebar-menu-search-input"
+                           maxlength="80"
+                           autocomplete="off"
+                           placeholder="<?= htmlspecialchars(__('sidebar_search_placeholder') ?: 'Cari menu...', ENT_QUOTES, 'UTF-8') ?>"
+                           role="combobox"
+                           aria-autocomplete="list"
+                           aria-controls="sidebar-menu-search-results"
+                           aria-expanded="false">
+                    <button type="button"
+                            class="sidebar-menu-search-clear"
+                            id="sidebar-menu-search-clear"
+                            aria-label="<?= htmlspecialchars(__('sidebar_search_clear') ?: 'Kosongkan carian menu', ENT_QUOTES, 'UTF-8') ?>"
+                            hidden>
+                        <i class="ri-close-line" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div class="sidebar-menu-search-results"
+                     id="sidebar-menu-search-results"
+                     role="listbox"
+                     aria-label="<?= htmlspecialchars(__('sidebar_search_label') ?: 'Cari menu', ENT_QUOTES, 'UTF-8') ?>"
+                     hidden></div>
+            </div>
+            <button type="button"
+                    class="sidebar-menu-search-compact"
+                    id="sidebar-menu-search-compact"
+                    aria-label="<?= htmlspecialchars(__('sidebar_search_open') ?: 'Buka carian menu', ENT_QUOTES, 'UTF-8') ?>"
+                    title="<?= htmlspecialchars(__('sidebar_search_open') ?: 'Buka carian menu', ENT_QUOTES, 'UTF-8') ?>">
+                <i class="ri-search-line" aria-hidden="true"></i>
+            </button>
+        </div>
+        <script>
+        window.sidebarMenuSearchConfig = <?= json_encode([
+            'url' => base_url('ajax/sidebar-menu-search.php'),
+            'i18n' => [
+                'loading' => __('sidebar_search_loading') ?: 'Mencari...',
+                'empty' => __('sidebar_search_empty') ?: 'Tiada menu yang sepadan.',
+                'error' => __('sidebar_search_error') ?: 'Carian menu tidak dapat dilakukan.',
+            ],
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+        </script>
+        <script src="<?= base_url('assets/js/sidebar-menu-search.js') ?>?v=<?= htmlspecialchars((string)($_ENV['APP_ASSET_VER'] ?? '1'), ENT_QUOTES, 'UTF-8') ?>" defer></script>
 
         <!-- ✅ Menu Sidebar -->
         <ul class="side-nav" style="padding-bottom: 70px;">

@@ -28,11 +28,11 @@ if (isset($_COOKIE[session_name()])) {
         if (isset($_POST[session_name()])) unset($_POST[session_name()]);
     }
 }
-ini_set('session.cookie_samesite', 'Lax');
-ini_set('session.cookie_secure', isset($_SERVER['HTTPS']) ? '1' : '0');
-ini_set('session.cookie_httponly', '1');
-ini_set('session.use_strict_mode', '1');
 if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_samesite', 'Lax');
+    ini_set('session.cookie_secure', isset($_SERVER['HTTPS']) ? '1' : '0');
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.use_strict_mode', '1');
     session_start();
 }
 if (!headers_sent()) {

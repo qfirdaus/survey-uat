@@ -546,6 +546,10 @@
 'profile_no_job_info'           => 'Tiada maklumat jawatan',
 'profile_no_department_info'    => 'Tiada maklumat jabatan',
 'profile_jawatan'               => 'Jawatan',
+'profile_program'               => 'Program',
+'profile_faculty'               => 'Fakulti',
+'profile_no_program_info'       => 'Tiada maklumat program',
+'profile_no_faculty_info'       => 'Tiada maklumat fakulti',
 
 // =========================
 // Developer Guide
@@ -2391,6 +2395,14 @@
 
 'sidebar_profile_empty'       => 'Profil tidak ditemui',
 'sidebar_loading'             => 'Memuatkan...',
+'sidebar_search_label'        => 'Cari menu',
+'sidebar_search_placeholder'  => 'Cari menu...',
+'sidebar_search_loading'      => 'Mencari...',
+'sidebar_search_empty'        => 'Tiada menu yang sepadan.',
+'sidebar_search_error'        => 'Carian menu tidak dapat dilakukan.',
+'sidebar_search_clear'        => 'Kosongkan carian menu',
+'sidebar_search_open'         => 'Buka carian menu',
+'sidebar_search_query_too_long' => 'Teks carian terlalu panjang.',
 
 /* =========================
  * FOOTER
