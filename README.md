@@ -1,12 +1,12 @@
-# Survey
+# IQS-Framework
 
-Survey ialah aplikasi dalaman berasaskan PHP yang dibina di atas IQS Framework. Projek ini menggunakan fungsi teras seperti login berpusat, kawalan akses mengikut kumpulan, konfigurasi runtime, audit aktiviti, template emel, manual pengguna dan sambungan pangkalan data yang dikawal dari UI.
+IQS-Framework ialah platform pentadbiran dalaman berasaskan PHP untuk membina sistem organisasi yang memerlukan login berpusat, kawalan akses mengikut kumpulan, konfigurasi runtime, audit aktiviti, template emel, manual pengguna, dan sambungan pangkalan data yang boleh dikawal dari UI.
 
 README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.8.4`
+- Current version: `1.8.5`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -26,6 +26,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 - Login and logout flow through `LoginController.php` and `LogoutController.php`.
 - Session initialization, timeout handling, CSRF helpers, language loading, audit hooks, and runtime bootstrap through `public/includes/init.php`.
+- Session cookie and strict-mode settings are applied only before session startup, allowing password renewal and reset pages to reuse the core bootstrap without active-session configuration warnings.
 - Role switching for users with more than one available group context through `role-switch.php` and `role-switch-roles.php`.
 - Profile workspace with login activity, audit history, active session visibility, and session termination support.
 - Login policy configuration from System Settings, including manual login route control and SSO compatibility settings.
@@ -52,6 +53,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Supports optional sidebar menu subgroups inside parent modules through `tbl_m_menu_subgroup` and `tbl_m_menu.f_subgroupID`.
 - Menu subgroups can be created, edited, ordered, assigned to menus, and protected from deletion while menus are still assigned.
 - Sidebar rendering remains backward-compatible: modules can still use direct menus without subgroups, while selected modules can group menus under subgroup headings.
+- Sidebar users can search accessible menus through a role-aware AJAX search below the active user profile, with module/subgroup context, keyboard navigation, request debouncing, and condensed-sidebar support.
 - Sidebar fragment updates are served by `public/ajax/sidebar-fragment.php`.
 - Related AJAX endpoints include `group-*`, `module-*`, `menu-*`, `menu-subgroup-*`, `menu-order-item-swap.php`, `modul-list.php`, and role-switch endpoints.
 - Access governance logic is supported by `GroupController.php`, `SidebarController.php`, `Group.php`, and `Modul.php`.
@@ -85,6 +87,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 - Profile page at `public/pages/profile.php`.
 - Shows account profile, login activity, audit event history, audit metadata where authorized, and active session actions.
+- Profile identity labels adapt to the authenticated user category, including staff number/position/department for staff and matric number/programme/faculty for students.
 - AJAX endpoints include `profile-login-activity.php`, `profile-audit-events.php`, `profile-audit-event-meta.php`, and `profile-kill-session.php`.
 
 ### System Settings
@@ -111,15 +114,17 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Provider integration is handled through `AiChatbotService.php`, `AiChatbotProviderRegistry.php`, and provider classes under `public/classes/AiChatbotProviders/`.
 - Runtime settings are managed from System Settings > AI Chatbot and stored in `tbl_m_config` under the `ai_chatbot` group.
 - The AI Chatbot settings UI is split into Overview, Provider, Limits, Character, and Storage subtabs.
-- Usage/session/message persistence is supported through `tbl_ai_chat_session`, `tbl_ai_chat_message`, and `tbl_ai_chat_usage` when the corresponding database schema is installed.
+- Usage/session/message persistence is supported through `tbl_ai_chat_session`, `tbl_ai_chat_message`, and `tbl_ai_chat_usage` when the table script in `docs/ai-chatbot-tables-2026-06-11.sql` has been applied.
 - Role-aware answers are guided by safe runtime context, active group context, visible module/menu context, permission-filtered retrieval policy, and governance classification metadata.
-- Optional curated FAQ/SOP/manual knowledge retrieval is supported through `tbl_ai_chat_knowledge` when the corresponding database schema is installed.
+- Optional curated FAQ/SOP/manual knowledge retrieval is supported through `tbl_ai_chat_knowledge` when `docs/ai-chatbot-knowledge-tables-2026-06-12.sql` has been applied.
 - Manual knowledge can be maintained through the Knowledge Manager with language, visibility, allowed groups, tags, source/version, review dates, status controls, AJAX save/edit/status/delete, SweetAlert feedback, and local loading states.
-- PDF-only knowledge source upload is supported when its source and chunk tables are installed; uploaded text PDFs are extracted into draft chunks before activation.
+- PDF-only knowledge source upload is supported when `docs/ai-chatbot-knowledge-pdf-schema-2026-06-13.sql` has been applied; uploaded text PDFs are extracted into draft chunks before activation.
 - Knowledge retrieval uses hybrid keyword-ranked matching across active manual items and active processed PDF chunks, while filtering by language, visibility, allowed group, and super-admin scope before content is sent to any AI provider.
 - The Review Dashboard uses `tbl_ai_chat_usage` metadata to highlight review queues, no-knowledge candidates, provider failures, outcome/category volume, and provider latency without requiring raw message content.
 - The widget presents answer text only; navigation/action suggestion links are not rendered in chatbot responses.
 - The chatbot does not execute model-generated SQL, does not expose unrestricted database records, and must ground system-specific answers in approved runtime, visible system, or curated knowledge context.
+- Implementation guidance is documented in `docs/ai-chatbot-core-blueprint-2026-06-11.md`, `docs/ai-chatbot-production-runbook-2026-06-11.md`, `docs/ai-chatbot-implementation-readiness-2026-06-13.md`, and `docs/db-inspection-guideline-2026-06-13.md`.
+- External provider/API failures are classified through the framework external-service failure pattern documented in `docs/external-service-failure-handling-2026-06-23.md`.
 
 ### System Cache Maintenance
 
@@ -167,6 +172,7 @@ Do not hardcode DSN, username, or password inside page/controller code.
 - Email template management page exists at `public/pages/template-emel.php`.
 - Template operations are handled by `EmailTemplateController.php`, `Mailer.php`, `EmailTemplate*.php`, and AJAX endpoints under `public/ajax/email-*` and `public/ajax/email-template-*`.
 - Supported UI operations include listing, preview/testing, creating, updating, duplicating, archiving/restoring, deleting, and seeding templates where available.
+- SMTP delivery failures are classified through the framework external-service failure pattern documented in `docs/external-service-failure-handling-2026-06-23.md`.
 
 ### Template Generator
 
@@ -211,13 +217,15 @@ Do not hardcode DSN, username, or password inside page/controller code.
 - Frontend assets include Bootstrap-style components, DataTables usage, SweetAlert workflows, Remix Icon icons, and page-specific JavaScript/CSS files.
 - Application modals are standardized to top-aligned Bootstrap dialogs unless a future page-specific exception is explicitly documented.
 - Global full-page loader is now reserved for sidebar navigation transitions, while in-page transactions rely on local loading states and silent background refreshes.
-- The active compiled Tailwind stylesheet is committed at `public/assets/css/output.css`; this repository has no maintained npm build pipeline.
+- Tailwind/PostCSS tooling exists in `package.json` for frontend build support, although the main application is PHP-rendered.
 
-### Update Governance
+### Update Distribution Tooling
 
-- Framework updates must be reviewed manually against Survey project files before they are applied.
-- Core file protection guidance and `tools/core-file-protection-audit.php` are retained for local validation.
-- Project-specific translations under `public/lang/custom/` must be preserved during framework updates.
+- `sync-updates.sh` distributes collected updates to the registered downstream project list, including `e-prestasi` and `upnm30`.
+- `sync-updates.sh` and `update-files.sh` support `.sync-update-ignore` so selected files can be excluded from `updates/` and project sync flows.
+- `sync-updates.sh` reports results directly in the terminal and no longer creates the unused `sync.log` or `conflict.log` files.
+- Core file protection docs and `tools/core-file-protection-audit.php` are included in framework update collection.
+- `public/lang/custom/*` remains protected from overwrite during update distribution.
 
 ## Current Page Inventory
 
@@ -269,7 +277,7 @@ Other controller files may exist for legacy or supporting flows, but the list ab
 
 ## Database Architecture
 
-Survey uses three database access patterns inherited from IQS Framework:
+IQS-Framework uses three database access patterns:
 
 1. Main MySQL application database
 
@@ -286,7 +294,7 @@ Survey uses three database access patterns inherited from IQS Framework:
 ## Directory Structure
 
 ```text
-survey-uat/
+iqs-framework/
 |-- public/
 |   |-- ajax/              # AJAX endpoints
 |   |-- assets/            # CSS, JS, images, vendor assets
@@ -298,6 +306,7 @@ survey-uat/
 |   |-- setting/           # Helpers, constants, language/config support
 |-- docs/                  # Project documentation assets
 |-- tools/                 # CLI maintenance tools
+|-- updates/               # Update/deployment support files
 |-- .env.example           # Example runtime environment
 |-- VERSION                # Application version
 |-- CHANGELOG.md           # Release notes
@@ -318,7 +327,7 @@ The repository now runs directly in WSL with Nginx and PHP-FPM. The retired Dock
 
 3. Configure the Nginx virtual host.
 
-   Set the document root to `/var/www/app/survey-uat/public`, route PHP requests to the installed PHP-FPM socket, disable directory listing, and deny access to hidden or sensitive files. Keep the Nginx configuration outside this repository under normal system administration controls.
+   Set the document root to `/var/www/app/iqs-framework/public`, route PHP requests to the installed PHP-FPM socket, disable directory listing, and deny access to hidden or sensitive files. Keep the Nginx configuration outside this repository under normal system administration controls.
 
 4. Confirm filesystem permissions.
 
@@ -348,8 +357,9 @@ The repository now runs directly in WSL with Nginx and PHP-FPM. The retired Dock
 - Use `NotificationPublisher`, `NotificationWorkflowService`, or `NotificationTemplateService` for new notification flows instead of inserting notification rows directly from page code.
 - Follow `docs/notification-developer-standard-2026-05-04.md` when adding notifications to new modules so admin, event, and workflow notifications remain consistent across projects.
 - Configure sidebar modules, menus, menu access, and optional menu subgroups through `kumpulan-pengguna.php`; project programmers should not hardcode sidebar structure inside `public/includes/sidebar.php`.
+- Refer to `docs/sidebar-menu-subgroup-blueprint-2026-05-06.md` before enabling subgroup schema or adding grouped sidebar menus in a project deployment.
 - Treat files marked `IQS FRAMEWORK CORE FILE` as read-only in downstream project clones. Use generated/custom project files for project behavior changes.
-- Run `php tools/core-file-protection-audit.php` before a framework update and review project-specific files reported without core markers instead of overwriting them automatically.
+- Run `php tools/core-file-protection-audit.php --strict` before framework release or update collection.
 - Do not hardcode database DSN, username, or password in pages/controllers.
 - Keep access checks aligned with group, module, and menu governance.
 - Record sensitive administrative changes through the audit helper/logger pattern already used in the system.
@@ -367,7 +377,7 @@ The repository now runs directly in WSL with Nginx and PHP-FPM. The retired Dock
 
 ## Removed or Undocumented Features
 
-This README documents the current Survey repository. Historical IQS Framework release details remain in `CHANGELOG.md`, while project-specific runtime and deployment guidance must use the Survey repository path.
+This README intentionally excludes features that are not active page/module surfaces in the current IQS-Framework codebase. In particular, removed prototype pages, old project names, and previous domain-specific modules are not documented here unless they are reintroduced into the active application structure.
 
 ## Maintainer
 
