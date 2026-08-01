@@ -284,6 +284,9 @@
     const csrfToken = typeof config.csrfToken === 'string' ? config.csrfToken : '';
     const initialDbSelection = config.initialDbSelection || {};
     let additionalConnections = Array.isArray(config.additionalConnections) ? config.additionalConnections.slice() : [];
+    let additionalDiagnostics = config.additionalDiagnostics && typeof config.additionalDiagnostics === 'object'
+      ? config.additionalDiagnostics
+      : {};
     const pageUiHelper = window.PageUiHelper || {};
     const formRuntimeState = new WeakMap();
     const buildAssetUrl = function (assetPath) {
@@ -1194,6 +1197,9 @@
         additionalConnections = payload.data.additionalConnections.slice();
         renderAdditionalConnectionsTable();
       }
+      if (payload.tab === 'db' && payload.data && payload.data.additionalDiagnostics) {
+        renderAdditionalDiagnostics(payload.data.additionalDiagnostics);
+      }
 
       if (payload.tab === 'theme' && payload.data && payload.data.themeSettings) {
         applySavedThemeSettings(payload.data.themeSettings);
@@ -1244,6 +1250,10 @@
     const dbAdditionalSaveButton = document.getElementById('btn-db-additional-save');
     const dbAdditionalEnvRows = document.getElementById('db-additional-env-rows');
     const dbAdditionalEnvAddButton = document.getElementById('btn-db-additional-env-add');
+    const dbAdditionalDiagnostics = document.getElementById('db-additional-diagnostics');
+    const dbAdditionalDiagnosticsSummary = document.getElementById('db-additional-diagnostics-summary');
+    const dbAdditionalDiagnosticsCount = document.getElementById('db-additional-diagnostics-count');
+    const dbAdditionalDiagnosticsWarnings = document.getElementById('db-additional-diagnostics-warnings');
 
     const escapeHtml = function (value) {
       return String(value == null ? '' : value)
@@ -1252,6 +1262,50 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+    };
+
+    const renderAdditionalDiagnostics = function (diagnostics) {
+      if (!dbAdditionalDiagnostics || !diagnostics || typeof diagnostics !== 'object') {
+        return;
+      }
+
+      additionalDiagnostics = diagnostics;
+      var status = String(diagnostics.status || 'healthy');
+      var tone = status === 'attention' ? 'danger' : (status === 'warning' ? 'warning' : 'success');
+      dbAdditionalDiagnostics.classList.remove('alert-success', 'alert-warning', 'alert-danger');
+      dbAdditionalDiagnostics.classList.add('alert-' + tone);
+
+      if (dbAdditionalDiagnosticsSummary) {
+        var drivers = Array.isArray(diagnostics.available_drivers) && diagnostics.available_drivers.length
+          ? diagnostics.available_drivers.join(', ')
+          : 'none';
+        dbAdditionalDiagnosticsSummary.textContent = [
+          'Runtime ' + String(diagnostics.runtime_os || '-').toUpperCase(),
+          'PDO ' + drivers,
+          String(diagnostics.enabled_count || 0) + ' enabled',
+          String(diagnostics.active_env_count || 0) + ' active env rows',
+          String((diagnostics.platform_coverage && diagnostics.platform_coverage.available_count) || 0)
+            + '/' + String((diagnostics.platform_coverage && diagnostics.platform_coverage.required_count) || 0)
+            + ' platform coverage'
+        ].join(' · ');
+      }
+
+      if (dbAdditionalDiagnosticsCount) {
+        dbAdditionalDiagnosticsCount.classList.remove('bg-success', 'bg-warning', 'bg-danger');
+        dbAdditionalDiagnosticsCount.classList.add('bg-' + tone);
+        dbAdditionalDiagnosticsCount.textContent = String(diagnostics.warning_count || 0) + ' warning(s)';
+      }
+
+      if (dbAdditionalDiagnosticsWarnings) {
+        var warnings = Array.isArray(diagnostics.warnings) ? diagnostics.warnings : [];
+        dbAdditionalDiagnosticsWarnings.classList.toggle('d-none', warnings.length === 0);
+        dbAdditionalDiagnosticsWarnings.innerHTML = warnings.slice(0, 8).map(function (warning) {
+          return '<li><code>' + escapeHtml(warning.connection_code || '-') + '</code> — '
+            + escapeHtml(warning.message || '') + '</li>';
+        }).join('') + (warnings.length > 8
+          ? '<li>' + escapeHtml(String(warnings.length - 8)) + ' lagi warning tidak dipaparkan.</li>'
+          : '');
+      }
     };
 
     const getAdditionalConnectionFilters = function () {
@@ -1412,7 +1466,23 @@
       if (!rows.length) {
         return null;
       }
-      return rows.find(function (row) { return !!Number(row.f_is_active || 0); }) || rows[0];
+      var runtimeOs = String((additionalDiagnostics && additionalDiagnostics.runtime_os) || '').toLowerCase();
+      var availableDrivers = Array.isArray(additionalDiagnostics && additionalDiagnostics.available_drivers)
+        ? additionalDiagnostics.available_drivers.map(function (driver) { return String(driver).toLowerCase(); })
+        : [];
+      var candidates = rows.filter(function (row) {
+        var rowOs = String(row.f_os_family || 'any').toLowerCase();
+        var driver = String(row.f_driver || '').toLowerCase();
+        return !!Number(row.f_is_active || 0)
+          && (rowOs === runtimeOs || rowOs === 'any')
+          && (!availableDrivers.length || availableDrivers.indexOf(driver) !== -1);
+      });
+      candidates.sort(function (left, right) {
+        var leftExact = String(left.f_os_family || 'any').toLowerCase() === runtimeOs ? 0 : 1;
+        var rightExact = String(right.f_os_family || 'any').toLowerCase() === runtimeOs ? 0 : 1;
+        return leftExact - rightExact;
+      });
+      return candidates[0] || null;
     };
 
     const buildAdditionalSampleCodeBlock = function (title, code) {
@@ -2174,6 +2244,7 @@
           var preview = payload.data.objectPreview;
           var columns = Array.isArray(preview.columns) ? preview.columns : [];
           var rows = Array.isArray(preview.rows) ? preview.rows : [];
+          var maskedColumns = Array.isArray(preview.masked_columns) ? preview.masked_columns : [];
           var headerHtml = columns.map(function (column) {
             return '<th>' + escapeHtml(column) + '</th>';
           }).join('') + '<th class="text-start db-preview-toggle-cell">Paparan</th>';
@@ -2194,6 +2265,12 @@
             + buildAdditionalViewMetaItem(additionalLabel('config_tab_db_additional_env', 'Environment'), escapeHtml(preview.environment || '-'))
             + buildAdditionalViewMetaItem(additionalLabel('config_tab_db_additional_database', 'Database'), escapeHtml(preview.database_name || '-'))
             + '</div>'
+            + (maskedColumns.length || Number(preview.truncated_values || 0) || Number(preview.binary_values || 0)
+              ? '<div class="alert alert-warning py-2 small">Preview protection: '
+                + escapeHtml(String(maskedColumns.length)) + ' masked column(s), '
+                + escapeHtml(String(preview.truncated_values || 0)) + ' truncated value(s), '
+                + escapeHtml(String(preview.binary_values || 0)) + ' binary value(s).</div>'
+              : '')
             + '<div class="db-additional-view-card">'
             + '<div class="db-additional-view-card-header"><h6 class="db-additional-view-card-title"><i class="ri-file-search-line"></i> ' + escapeHtml(__('config_tab_db_additional_data_preview_title') || 'Data Preview') + '</h6></div>'
             + '<div class="db-additional-view-card-body"><div class="db-additional-view-table-wrap">'
@@ -2312,6 +2389,36 @@
       }
     };
 
+    const appendPlatformPreset = function (osFamily, driver) {
+      if (!dbAdditionalEnvRows) {
+        return;
+      }
+      var environment = document.getElementById('db-additional-supports-prod').checked ? 'production' : 'development';
+      var rows = serializeAdditionalEnvRows();
+      var duplicate = rows.some(function (row) {
+        return row.f_environment === environment && row.f_os_family === osFamily && row.f_driver === driver;
+      });
+      if (duplicate) {
+        showTetapanSystemError('Variant ' + environment + ' / ' + osFamily + ' / ' + driver + ' sudah wujud.');
+        return;
+      }
+
+      var base = rows.find(function (row) { return row.f_environment === environment && row.f_is_active; })
+        || rows.find(function (row) { return row.f_environment === environment; })
+        || {};
+      appendEnvRow(Object.assign({}, base, {
+        f_environment: environment,
+        f_os_family: osFamily,
+        f_driver: driver,
+        f_dsn_name: driver === 'odbc' ? '' : String(base.f_dsn_name || ''),
+        f_host: driver === 'odbc' ? '' : String(base.f_host || ''),
+        f_port: driver === 'odbc' ? '' : String(base.f_port || ''),
+        f_database_name: driver === 'odbc' ? '' : String(base.f_database_name || ''),
+        f_password_ciphertext: '',
+        f_is_active: true
+      }));
+    };
+
     const resetAdditionalConnectionForm = function () {
       if (!dbAdditionalForm) {
         return;
@@ -2319,6 +2426,7 @@
       dbAdditionalForm.reset();
       document.getElementById('db-additional-form-type').value = 'db_additional_create';
       document.getElementById('db-additional-existing-code').value = '';
+      document.getElementById('db-additional-registry-revision').value = '';
       document.getElementById('db-additional-code').readOnly = false;
       document.getElementById('db-additional-enabled').checked = true;
       document.getElementById('db-additional-supports-prod').checked = true;
@@ -2367,6 +2475,7 @@
       if (connection) {
         document.getElementById('db-additional-form-type').value = 'db_additional_update';
         document.getElementById('db-additional-existing-code').value = String(connection.f_code || '');
+        document.getElementById('db-additional-registry-revision').value = String(connection.f_registry_revision || '');
         document.getElementById('db-additional-code').value = String(connection.f_code || '');
         document.getElementById('db-additional-code').readOnly = true;
         document.getElementById('db-additional-name').value = String(connection.f_name || '');
@@ -2490,6 +2599,9 @@
             additionalConnections = payload.data.additionalConnections.slice();
             renderAdditionalConnectionsTable();
           }
+          if (payload.data && payload.data.additionalDiagnostics) {
+            renderAdditionalDiagnostics(payload.data.additionalDiagnostics);
+          }
         })
         .catch(function (error) {
           showTetapanSystemError(error && error.message ? error.message : additionalLabel('config_tab_db_additional_refresh_failed', 'Failed to refresh additional connections.'));
@@ -2516,6 +2628,7 @@
         f_supports_prod: document.getElementById('db-additional-supports-prod').checked ? '1' : '0',
         f_supports_dev: document.getElementById('db-additional-supports-dev').checked ? '1' : '0',
         existing_code: document.getElementById('db-additional-existing-code').value,
+        f_registry_revision: document.getElementById('db-additional-registry-revision').value,
         env_rows: JSON.stringify(serializeAdditionalEnvRows())
       };
 
@@ -3826,6 +3939,19 @@
       });
     }
 
+    var windowsOdbcPresetButton = document.getElementById('btn-db-additional-preset-windows-odbc');
+    if (windowsOdbcPresetButton) {
+      windowsOdbcPresetButton.addEventListener('click', function () {
+        appendPlatformPreset('windows', 'odbc');
+      });
+    }
+    var linuxDblibPresetButton = document.getElementById('btn-db-additional-preset-linux-dblib');
+    if (linuxDblibPresetButton) {
+      linuxDblibPresetButton.addEventListener('click', function () {
+        appendPlatformPreset('linux', 'dblib');
+      });
+    }
+
     if (dbAdditionalSearch) {
       dbAdditionalSearch.addEventListener('input', renderAdditionalConnectionsTable);
     }
@@ -3949,6 +4075,9 @@
               if (listPayload && listPayload.success && listPayload.data && Array.isArray(listPayload.data.additionalConnections)) {
                 additionalConnections = listPayload.data.additionalConnections.slice();
                 renderAdditionalConnectionsTable();
+                if (listPayload.data.additionalDiagnostics) {
+                  renderAdditionalDiagnostics(listPayload.data.additionalDiagnostics);
+                }
               }
             })
             .catch(function (error) {
@@ -3960,6 +4089,7 @@
     }
 
     renderAdditionalConnectionsTable();
+    renderAdditionalDiagnostics(additionalDiagnostics);
 
     const formBahasa = document.getElementById('form-bahasa');
     const btnBahasa = document.getElementById('btn-simpan-bahasa');

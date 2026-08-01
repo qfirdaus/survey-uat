@@ -13,12 +13,20 @@ require_once __DIR__ . '/Config.php';
 
 final class DatabaseRuntimeConfig
 {
-    public function __construct(private readonly ?Config $configModel = null)
+    public function __construct(
+        private readonly ?Config $configModel = null,
+        private readonly ?string $osFamilyOverride = null,
+    )
     {
     }
 
     public function getOsFamily(): string
     {
+        $override = strtolower(trim((string)$this->osFamilyOverride));
+        if (in_array($override, ['windows', 'linux'], true)) {
+            return $override;
+        }
+
         return PHP_OS_FAMILY === 'Windows' ? 'windows' : 'linux';
     }
 

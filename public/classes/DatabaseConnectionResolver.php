@@ -10,12 +10,14 @@
 
 require_once __DIR__ . '/DatabaseRuntimeConfig.php';
 require_once __DIR__ . '/DatabaseConnectionRegistry.php';
+require_once __DIR__ . '/AdditionalDatabaseException.php';
 
 final class DatabaseConnectionResolver
 {
     public function __construct(
         private readonly DatabaseRuntimeConfig $runtimeConfig,
         private readonly DatabaseConnectionRegistry $registry,
+        private readonly ?array $availableDrivers = null,
     ) {
     }
 
@@ -52,7 +54,7 @@ final class DatabaseConnectionResolver
         $definition = $this->registry->getAdditional($code);
         if ($definition instanceof DatabaseConnectionDefinition) {
             if (!$definition->enabled) {
-                throw new RuntimeException("Additional database connection is disabled: {$code}");
+                throw AdditionalDatabaseException::disabled($code);
             }
 
             $targetEnvironment = $environment ?: $this->runtimeConfig->getMainMysqlEnvironment();
@@ -79,7 +81,7 @@ final class DatabaseConnectionResolver
             ];
         }
 
-        throw new RuntimeException("Additional database connection not found: {$code}");
+        throw AdditionalDatabaseException::notFound($code);
     }
 
     public function resolveByCode(string $code): array
@@ -133,8 +135,13 @@ final class DatabaseConnectionResolver
     private function resolveMysqlEnvironment(DatabaseConnectionDefinition $definition, string $environment): array
     {
         $entry = $definition->environments[$environment] ?? null;
+        if ($definition->isAdditional() && is_array($entry) && !isset($entry['config'])) {
+            return $this->resolveVariantMap($definition->code, 'MySQL', $entry, ['mysql'], $definition->driverMode);
+        }
         if (!is_array($entry) || empty($entry['config'])) {
-            throw new RuntimeException("MySQL environment not configured for {$definition->code}: {$environment}");
+            throw $definition->isAdditional()
+                ? AdditionalDatabaseException::environmentNotConfigured('MySQL', $definition->code, $environment)
+                : new RuntimeException("MySQL environment not configured for {$definition->code}: {$environment}");
         }
 
         return [
@@ -150,7 +157,9 @@ final class DatabaseConnectionResolver
     {
         $map = $definition->environments[$environment] ?? null;
         if (!is_array($map) || $map === []) {
-            throw new RuntimeException("Sybase environment not configured for {$definition->code}: {$environment}");
+            throw $definition->isAdditional()
+                ? AdditionalDatabaseException::environmentNotConfigured('Sybase', $definition->code, $environment)
+                : new RuntimeException("Sybase environment not configured for {$definition->code}: {$environment}");
         }
 
         return $this->resolveSybaseVariantMap($definition->code, $map, $definition->driverMode);
@@ -160,7 +169,9 @@ final class DatabaseConnectionResolver
     {
         $map = $definition->environments[$environment] ?? null;
         if (!is_array($map) || $map === []) {
-            throw new RuntimeException("MSSQL environment not configured for {$definition->code}: {$environment}");
+            throw $definition->isAdditional()
+                ? AdditionalDatabaseException::environmentNotConfigured('MSSQL', $definition->code, $environment)
+                : new RuntimeException("MSSQL environment not configured for {$definition->code}: {$environment}");
         }
 
         return $this->resolveMssqlVariantMap($definition->code, $map, $definition->driverMode);
@@ -203,90 +214,60 @@ final class DatabaseConnectionResolver
 
     private function resolveSybaseVariantMap(string $requestedCode, array $variantMap, string $driverMode = 'auto'): array
     {
-        $driverMode = strtolower(trim($driverMode));
-        $os = $this->runtimeConfig->getOsFamily();
-        $drivers = PDO::getAvailableDrivers();
-        $hasOdbc = in_array('odbc', $drivers, true);
-        $hasDblib = in_array('dblib', $drivers, true);
-
-        $primary = null;
-        $fallback = null;
-
-        if ($driverMode !== '' && $driverMode !== 'auto') {
-            $primary = $variantMap[$os][$driverMode] ?? $variantMap['windows'][$driverMode] ?? $variantMap['linux'][$driverMode] ?? null;
-        }
-
-        if ($primary === null && $os === 'windows') {
-            $primary = $hasOdbc ? ($variantMap['windows']['dsn'] ?? $variantMap['linux']['dsn'] ?? null) : null;
-            $fallback = $hasDblib ? ($variantMap['windows']['dblib'] ?? $variantMap['linux']['dblib'] ?? null) : null;
-            if ($primary === null) {
-                $primary = $variantMap['windows']['dsn'] ?? $variantMap['linux']['dsn'] ?? $variantMap['windows']['dblib'] ?? $variantMap['linux']['dblib'] ?? null;
-            }
-            if ($fallback === null) {
-                $fallback = $variantMap['windows']['dblib'] ?? $variantMap['linux']['dblib'] ?? null;
-            }
-        } elseif ($primary === null) {
-            $primary = $hasDblib ? ($variantMap['linux']['dblib'] ?? $variantMap['windows']['dblib'] ?? null) : null;
-            $fallback = $hasOdbc ? ($variantMap['linux']['dsn'] ?? $variantMap['windows']['dsn'] ?? null) : null;
-            if ($primary === null) {
-                $primary = $variantMap['linux']['dblib'] ?? $variantMap['windows']['dblib'] ?? $variantMap['linux']['dsn'] ?? $variantMap['windows']['dsn'] ?? null;
-            }
-            if ($fallback === null) {
-                $fallback = $variantMap['linux']['dsn'] ?? $variantMap['windows']['dsn'] ?? null;
-            }
-        }
-
-        if (!is_array($primary) || empty($primary['config'])) {
-            throw new RuntimeException("No suitable Sybase driver variant found for {$requestedCode}");
-        }
-
-        return [
-            'requested_code' => $requestedCode,
-            'resolved_key' => (string)($primary['resolved_key'] ?? $requestedCode),
-            'config' => $primary['config'],
-            'fallback_key' => is_array($fallback) ? (string)($fallback['resolved_key'] ?? '') : null,
-            'fallback_config' => is_array($fallback) ? ($fallback['config'] ?? null) : null,
-        ];
+        $preferences = $this->runtimeConfig->getOsFamily() === 'windows'
+            ? ['odbc', 'dsn', 'dblib']
+            : ['dblib', 'odbc', 'dsn'];
+        return $this->resolveVariantMap($requestedCode, 'Sybase', $variantMap, $preferences, $driverMode);
     }
 
     private function resolveMssqlVariantMap(string $requestedCode, array $variantMap, string $driverMode = 'auto'): array
     {
-        $driverMode = strtolower(trim($driverMode));
+        $preferences = $this->runtimeConfig->getOsFamily() === 'windows'
+            ? ['sqlsrv', 'odbc', 'dblib']
+            : ['odbc', 'dblib', 'sqlsrv'];
+        return $this->resolveVariantMap($requestedCode, 'MSSQL', $variantMap, $preferences, $driverMode);
+    }
+
+    /**
+     * Select only from the exact runtime OS and then the explicit `any` scope.
+     * A variant belonging to the other OS is never considered.
+     */
+    private function resolveVariantMap(
+        string $requestedCode,
+        string $family,
+        array $variantMap,
+        array $preferences,
+        string $driverMode = 'auto',
+    ): array {
         $os = $this->runtimeConfig->getOsFamily();
-        $drivers = PDO::getAvailableDrivers();
-        $hasSqlsrv = in_array('sqlsrv', $drivers, true);
-        $hasOdbc = in_array('odbc', $drivers, true);
-        $hasDblib = in_array('dblib', $drivers, true);
+        $drivers = array_map('strtolower', $this->availableDrivers ?? PDO::getAvailableDrivers());
+        $driverMode = strtolower(trim($driverMode));
+        $orderedDrivers = $driverMode !== '' && $driverMode !== 'auto'
+            ? array_values(array_unique(array_merge([$driverMode], $preferences)))
+            : $preferences;
+        $candidates = [];
 
-        $primary = null;
-        $fallback = null;
-
-        if ($driverMode !== '' && $driverMode !== 'auto') {
-            $primary = $variantMap[$os][$driverMode] ?? $variantMap['windows'][$driverMode] ?? $variantMap['linux'][$driverMode] ?? null;
-        }
-
-        if ($primary === null && $os === 'windows') {
-            $primary = $hasSqlsrv ? ($variantMap['windows']['sqlsrv'] ?? $variantMap['linux']['sqlsrv'] ?? null) : null;
-            $fallback = $hasOdbc ? ($variantMap['windows']['odbc'] ?? $variantMap['linux']['odbc'] ?? null) : null;
-            if ($primary === null) {
-                $primary = $variantMap['windows']['sqlsrv'] ?? $variantMap['windows']['odbc'] ?? $variantMap['windows']['dblib'] ?? $variantMap['linux']['odbc'] ?? $variantMap['linux']['dblib'] ?? null;
-            }
-            if ($fallback === null) {
-                $fallback = $hasDblib ? ($variantMap['windows']['dblib'] ?? $variantMap['linux']['dblib'] ?? null) : ($variantMap['windows']['odbc'] ?? $variantMap['linux']['odbc'] ?? null);
-            }
-        } elseif ($primary === null) {
-            $primary = $hasOdbc ? ($variantMap['linux']['odbc'] ?? $variantMap['windows']['odbc'] ?? null) : null;
-            $fallback = $hasDblib ? ($variantMap['linux']['dblib'] ?? $variantMap['windows']['dblib'] ?? null) : null;
-            if ($primary === null) {
-                $primary = $variantMap['linux']['odbc'] ?? $variantMap['linux']['dblib'] ?? $variantMap['windows']['sqlsrv'] ?? $variantMap['windows']['odbc'] ?? $variantMap['windows']['dblib'] ?? null;
-            }
-            if ($fallback === null) {
-                $fallback = $variantMap['linux']['dblib'] ?? $variantMap['windows']['dblib'] ?? $variantMap['windows']['sqlsrv'] ?? null;
+        foreach ([$os, 'any'] as $scope) {
+            $scopeVariants = is_array($variantMap[$scope] ?? null) ? $variantMap[$scope] : [];
+            foreach ($orderedDrivers as $variantKey) {
+                $entry = $scopeVariants[$variantKey] ?? null;
+                if (!is_array($entry) || empty($entry['config'])) {
+                    continue;
+                }
+                $pdoDriver = strtolower((string)($entry['config']['driver'] ?? ($variantKey === 'dsn' ? 'odbc' : $variantKey)));
+                if (!in_array($pdoDriver, $drivers, true)) {
+                    continue;
+                }
+                $candidates[] = $entry;
             }
         }
 
-        if (!is_array($primary) || empty($primary['config'])) {
-            throw new RuntimeException("No suitable MSSQL driver variant found for {$requestedCode}");
+        $primary = $candidates[0] ?? null;
+        $fallback = $candidates[1] ?? null;
+        if (!is_array($primary)) {
+            throw str_starts_with($requestedCode, 'dbx_')
+                ? AdditionalDatabaseException::driverUnavailable($family, $requestedCode)
+                : new RuntimeException("No suitable {$family} driver variant found for {$requestedCode}");
         }
 
         return [

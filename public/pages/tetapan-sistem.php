@@ -50,6 +50,7 @@ $authSettings = is_array($viewData['authSettings'] ?? null) ? $viewData['authSet
 $languageData = is_array($viewData['languageData'] ?? null) ? $viewData['languageData'] : [];
 $dbRuntime = is_array($viewData['dbRuntime'] ?? null) ? $viewData['dbRuntime'] : [];
 $additionalConnections = is_array($viewData['additionalConnections'] ?? null) ? $viewData['additionalConnections'] : [];
+$additionalDiagnostics = is_array($viewData['additionalDiagnostics'] ?? null) ? $viewData['additionalDiagnostics'] : [];
 $themeSettings = is_array($viewData['themeSettings'] ?? null) ? $viewData['themeSettings'] : [];
 $aiChatbotSettings = is_array($viewData['aiChatbotSettings'] ?? null) ? $viewData['aiChatbotSettings'] : [];
 $sidebarSmallImages = is_array($viewData['sidebarSmallImages'] ?? null) ? $viewData['sidebarSmallImages'] : [];
@@ -1024,7 +1025,8 @@ if (isset($translationBundlesJs[$lang])) {
         sybase_operational_mode: <?= json_encode($dbRenderOperationalMode, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
       },
       dbRuntime: <?= json_encode($dbRuntime, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) ?>,
-      additionalConnections: <?= json_encode($additionalConnections, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
+      additionalConnections: <?= json_encode($additionalConnections, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>,
+      additionalDiagnostics: <?= json_encode($additionalDiagnostics, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
     };
   </script>
   <script>

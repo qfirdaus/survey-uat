@@ -413,6 +413,52 @@
                         </div>
                       </div>
                       <div class="card-body">
+                        <?php
+                          $additionalDiagnosticWarnings = is_array($additionalDiagnostics['warnings'] ?? null)
+                            ? $additionalDiagnostics['warnings']
+                            : [];
+                          $additionalDiagnosticStatus = (string)($additionalDiagnostics['status'] ?? 'healthy');
+                          $additionalDiagnosticClass = $additionalDiagnosticStatus === 'attention'
+                            ? 'danger'
+                            : ($additionalDiagnosticStatus === 'warning' ? 'warning' : 'success');
+                        ?>
+                        <div class="alert alert-<?= h($additionalDiagnosticClass) ?> mb-3" id="db-additional-diagnostics" role="status">
+                          <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                            <div>
+                              <div class="fw-semibold">
+                                <i class="ri-pulse-line me-1"></i> Read-only Registry Diagnostics
+                              </div>
+                              <div class="small mt-1" id="db-additional-diagnostics-summary">
+                                Runtime <?= h(strtoupper((string)($additionalDiagnostics['runtime_os'] ?? PHP_OS_FAMILY))) ?> ·
+                                PDO <?= h(implode(', ', (array)($additionalDiagnostics['available_drivers'] ?? [])) ?: 'none') ?> ·
+                                <?= h((string)($additionalDiagnostics['enabled_count'] ?? 0)) ?> enabled ·
+                                <?= h((string)($additionalDiagnostics['active_env_count'] ?? 0)) ?> active env rows
+                              </div>
+                            </div>
+                            <span class="badge bg-<?= h($additionalDiagnosticClass) ?>" id="db-additional-diagnostics-count">
+                              <?= h((string)($additionalDiagnostics['warning_count'] ?? 0)) ?> warning(s)
+                            </span>
+                          </div>
+                          <div class="small mt-2">
+                            Snapshot ini tidak membuka atau menguji live connection. Gunakan Test Connection untuk pengesahan rangkaian dan credential sebenar.
+                          </div>
+                          <?php if ($additionalDiagnosticWarnings !== []): ?>
+                            <ul class="small mb-0 mt-2 ps-3" id="db-additional-diagnostics-warnings">
+                              <?php foreach (array_slice($additionalDiagnosticWarnings, 0, 8) as $diagnosticWarning): ?>
+                                <li>
+                                  <code><?= h((string)($diagnosticWarning['connection_code'] ?? '-')) ?></code>
+                                  — <?= h((string)($diagnosticWarning['message'] ?? '')) ?>
+                                </li>
+                              <?php endforeach; ?>
+                              <?php if (count($additionalDiagnosticWarnings) > 8): ?>
+                                <li><?= h((string)(count($additionalDiagnosticWarnings) - 8)) ?> lagi warning tidak dipaparkan.</li>
+                              <?php endif; ?>
+                            </ul>
+                          <?php endif; ?>
+                          <?php if ($additionalDiagnosticWarnings === []): ?>
+                            <ul class="small mb-0 mt-2 ps-3 d-none" id="db-additional-diagnostics-warnings"></ul>
+                          <?php endif; ?>
+                        </div>
                         <div class="db-additional-toolbar">
                           <div class="row g-2">
                             <div class="col-md-4">
@@ -519,6 +565,7 @@
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                         <input type="hidden" name="form_type" id="db-additional-form-type" value="db_additional_create">
                         <input type="hidden" name="existing_code" id="db-additional-existing-code" value="">
+                        <input type="hidden" name="f_registry_revision" id="db-additional-registry-revision" value="">
 
                         <div class="tab-content" id="db-additional-modal-tabs-content">
                           <div class="tab-pane fade show active" id="tab-additional-connection" role="tabpanel" aria-labelledby="tab-additional-connection-tab">
@@ -619,9 +666,17 @@
                                   <div>
                                     <small class="text-muted"><?= __('config_tab_db_additional_env_configs_sub') ?? 'Tambah satu atau lebih env row ikut driver dan OS yang diperlukan.' ?></small>
                                   </div>
-                                  <button type="button" class="btn btn-primary btn-sm db-rounded-btn" id="btn-db-additional-env-add">
-                                    <i class="ri-add-line me-1"></i> <?= __('config_tab_db_additional_add_env_row') ?? 'Add Env Row' ?>
-                                  </button>
+                                  <div class="d-flex flex-wrap gap-2">
+                                    <button type="button" class="btn btn-outline-primary btn-sm db-rounded-btn" id="btn-db-additional-preset-windows-odbc">
+                                      <i class="ri-windows-line me-1"></i> Windows ODBC
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm db-rounded-btn" id="btn-db-additional-preset-linux-dblib">
+                                      <i class="ri-terminal-box-line me-1"></i> Linux DBLIB
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm db-rounded-btn" id="btn-db-additional-env-add">
+                                      <i class="ri-add-line me-1"></i> <?= __('config_tab_db_additional_add_env_row') ?? 'Add Env Row' ?>
+                                    </button>
+                                  </div>
                                 </div>
                                 <div id="db-additional-env-rows" class="db-additional-env-rows"></div>
                               </div>

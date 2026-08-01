@@ -198,7 +198,9 @@ final class DatabaseConnectionRegistry
             if ($family === 'mysql') {
                 $config = self::buildMysqlConfigFromEnvRow($envRow);
                 if ($config !== null) {
-                    $environments[$environment] = [
+                    $osFamily = strtolower(trim((string)($envRow['f_os_family'] ?? 'any')));
+                    $osFamily = in_array($osFamily, ['windows', 'linux'], true) ? $osFamily : 'any';
+                    $environments[$environment][$osFamily]['mysql'] = [
                         'resolved_key' => self::buildResolvedKey($code, $environment, (string)($envRow['f_driver'] ?? 'mysql'), (string)($envRow['f_os_family'] ?? 'any')),
                         'config' => $config,
                     ];
@@ -217,16 +219,14 @@ final class DatabaseConnectionRegistry
                 $environments[$environment] = [];
             }
 
-            $targetOsFamilies = $osFamily === 'any' ? ['windows', 'linux'] : [$osFamily];
-            foreach ($targetOsFamilies as $targetOsFamily) {
-                if (!isset($environments[$environment][$targetOsFamily]) || !is_array($environments[$environment][$targetOsFamily])) {
-                    $environments[$environment][$targetOsFamily] = [];
-                }
-                $environments[$environment][$targetOsFamily][$driver] = [
-                    'resolved_key' => self::buildResolvedKey($code, $environment, $driver, $targetOsFamily),
-                    'config' => $config,
-                ];
+            $targetOsFamily = in_array($osFamily, ['windows', 'linux'], true) ? $osFamily : 'any';
+            if (!isset($environments[$environment][$targetOsFamily]) || !is_array($environments[$environment][$targetOsFamily])) {
+                $environments[$environment][$targetOsFamily] = [];
             }
+            $environments[$environment][$targetOsFamily][$driver] = [
+                'resolved_key' => self::buildResolvedKey($code, $environment, $driver, $targetOsFamily),
+                'config' => $config,
+            ];
         }
 
         return new DatabaseConnectionDefinition(

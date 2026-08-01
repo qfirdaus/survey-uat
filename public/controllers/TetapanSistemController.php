@@ -20,6 +20,10 @@ require_once __DIR__ . '/../classes/SystemConfigConstants.php';
 require_once __DIR__ . '/../classes/DatabaseConnectionRepository.php';
 require_once __DIR__ . '/../classes/DatabaseConnectionValidator.php';
 require_once __DIR__ . '/../classes/DatabaseConnectionFactory.php';
+require_once __DIR__ . '/../classes/DatabaseConnectionDiagnostics.php';
+require_once __DIR__ . '/../classes/DatabasePreviewSanitizer.php';
+require_once __DIR__ . '/../classes/DatabaseErrorRedactor.php';
+require_once __DIR__ . '/../classes/DatabaseErrorClassifier.php';
 require_once __DIR__ . '/../classes/AiChatbotService.php';
 require_once __DIR__ . '/../setting/constants/prestasi_constants.php';
 require_once __DIR__ . '/../setting/helper/config_helper.php';
@@ -40,6 +44,8 @@ class TetapanSistemController {
   private DatabaseConnectionRepository $additionalConnectionRepository;
   private DatabaseConnectionValidator $additionalConnectionValidator;
   private DatabaseConnectionFactory $additionalConnectionFactory;
+  private DatabaseConnectionDiagnostics $additionalConnectionDiagnostics;
+  private DatabasePreviewSanitizer $additionalPreviewSanitizer;
 
   public function __construct() {
     $this->lang = $_SESSION['lang'] ?? SystemConfigConstants::DEFAULT_LANGUAGE;
@@ -51,6 +57,8 @@ class TetapanSistemController {
     $this->additionalConnectionRepository = new DatabaseConnectionRepository($this->pdo);
     $this->additionalConnectionValidator = new DatabaseConnectionValidator();
     $this->additionalConnectionFactory = new DatabaseConnectionFactory();
+    $this->additionalConnectionDiagnostics = new DatabaseConnectionDiagnostics();
+    $this->additionalPreviewSanitizer = new DatabasePreviewSanitizer();
 
     // ✅ Profil user
     $userModel  = new User($pdo_mysql);
@@ -1175,6 +1183,7 @@ class TetapanSistemController {
       SystemConfigConstants::CACHE_TTL_DB_CONFIG,
       fn(): array => $this->safeGetAdditionalConnections()
     );
+    $additionalDiagnostics = $this->additionalConnectionDiagnostics->analyze($additionalConnections);
 
     $themeSettings = $this->getCachedValue(
       'theme',
@@ -1199,6 +1208,7 @@ class TetapanSistemController {
       'languageData' => $languageData,
       'dbRuntime' => $dbRuntime,
       'additionalConnections' => $additionalConnections,
+      'additionalDiagnostics' => $additionalDiagnostics,
       'themeSettings' => $themeSettings,
       'aiChatbotSettings' => $aiChatbotSettings,
       'sidebarSmallImages' => $sidebarSmallImages,
@@ -1211,6 +1221,14 @@ class TetapanSistemController {
     } catch (Throwable $e) {
       return [];
     }
+  }
+
+  private function buildAdditionalConnectionsResponseData(array $extra = []): array {
+    $connections = $this->additionalConnectionRepository->findAllAdditional();
+    return array_merge($extra, [
+      'additionalConnections' => $connections,
+      'additionalDiagnostics' => $this->additionalConnectionDiagnostics->analyze($connections),
+    ]);
   }
 
   /**
@@ -1368,18 +1386,17 @@ class TetapanSistemController {
         'tab' => 'db',
         'title' => 'Berjaya',
         'message' => 'Senarai sambungan tambahan berjaya dimuatkan.',
-        'data' => [
-          'additionalConnections' => $this->additionalConnectionRepository->findAllAdditional(),
-        ],
+        'data' => $this->buildAdditionalConnectionsResponseData(),
       ];
     } catch (Throwable $e) {
+      $safeError = $this->safeAdditionalDatabaseError($e);
       return [
         'success' => false,
         'status' => 500,
         'tab' => 'db',
         'title' => 'Ralat Sistem',
-        'message' => $e->getMessage(),
-        'errors' => [$e->getMessage()],
+        'message' => $safeError,
+        'errors' => [$safeError],
       ];
     }
   }
@@ -1398,7 +1415,7 @@ class TetapanSistemController {
         $errors[] = 'Kod sambungan tambahan sudah wujud.';
       }
     } catch (Throwable $e) {
-      $errors[] = $e->getMessage();
+      $errors[] = $this->safeAdditionalDatabaseError($e);
     }
 
     if ($errors !== []) {
@@ -1422,23 +1439,24 @@ class TetapanSistemController {
         'tab' => 'db',
         'title' => 'Berjaya',
         'message' => 'Sambungan tambahan berjaya ditambah.',
-        'data' => [
+        'data' => $this->buildAdditionalConnectionsResponseData([
           'connection' => $this->additionalConnectionRepository->findAdditionalByCode($code),
-          'additionalConnections' => $this->additionalConnectionRepository->findAllAdditional(),
-        ],
+        ]),
       ];
     } catch (Throwable $e) {
+      $safeError = $this->safeAdditionalDatabaseError($e);
       $this->auditAdditionalConnectionAction('CREATE_FAILED', (string)($payload['f_code'] ?? ''), [
         'payload' => $payload,
-        'error' => $e->getMessage(),
+        'error_category' => DatabaseErrorClassifier::classify($e),
+        'error' => $safeError,
       ]);
       return [
         'success' => false,
         'status' => 500,
         'tab' => 'db',
         'title' => 'Ralat Sistem',
-        'message' => $e->getMessage(),
-        'errors' => [$e->getMessage()],
+        'message' => $safeError,
+        'errors' => [$safeError],
       ];
     }
   }
@@ -1474,7 +1492,12 @@ class TetapanSistemController {
         throw new RuntimeException('Sambungan tambahan tidak ditemui.');
       }
 
-      $this->additionalConnectionRepository->updateAdditional($code, $payload, $envRows);
+      $this->additionalConnectionRepository->updateAdditional(
+        $code,
+        $payload,
+        $envRows,
+        trim((string)($_POST['f_registry_revision'] ?? '')) ?: null
+      );
       $this->invalidateTsCache('db-additional');
       $this->auditAdditionalConnectionAction('UPDATE', $code, [
         'old' => $existing,
@@ -1486,23 +1509,24 @@ class TetapanSistemController {
         'tab' => 'db',
         'title' => 'Berjaya',
         'message' => 'Sambungan tambahan berjaya dikemas kini.',
-        'data' => [
+        'data' => $this->buildAdditionalConnectionsResponseData([
           'connection' => $this->additionalConnectionRepository->findAdditionalByCode($code),
-          'additionalConnections' => $this->additionalConnectionRepository->findAllAdditional(),
-        ],
+        ]),
       ];
     } catch (Throwable $e) {
+      $safeError = $this->safeAdditionalDatabaseError($e);
       $this->auditAdditionalConnectionAction('UPDATE_FAILED', $code, [
         'new' => $payload,
-        'error' => $e->getMessage(),
+        'error_category' => DatabaseErrorClassifier::classify($e),
+        'error' => $safeError,
       ]);
       return [
         'success' => false,
         'status' => 500,
         'tab' => 'db',
         'title' => 'Ralat Sistem',
-        'message' => $e->getMessage(),
-        'errors' => [$e->getMessage()],
+        'message' => $safeError,
+        'errors' => [$safeError],
       ];
     }
   }
@@ -1545,23 +1569,24 @@ class TetapanSistemController {
         'tab' => 'db',
         'title' => 'Berjaya',
         'message' => $enabled ? 'Sambungan tambahan berjaya diaktifkan.' : 'Sambungan tambahan berjaya dinyahaktifkan.',
-        'data' => [
+        'data' => $this->buildAdditionalConnectionsResponseData([
           'connection' => $this->additionalConnectionRepository->findAdditionalByCode($code),
-          'additionalConnections' => $this->additionalConnectionRepository->findAllAdditional(),
-        ],
+        ]),
       ];
     } catch (Throwable $e) {
+      $safeError = $this->safeAdditionalDatabaseError($e);
       $this->auditAdditionalConnectionAction('TOGGLE_FAILED', $code, [
         'enabled' => $enabled,
-        'error' => $e->getMessage(),
+        'error_category' => DatabaseErrorClassifier::classify($e),
+        'error' => $safeError,
       ]);
       return [
         'success' => false,
         'status' => 500,
         'tab' => 'db',
         'title' => 'Ralat Sistem',
-        'message' => $e->getMessage(),
-        'errors' => [$e->getMessage()],
+        'message' => $safeError,
+        'errors' => [$safeError],
       ];
     }
   }
@@ -1627,6 +1652,7 @@ class TetapanSistemController {
         ],
       ];
     } catch (Throwable $e) {
+      $safeError = $this->safeAdditionalDatabaseError($e);
       try {
         if ($code !== '') {
           $this->additionalConnectionRepository->saveTestResult(
@@ -1634,7 +1660,7 @@ class TetapanSistemController {
             strtolower(trim((string)($_POST['environment'] ?? 'production'))),
             strtolower(trim((string)($_POST['os_family'] ?? (PHP_OS_FAMILY === 'Windows' ? 'windows' : 'linux')))),
             'ERROR',
-            $e->getMessage(),
+            $safeError,
             strtolower(trim((string)($_POST['driver'] ?? 'auto')))
           );
         }
@@ -1646,7 +1672,8 @@ class TetapanSistemController {
         'os_family' => strtolower(trim((string)($_POST['os_family'] ?? (PHP_OS_FAMILY === 'Windows' ? 'windows' : 'linux')))),
         'driver' => strtolower(trim((string)($_POST['driver'] ?? 'auto'))),
         'status' => 'ERROR',
-        'error' => $e->getMessage(),
+        'error_category' => DatabaseErrorClassifier::classify($e),
+        'error' => $safeError,
       ]);
 
       return [
@@ -1654,8 +1681,8 @@ class TetapanSistemController {
         'status' => 500,
         'tab' => 'db',
         'title' => 'Ralat Sambungan Database',
-        'message' => $e->getMessage(),
-        'errors' => [$e->getMessage()],
+        'message' => $safeError,
+        'errors' => [$safeError],
       ];
     }
   }
@@ -1711,12 +1738,14 @@ class TetapanSistemController {
         ],
       ];
     } catch (Throwable $e) {
+      $safeError = $this->safeAdditionalDatabaseError($e);
       $this->auditAdditionalConnectionAction('INSPECT_FAILED', $code, [
         'environment' => strtolower(trim((string)($_POST['environment'] ?? 'production'))),
         'os_family' => strtolower(trim((string)($_POST['os_family'] ?? (PHP_OS_FAMILY === 'Windows' ? 'windows' : 'linux')))),
         'driver' => strtolower(trim((string)($_POST['driver'] ?? 'auto'))),
         'status' => 'ERROR',
-        'error' => $e->getMessage(),
+        'error_category' => DatabaseErrorClassifier::classify($e),
+        'error' => $safeError,
       ]);
 
       return [
@@ -1724,8 +1753,8 @@ class TetapanSistemController {
         'status' => 500,
         'tab' => 'db',
         'title' => 'Ralat Sambungan Database',
-        'message' => $e->getMessage(),
-        'errors' => [$e->getMessage()],
+        'message' => $safeError,
+        'errors' => [$safeError],
       ];
     }
   }
@@ -1781,12 +1810,14 @@ class TetapanSistemController {
         ],
       ];
     } catch (Throwable $e) {
+      $safeError = $this->safeAdditionalDatabaseError($e);
       $this->auditAdditionalConnectionAction('SCHEMA_PREVIEW_FAILED', $code, [
         'environment' => strtolower(trim((string)($_POST['environment'] ?? 'production'))),
         'os_family' => strtolower(trim((string)($_POST['os_family'] ?? (PHP_OS_FAMILY === 'Windows' ? 'windows' : 'linux')))),
         'driver' => strtolower(trim((string)($_POST['driver'] ?? 'auto'))),
         'status' => 'ERROR',
-        'error' => $e->getMessage(),
+        'error_category' => DatabaseErrorClassifier::classify($e),
+        'error' => $safeError,
       ]);
 
       return [
@@ -1794,8 +1825,8 @@ class TetapanSistemController {
         'status' => 500,
         'tab' => 'db',
         'title' => 'Ralat Sambungan Database',
-        'message' => $e->getMessage(),
-        'errors' => [$e->getMessage()],
+        'message' => $safeError,
+        'errors' => [$safeError],
       ];
     }
   }
@@ -1865,13 +1896,15 @@ class TetapanSistemController {
         ],
       ];
     } catch (Throwable $e) {
+      $safeError = $this->safeAdditionalDatabaseError($e);
       $this->auditAdditionalConnectionAction('OBJECT_PREVIEW_FAILED', $code, [
         'environment' => strtolower(trim((string)($_POST['environment'] ?? 'production'))),
         'os_family' => strtolower(trim((string)($_POST['os_family'] ?? (PHP_OS_FAMILY === 'Windows' ? 'windows' : 'linux')))),
         'driver' => strtolower(trim((string)($_POST['driver'] ?? 'auto'))),
         'object_name' => $objectName,
         'status' => 'ERROR',
-        'error' => $e->getMessage(),
+        'error_category' => DatabaseErrorClassifier::classify($e),
+        'error' => $safeError,
       ]);
 
       return [
@@ -1879,10 +1912,14 @@ class TetapanSistemController {
         'status' => 500,
         'tab' => 'db',
         'title' => 'Ralat Sambungan Database',
-        'message' => $e->getMessage(),
-        'errors' => [$e->getMessage()],
+        'message' => $safeError,
+        'errors' => [$safeError],
       ];
     }
+  }
+
+  private function safeAdditionalDatabaseError(Throwable $error): string {
+    return DatabaseErrorRedactor::redact($error->getMessage());
   }
 
   private function collectAdditionalConnectionPayload(?string $forcedCode = null): array {
@@ -1963,6 +2000,18 @@ class TetapanSistemController {
       throw new RuntimeException('Sambungan tambahan ini tidak menyokong environment development.');
     }
 
+    $family = strtolower(trim((string)($connection['f_family'] ?? '')));
+    $availableDrivers = array_map('strtolower', PDO::getAvailableDrivers());
+    $preferences = match ($family) {
+      'sybase' => $targetOsFamily === 'windows' ? ['odbc', 'dblib'] : ['dblib', 'odbc'],
+      'mssql' => $targetOsFamily === 'windows' ? ['sqlsrv', 'odbc', 'dblib'] : ['odbc', 'dblib', 'sqlsrv'],
+      default => ['mysql'],
+    };
+    if ($targetDriver !== '') {
+      $preferences = [$targetDriver];
+    }
+
+    $matches = [];
     foreach ($envRows as $row) {
       $rowEnvironment = strtolower(trim((string)($row['f_environment'] ?? '')));
       $rowOsFamily = strtolower(trim((string)($row['f_os_family'] ?? 'any')));
@@ -1976,32 +2025,26 @@ class TetapanSistemController {
       if ($rowEnvironment !== $targetEnvironment) {
         continue;
       }
-      if ($rowOsFamily !== 'any' && $rowOsFamily !== $targetOsFamily) {
+      if (!in_array($rowOsFamily, [$targetOsFamily, 'any'], true)) {
         continue;
       }
-      if ($targetDriver !== '' && $rowDriver !== $targetDriver) {
+      if (!in_array($rowDriver, $preferences, true) || !in_array($rowDriver, $availableDrivers, true)) {
         continue;
       }
-
-      return $row;
+      $osRank = $rowOsFamily === $targetOsFamily ? 0 : 1;
+      $driverRank = array_search($rowDriver, $preferences, true);
+      $matches[] = ['row' => $row, 'rank' => [$osRank, $driverRank === false ? 999 : $driverRank]];
+    }
+    usort($matches, static fn(array $left, array $right): int => $left['rank'] <=> $right['rank']);
+    if ($matches !== []) {
+      return $matches[0]['row'];
     }
 
-    foreach ($envRows as $row) {
-      if (
-        !empty($row['f_is_active'])
-        && strtolower(trim((string)($row['f_environment'] ?? ''))) === $targetEnvironment
-      ) {
-        return $row;
-      }
-    }
-
-    foreach ($envRows as $row) {
-      if (!empty($row['f_is_active'])) {
-        return $row;
-      }
-    }
-
-    throw new RuntimeException('Tiada env row aktif yang sesuai untuk ujian sambungan tambahan ini.');
+    throw new RuntimeException(sprintf(
+      'Tiada env row aktif untuk environment %s dan OS %s dengan driver runtime yang tersedia.',
+      $targetEnvironment,
+      $targetOsFamily
+    ));
   }
 
   private function buildAdditionalTestPdoConfig(array $envRow, string $family = ''): array {
@@ -2205,9 +2248,11 @@ class TetapanSistemController {
       throw new RuntimeException('Family database ini belum disokong untuk data preview.');
     }
 
+    $this->applyAdditionalPreviewTimeout($pdo, $family);
     $stmt = $pdo->query($sql);
     $rows = $stmt ? ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
     $columns = $rows !== [] ? array_keys($rows[0]) : [];
+    $sanitized = $this->additionalPreviewSanitizer->sanitize($rows);
 
     return [
       'connection_code' => (string)($connection['f_code'] ?? ''),
@@ -2217,8 +2262,27 @@ class TetapanSistemController {
       'database_name' => (string)($envRow['f_database_name'] ?? ''),
       'object_name' => $objectName,
       'columns' => array_values($columns),
-      'rows' => $rows,
+      'rows' => $sanitized['rows'],
+      'masked_columns' => $sanitized['masked_columns'],
+      'truncated_values' => $sanitized['truncated_values'],
+      'binary_values' => $sanitized['binary_values'],
+      'row_limit' => 20,
+      'query_timeout_seconds' => SystemConfigConstants::DB_TEST_CONNECTION_TIMEOUT,
     ];
+  }
+
+  private function applyAdditionalPreviewTimeout(PDO $pdo, string $family): void {
+    try {
+      $pdo->setAttribute(PDO::ATTR_TIMEOUT, SystemConfigConstants::DB_TEST_CONNECTION_TIMEOUT);
+    } catch (Throwable $e) {
+    }
+
+    if ($family === 'mysql') {
+      try {
+        $pdo->exec('SET SESSION MAX_EXECUTION_TIME = ' . (SystemConfigConstants::DB_TEST_CONNECTION_TIMEOUT * 1000));
+      } catch (Throwable $e) {
+      }
+    }
   }
 
   private function quoteAdditionalPreviewObjectName(string $family, string $objectName): string {
@@ -2948,7 +3012,7 @@ class TetapanSistemController {
         ], $meta),
       ]);
     } catch (Throwable $e) {
-      error_log("[TetapanSistem] Additional DB audit logging failed: " . $e->getMessage());
+      error_log('[TetapanSistem] Additional DB audit logging failed: ' . $this->safeAdditionalDatabaseError($e));
     }
   }
 

@@ -118,10 +118,6 @@ final class DatabaseConnectionValidator
                 $errors[] = "{$label}: MySQL tambahan mesti menggunakan driver mysql.";
             }
 
-            if ($family === 'mysql' && $osFamily !== 'any') {
-                $errors[] = "{$label}: MySQL tambahan mesti menggunakan OS family \"any\".";
-            }
-
             if ($family === 'sybase' && !in_array($driver, ['odbc', 'dblib'], true)) {
                 $errors[] = "{$label}: Sybase tambahan hanya menyokong driver odbc atau dblib.";
             }
@@ -161,6 +157,17 @@ final class DatabaseConnectionValidator
                     $errors[] = "{$label}: kombinasi environment, OS family, dan driver ini sudah wujud.";
                 } else {
                     $seenEnvKeys[$envKey] = true;
+                }
+            }
+        }
+
+        foreach (self::ALLOWED_ENVIRONMENTS as $environment) {
+            foreach (['mysql', 'odbc', 'dblib', 'sqlsrv'] as $driver) {
+                $hasAny = isset($seenEnvKeys[$environment . '|any|' . $driver]);
+                $hasSpecific = isset($seenEnvKeys[$environment . '|windows|' . $driver])
+                    || isset($seenEnvKeys[$environment . '|linux|' . $driver]);
+                if ($hasAny && $hasSpecific) {
+                    $errors[] = "Kombinasi {$environment}/{$driver} tidak boleh mencampurkan OS family any dengan variant OS-specific.";
                 }
             }
         }

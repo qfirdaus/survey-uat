@@ -9,12 +9,16 @@
  */declare(strict_types=1);
 
 require_once __DIR__ . '/../setting/helper/security_helper.php';
+require_once __DIR__ . '/DatabaseCredentialCipher.php';
 
 final class DatabaseConnectionRepository
 {
     private bool $tableChecked = false;
 
-    public function __construct(private readonly PDO $pdo)
+    public function __construct(
+        private readonly PDO $pdo,
+        private readonly ?DatabaseCredentialCipher $credentialCipher = null,
+    )
     {
     }
 
@@ -39,6 +43,7 @@ final class DatabaseConnectionRepository
         foreach ($rows as &$row) {
             $code = (string)($row['f_code'] ?? '');
             $row['env_rows'] = $envMap[$code] ?? [];
+            $row['f_registry_revision'] = $this->buildRegistryRevision($row);
         }
 
         return $rows;
@@ -62,6 +67,7 @@ final class DatabaseConnectionRepository
         }
 
         $row['env_rows'] = $this->findEnvRowsByCodes([(string)$row['f_code']], $includeSecrets)[(string)$row['f_code']] ?? [];
+        $row['f_registry_revision'] = $this->buildRegistryRevision($row);
         return $row;
     }
 
@@ -106,13 +112,29 @@ final class DatabaseConnectionRepository
         }
     }
 
-    public function updateAdditional(string $code, array $payload, array $envRows): bool
+    public function updateAdditional(string $code, array $payload, array $envRows, ?string $expectedRevision = null): bool
     {
         $this->assertTablesReady();
 
         $code = trim($code);
         $this->pdo->beginTransaction();
         try {
+            $lockMaster = $this->pdo->prepare("SELECT f_code FROM tbl_m_db_connection WHERE f_code = :code AND f_category = 'additional' FOR UPDATE");
+            $lockMaster->execute([':code' => $code]);
+            if ($lockMaster->fetchColumn() === false) {
+                throw new RuntimeException('Sambungan tambahan tidak ditemui.');
+            }
+            $lockRows = $this->pdo->prepare('SELECT f_connection_code FROM tbl_m_db_connection_env WHERE f_connection_code = :code FOR UPDATE');
+            $lockRows->execute([':code' => $code]);
+
+            if (is_string($expectedRevision) && trim($expectedRevision) !== '') {
+                $current = $this->findAdditionalByCode($code, false);
+                $currentRevision = is_array($current) ? (string)($current['f_registry_revision'] ?? '') : '';
+                if (!hash_equals($currentRevision, trim($expectedRevision))) {
+                    throw new RuntimeException('Konfigurasi sambungan telah berubah sejak borang dibuka. Muat semula sebelum menyimpan supaya variant platform lain tidak ditimpa.');
+                }
+            }
+
             $stmt = $this->pdo->prepare("
                 UPDATE tbl_m_db_connection
                 SET f_name = :name,
@@ -176,21 +198,18 @@ final class DatabaseConnectionRepository
                 f_last_tested_at = NOW()
             WHERE f_connection_code = :code
               AND f_environment = :environment
-              AND f_os_family IN (:os_any, :os_family)
+              AND f_os_family = :os_family
+              AND f_driver = :driver
         ");
 
         try {
-            $sql = str_replace(
-                [':os_any', ':os_family'],
-                [$this->pdo->quote('any'), $this->pdo->quote($osFamily)],
-                $update->queryString
-            );
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute([
+            $update->execute([
                 ':status' => strtoupper(trim($status)),
                 ':message' => $message,
                 ':code' => trim($code),
                 ':environment' => trim($environment),
+                ':os_family' => trim($osFamily),
+                ':driver' => trim((string)($driver ?? 'auto')),
             ]);
         } catch (Throwable $e) {
             // ignore update errors and still attempt audit test insert
@@ -287,6 +306,11 @@ final class DatabaseConnectionRepository
         $map = [];
         foreach ($rows as $row) {
             $code = (string)($row['f_connection_code'] ?? '');
+            $storedSecret = $this->normalizeNullableString($row['f_password_ciphertext'] ?? null);
+            $row['f_has_password'] = $storedSecret !== null;
+            $row['f_credential_format'] = $storedSecret === null
+                ? 'none'
+                : (str_starts_with($storedSecret, 'v2:') ? 'v2' : 'legacy');
             $row['f_password_ciphertext'] = $includeSecrets
                 ? $this->decryptSecret($row['f_password_ciphertext'] ?? null)
                 : null;
@@ -359,13 +383,7 @@ final class DatabaseConnectionRepository
             return null;
         }
 
-        if (class_exists('Encryption')) {
-            $encryption = new Encryption();
-            $encoded = $encryption->encode($stringValue);
-            return is_string($encoded) && $encoded !== '' ? $encoded : $stringValue;
-        }
-
-        return $stringValue;
+        return $this->cipher()->encrypt($stringValue);
     }
 
     private function decryptSecret(mixed $value): ?string
@@ -375,13 +393,12 @@ final class DatabaseConnectionRepository
             return null;
         }
 
-        if (class_exists('Encryption')) {
-            $encryption = new Encryption();
-            $decoded = $encryption->decode($stringValue);
-            return is_string($decoded) && $decoded !== '' ? $decoded : $stringValue;
-        }
+        return $this->cipher()->decrypt($stringValue);
+    }
 
-        return $stringValue;
+    private function cipher(): DatabaseCredentialCipher
+    {
+        return $this->credentialCipher ?? new DatabaseCredentialCipher();
     }
 
     private function normalizeNullableString(mixed $value): ?string
@@ -406,5 +423,28 @@ final class DatabaseConnectionRepository
 
         $stringValue = trim((string)$value);
         return $stringValue === '' ? null : $stringValue;
+    }
+
+    /** @param array<string, mixed> $connection */
+    private function buildRegistryRevision(array $connection): string
+    {
+        $master = [];
+        foreach (['f_code', 'f_name', 'f_family', 'f_purpose', 'f_driver_mode', 'f_is_enabled', 'f_supports_prod', 'f_supports_dev', 'f_notes', 'f_updated_at'] as $key) {
+            $master[$key] = $connection[$key] ?? null;
+        }
+
+        $variants = [];
+        foreach (($connection['env_rows'] ?? []) as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $variant = [];
+            foreach (['id', 'f_db_connection_env_id', 'f_environment', 'f_os_family', 'f_driver', 'f_host', 'f_port', 'f_database_name', 'f_dsn_name', 'f_username', 'f_charset', 'f_extra_json', 'f_is_active', 'f_credential_format', 'f_has_password', 'f_updated_at'] as $key) {
+                $variant[$key] = $row[$key] ?? null;
+            }
+            $variants[] = $variant;
+        }
+
+        return hash('sha256', json_encode([$master, $variants], JSON_UNESCAPED_SLASHES) ?: '');
     }
 }
