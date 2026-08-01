@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.8.5`
+- Current version: `1.9.0`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -156,6 +156,12 @@ The Database tab in System Settings supports:
 - Runtime summary and diagnostics that update through AJAX after saving.
 - Additional database connection registry stored in `tbl_m_db_connection` and `tbl_m_db_connection_env`.
 - Additional connection actions for create, update, enable/disable, test connection, inspect, schema preview, object preview, and sample code.
+- Platform-aware additional database variants identified by `(connection, environment, os_family, driver)` so Linux and Windows settings can coexist in the same shared registry.
+- Deterministic resolution that selects the exact runtime OS before an `any` variant and rejects fallback across another OS or environment.
+- Windows presets for ODBC/SQLSRV and a Linux DBLIB preset, with runtime health reported separately from cross-platform coverage.
+- Exact-tuple test-result updates and optimistic concurrency protection so testing or editing one platform does not overwrite another platform's variant.
+- Dual-read credential support for legacy ciphertext and authenticated v2 envelopes. New v2 writes require `DB_ADDITIONAL_CREDENTIAL_KEY`; `DB_ADDITIONAL_CREDENTIAL_KEY_ID` identifies the active key without exposing it.
+- Read-only diagnostics and controlled dry-run-default audit/migration tools with sensitive values redacted from output and logs.
 
 Programmers should consume additional database connections through:
 
@@ -164,6 +170,16 @@ $pdo = Database::pdoAdditional('dbx_code');
 ```
 
 Do not hardcode DSN, username, or password inside page/controller code.
+
+For a shared development registry, store separate platform variants instead of repeatedly changing one shared driver row. Typical MSSQL/Sybase mappings are Linux/DBLIB and Windows/ODBC or Windows/SQLSRV. Install the same v2 credential key securely on every runtime that shares encrypted registry rows; never commit the key to Git.
+
+Operational references:
+
+- [Additional Database upgrade audit and rollout record](./docs/additional-database-upgrade-audit-plan-2026-08-01.md)
+- Use the Database tab diagnostics panel for read-only runtime health and platform coverage.
+- `php tools/additional-database-platform-audit.php` for read-only platform coverage auditing.
+- `php tools/additional-database-platform-migrate.php` for controlled platform migration; dry-run is the default.
+- `php tools/additional-database-credential-migrate.php` for controlled credential migration; dry-run is the default.
 
 ### Email Configuration and Templates
 

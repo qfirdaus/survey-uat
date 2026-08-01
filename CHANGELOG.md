@@ -16,6 +16,29 @@ This changelog follows a release-style summary based on major project milestones
 - Removed the retired Dockerfile, Compose service, Apache/PHP container configuration, Docker ignore rules, and development TLS key material.
 - Removed unused `sync.log` and `conflict.log` initialization and references from the update sync workflow.
 
+## [1.9.0] - 2026-08-01
+
+### Added
+- Added platform-aware Additional Database variants so Linux DBLIB and Windows ODBC/SQLSRV configurations can coexist in a shared registry.
+- Added deterministic runtime resolution, platform coverage diagnostics, UI presets, exact-tuple test tracking, and optimistic concurrency protection for registry edits.
+- Added authenticated v2 credential envelopes with legacy/v2 dual-read compatibility and environment-managed key identification.
+- Added read-only diagnostics, credential smoke testing, platform auditing, and dry-run-default controlled migration tools with backup and rollback safeguards.
+- Added Windows/Linux regression coverage for Sybase, MSSQL, and MySQL resolution paths.
+
+### Changed
+- Changed Additional Database test, inspect, schema preview, object preview, and sample operations to resolve an exact environment/OS/driver tuple without crossing platform or environment boundaries.
+- Changed diagnostics to distinguish current runtime health from full platform coverage and to expose standardized redacted error categories through audit metadata.
+- Changed connection-test persistence to update only the exact selected variant.
+- Changed project release metadata to version `1.9.0`.
+
+### Fixed
+- Fixed shared Additional Database driver settings requiring manual DBLIB/ODBC switching between Linux and Windows development runtimes.
+- Fixed variant selection and form replacement behavior that could choose, overwrite, or remove a different platform's configuration.
+- Fixed sensitive credential, DSN, username, host, and connection-detail exposure in diagnostics, previews, and failure logs.
+
+### Security
+- Added authenticated credential encryption, explicit key configuration checks, redacted exception/log handling, bounded inspection queries, and safe failure categories without changing the downstream PDO exception contract.
+
 ## [1.8.5] - 2026-07-31
 
 ### Added
