@@ -19,6 +19,10 @@ try {
     require_once __DIR__ . '/_helpers.php';
     logAjaxUnexpectedOutput('user-update-public:init.php', $initOutput);
 
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+        jsonErrorResponse((string)__('userList_ajax_method_not_allowed'), 405);
+    }
+
     if (empty($_SESSION['f_stafID'])) {
         jsonErrorResponse((string)(__('unauthorized_access') ?: 'Sila log masuk terlebih dahulu.'), 401);
     }

@@ -93,6 +93,7 @@
                     '[data-detail-access-mode]': ((window.TemplateGeneratorPageData || {}).accessModeLabels || {})[payload.access_mode] || payload.access_mode || '-',
                     '[data-detail-status]': payload.status || '-',
                     '[data-detail-updated-at]': payload.updated_at || '-',
+                    '[data-detail-update-by]': payload.update_by || '-',
                     '[data-detail-page-path]': payload.page_path || '-',
                     '[data-detail-controller-path]': payload.controller_path || '-',
                     '[data-detail-css-path]': payload.css_path || '-'
@@ -103,6 +104,27 @@
                     if (node) {
                         node.textContent = mappings[selector];
                     }
+                });
+
+                detailModalEl.dataset.templatePayload = JSON.stringify(payload);
+            });
+
+            detailModalEl.querySelectorAll('[data-copy-detail]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    var payload = safeJsonParse(detailModalEl.dataset.templatePayload || '{}') || {};
+                    var value = payload[button.getAttribute('data-copy-detail')] || '';
+                    var pageData = window.TemplateGeneratorPageData || {};
+                    if (!value || !navigator.clipboard) {
+                        if (window.Swal) Swal.fire({ icon: 'error', text: pageData.copyFailed || 'Unable to copy path' });
+                        return;
+                    }
+                    navigator.clipboard.writeText(value).then(function () {
+                        button.classList.add('is-copied');
+                        setTimeout(function () { button.classList.remove('is-copied'); }, 1200);
+                        if (window.Swal) Swal.fire({ toast: true, position: 'top-end', timer: 1400, showConfirmButton: false, icon: 'success', title: pageData.copySuccess || 'Path copied' });
+                    }).catch(function () {
+                        if (window.Swal) Swal.fire({ icon: 'error', text: pageData.copyFailed || 'Unable to copy path' });
+                    });
                 });
             });
         }

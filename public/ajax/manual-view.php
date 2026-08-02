@@ -12,24 +12,23 @@ require_once __DIR__ . '/../includes/init.php';
 require_login();
 require_once __DIR__ . '/../setting/constants/manual_constants.php';
 require_once __DIR__ . '/../controllers/ManualController.php';
+require_once __DIR__ . '/_helpers.php';
 
 try {
+    checkRateLimit('manual_view', 60, 60);
     $groupId = (int)($_GET['group_id'] ?? 0);
     if ($groupId <= 0) {
         http_response_code(400);
-        exit('Invalid request.');
+        exit((string)__('manual_view_invalid_request'));
     }
 
     $activeGroupId = (int)($_SESSION['group_active_id'] ?? 0);
     $db = Database::getInstance()->getConnection();
-    $stmt = $db->prepare("SELECT f_groupKod FROM tbl_m_group WHERE f_groupID = ?");
-    $stmt->execute([$activeGroupId]);
-    $roleKod = (string)$stmt->fetchColumn();
-    $isAdmin = manual_is_admin_role((string)$roleKod);
+    $isAdmin = manual_can_manage($db);
 
     if (!$isAdmin && $groupId !== $activeGroupId) {
         http_response_code(403);
-        exit('Forbidden.');
+        exit((string)__('manual_action_forbidden'));
     }
 
     $controller = new ManualController();
@@ -37,26 +36,29 @@ try {
     $relativePath = (string)($manual['f_file_path'] ?? '');
     if ($relativePath === '') {
         http_response_code(404);
-        exit('File not found.');
+        exit((string)__('manual_not_found'));
     }
 
-    $fullPath = realpath(__DIR__ . '/../' . ltrim($relativePath, '/\\'));
-    $baseDir = realpath(__DIR__ . '/../uploads/manuals');
-    if ($fullPath === false || $baseDir === false || strncmp($fullPath, $baseDir, strlen($baseDir)) !== 0 || !is_file($fullPath)) {
+    $fullPath = $controller->resolveManualFilePath($relativePath);
+    if ($fullPath === null) {
         http_response_code(404);
-        exit('File not found.');
+        exit((string)__('manual_not_found'));
     }
 
     header('Content-Type: application/pdf');
     header('Content-Length: ' . (string)filesize($fullPath));
-    header('Content-Disposition: inline; filename="' . basename($fullPath) . '"');
+    header('Content-Disposition: inline; filename="user-manual-group-' . $groupId . '.pdf"');
     header('X-Content-Type-Options: nosniff');
+    header('Content-Security-Policy: sandbox; default-src \'none\'; object-src \'self\'');
+    header('X-Frame-Options: SAMEORIGIN');
+    header('Referrer-Policy: no-referrer');
     header('Cache-Control: private, no-store, no-cache, must-revalidate');
     header('Pragma: no-cache');
 
     readfile($fullPath);
     exit;
 } catch (Throwable $e) {
+    error_log('[manual-view] ' . $e->getMessage());
     http_response_code(500);
-    exit('Unable to load file.');
+    exit((string)__('manual_view_load_failed'));
 }

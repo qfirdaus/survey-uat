@@ -112,6 +112,9 @@ try {
 
     $pdo = Database::getInstance('mysql')->getConnection();
     ensureAjaxGroupManagePermission($pdo, (string)(__('notification_template_forbidden') ?: 'You do not have permission to manage notification templates.'));
+    if (!checkRateLimit('notification_template_action', 30, 60)) {
+        jsonErrorResponse((string)(__('notification_rate_limited') ?: 'Too many requests. Please try again shortly.'), 429);
+    }
 
     $raw = file_get_contents('php://input');
     $data = json_decode((string)$raw, true);
@@ -154,7 +157,6 @@ try {
     jsonSuccessResponse([
         'message' => $message,
         'template_id' => $templateId ?? 0,
-        'records' => $service->getAll(),
         'summary' => $service->summary(),
     ]);
 } catch (InvalidArgumentException|RuntimeException $e) {

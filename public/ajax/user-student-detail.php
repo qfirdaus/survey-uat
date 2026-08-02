@@ -55,7 +55,7 @@ try {
         http_response_code(400);
         echo json_encode([
             'error' => true,
-            'message' => 'No. matrik tidak sah.',
+            'message' => (string)__('userList_ajax_invalid_matric'),
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -107,7 +107,7 @@ try {
         http_response_code(404);
         echo json_encode([
             'error' => true,
-            'message' => 'Pelajar tidak dijumpai.',
+            'message' => (string)__('userList_ajax_student_not_found'),
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }

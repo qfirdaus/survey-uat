@@ -36,10 +36,10 @@ if (empty($_SESSION['csrf_token'])) {
 }
 
 $service = new NotificationTemplateService($pdo);
-$records = $service->getAll();
+$records = [];
 $summary = $service->summary();
 $lang = (string)($_SESSION['lang'] ?? 'ms');
-$version = (string)($_ENV['APP_ASSET_VER'] ?? date('ymdHis'));
+$version = (string)($_ENV['APP_ASSET_VER'] ?? filemtime(__FILE__) ?: '1');
 $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates');
 ?>
 <!doctype html>
@@ -53,7 +53,9 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
     include __DIR__ . '/../includes/head.php';
   ?>
   <meta name="csrf-token" content="<?= h((string)$_SESSION['csrf_token']) ?>">
+  <meta name="referrer" content="same-origin">
   <link href="<?= h(base_url('assets/css/datatables-standard.css')) ?>?v=<?= h($version) ?>" rel="stylesheet">
+  <link href="<?= h(base_url('assets/css/pages/notification-templates.css')) ?>?v=<?= h($version) ?>" rel="stylesheet">
   <style>
     .notification-template-shell { width: 100%; }
     .notification-template-card { border: 1px solid rgba(15,23,42,.08); border-radius: 8px; box-shadow: 0 8px 24px rgba(15,23,42,.06); }
@@ -203,6 +205,15 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
         </div>
 
         <div class="notification-template-shell">
+          <section class="ntpl-hero">
+            <div><span class="ntpl-eyebrow"><i class="ri-stack-line"></i><?= h(ntpl('notification_template_hero_eyebrow', 'REUSABLE COMMUNICATION')) ?></span><h1><?= h(ntpl('notification_template_hero_title', 'Build consistent notifications once, reuse them everywhere')) ?></h1><p><?= h(ntpl('notification_template_hero_text', 'Maintain governed bilingual content for modules, schedulers and workflow escalations.')) ?></p></div>
+            <div class="ntpl-hero-note"><i class="ri-code-box-line"></i><div><strong><?= h(ntpl('notification_template_hero_note_title', 'Developer-ready templates')) ?></strong><span><?= h(ntpl('notification_template_hero_note_text', 'Template and event codes connect application workflows to reusable messages.')) ?></span></div></div>
+          </section>
+          <section class="ntpl-kpis" aria-label="<?= h(ntpl('notification_template_summary_label', 'Template summary')) ?>">
+            <?php foreach ([['total','ri-file-list-3-line','notification_template_stat_total'],['active','ri-checkbox-circle-line','notification_template_stat_active'],['archived','ri-archive-line','notification_template_stat_archived'],['action_required','ri-task-line','notification_template_stat_action']] as $kpi): ?>
+              <article class="ntpl-kpi"><span><i class="<?= h($kpi[1]) ?>"></i></span><div><small><?= h(ntpl($kpi[2], ucfirst(str_replace('_',' ',$kpi[0])))) ?></small><strong data-summary="<?= h($kpi[0]) ?>"><?= number_format((int)($summary[$kpi[0]] ?? 0)) ?></strong></div></article>
+            <?php endforeach; ?>
+          </section>
           <div class="card notification-template-card mb-3">
             <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
               <div>
@@ -218,8 +229,13 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
           <div class="card notification-template-card">
             <div class="card-body">
               <div class="alert d-none" id="notificationTemplateAlert"></div>
+              <div class="ntpl-filters">
+                <label><span><?= h(ntpl('notification_template_field_type','Type')) ?></span><select id="ntplTypeFilter" class="form-select form-select-sm"><option value=""><?= h(ntpl('notification_filter_all','All')) ?></option><option value="event">event</option><option value="announcement">announcement</option><option value="reminder">reminder</option><option value="workflow">workflow</option></select></label>
+                <label><span><?= h(ntpl('notification_template_field_priority','Priority')) ?></span><select id="ntplPriorityFilter" class="form-select form-select-sm"><option value=""><?= h(ntpl('notification_filter_all','All')) ?></option><option value="low">low</option><option value="normal">normal</option><option value="high">high</option><option value="urgent">urgent</option></select></label>
+                <label><span><?= h(ntpl('notification_template_col_status','Status')) ?></span><select id="ntplStatusFilter" class="form-select form-select-sm"><option value="all"><?= h(ntpl('notification_filter_all','All')) ?></option><option value="active"><?= h(ntpl('notification_template_status_active','Active')) ?></option><option value="archived"><?= h(ntpl('notification_template_status_archived','Archived')) ?></option></select></label>
+              </div>
               <div class="table-responsive">
-                <table class="table table-striped notification-template-table" id="notificationTemplateTable">
+                <table class="table table-striped notification-template-table" id="notificationTemplateTable" data-list-url="<?= h(base_url('ajax/notification-template-list.php')) ?>">
                   <thead>
                     <tr>
                       <th><?= h(ntpl('notification_template_col_code', 'Template Code')) ?></th>
@@ -246,15 +262,15 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
                     <h5 class="modal-title" id="notificationTemplateModalTitle"><?= h(ntpl('notification_template_modal_title', 'Notification Template')) ?></h5>
                     <div class="text-muted small"><?= h(ntpl('notification_template_modal_subtitle', 'Define reusable MS/EN notification content and placeholders.')) ?></div>
                   </div>
-                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= h(ntpl('common_close','Close')) ?>"></button>
                 </div>
                 <div class="modal-body">
                   <input type="hidden" name="template_id" id="nt_template_id" value="0">
                   <ul class="nav nav-pills notification-template-tabs mb-3" role="tablist">
-                    <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#ntTabBasic" type="button" role="tab"><i class="ri-settings-3-line me-1"></i>Basic</button></li>
-                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#ntTabContent" type="button" role="tab"><i class="ri-file-text-line me-1"></i>Content</button></li>
-                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#ntTabAction" type="button" role="tab"><i class="ri-cursor-line me-1"></i>Action & Icon</button></li>
-                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#ntTabAdvanced" type="button" role="tab"><i class="ri-braces-line me-1"></i>Advanced</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#ntTabBasic" type="button" role="tab"><i class="ri-settings-3-line me-1"></i><?= h(ntpl('notification_template_tab_basic','Basic')) ?></button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#ntTabContent" type="button" role="tab"><i class="ri-file-text-line me-1"></i><?= h(ntpl('notification_template_tab_content','Content')) ?></button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#ntTabAction" type="button" role="tab"><i class="ri-cursor-line me-1"></i><?= h(ntpl('notification_template_tab_action','Action & Icon')) ?></button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#ntTabAdvanced" type="button" role="tab"><i class="ri-braces-line me-1"></i><?= h(ntpl('notification_template_tab_advanced','Advanced')) ?></button></li>
                   </ul>
 
                   <div class="tab-content notification-template-surface">
@@ -262,11 +278,11 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
                   <div class="row g-3">
                     <div class="col-md-4">
                       <label class="form-label" for="nt_template_code"><?= h(ntpl('notification_template_field_template_code', 'Template Code')) ?> <span class="text-danger">*</span></label>
-                      <input type="text" class="form-control" id="nt_template_code" name="template_code" placeholder="CORE_PASSWORD_REMINDER">
+                      <input type="text" class="form-control" id="nt_template_code" name="template_code" maxlength="100" required placeholder="CORE_PASSWORD_REMINDER">
                     </div>
                     <div class="col-md-4">
                       <label class="form-label" for="nt_event_code"><?= h(ntpl('notification_template_field_event_code', 'Event Code')) ?> <span class="text-danger">*</span></label>
-                      <input type="text" class="form-control" id="nt_event_code" name="event_code" placeholder="core.password.reminder">
+                      <input type="text" class="form-control" id="nt_event_code" name="event_code" maxlength="100" required placeholder="core.password.reminder">
                     </div>
                     <div class="col-md-4">
                       <label class="form-label" for="nt_module_code"><?= h(ntpl('notification_template_field_module_code', 'Module Code')) ?></label>
@@ -311,19 +327,19 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
                   <div class="row g-3">
                     <div class="col-md-6">
                       <label class="form-label" for="nt_title_ms"><?= h(ntpl('notification_template_field_title_ms', 'Title MS')) ?> <span class="text-danger">*</span></label>
-                      <input type="text" class="form-control" id="nt_title_ms" name="title_ms">
+                      <input type="text" class="form-control" id="nt_title_ms" name="title_ms" maxlength="255" required>
                     </div>
                     <div class="col-md-6">
                       <label class="form-label" for="nt_title_en"><?= h(ntpl('notification_template_field_title_en', 'Title EN')) ?></label>
-                      <input type="text" class="form-control" id="nt_title_en" name="title_en">
+                      <input type="text" class="form-control" id="nt_title_en" name="title_en" maxlength="255">
                     </div>
                     <div class="col-md-6">
                       <label class="form-label" for="nt_body_ms"><?= h(ntpl('notification_template_field_body_ms', 'Body MS')) ?></label>
-                      <textarea class="form-control" id="nt_body_ms" name="body_ms" rows="5"></textarea>
+                      <textarea class="form-control" id="nt_body_ms" name="body_ms" rows="5" maxlength="10000"></textarea>
                     </div>
                     <div class="col-md-6">
                       <label class="form-label" for="nt_body_en"><?= h(ntpl('notification_template_field_body_en', 'Body EN')) ?></label>
-                      <textarea class="form-control" id="nt_body_en" name="body_en" rows="5"></textarea>
+                      <textarea class="form-control" id="nt_body_en" name="body_en" rows="5" maxlength="10000"></textarea>
                     </div>
                   </div>
                     </div>
@@ -345,16 +361,16 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
                           <i class="ri-notification-3-line fs-18" id="nt_icon_preview"></i>
                         </span>
                         <select class="form-select" id="nt_icon" name="icon">
-                          <option value="ri-notification-3-line">Notifikasi umum</option>
-                          <option value="ri-megaphone-line">Hebahan</option>
-                          <option value="ri-alarm-warning-line">Amaran penting</option>
-                          <option value="ri-time-line">Peringatan / tarikh akhir</option>
-                          <option value="ri-task-line">Tugasan workflow</option>
-                          <option value="ri-checkbox-circle-line">Berjaya / diluluskan</option>
-                          <option value="ri-error-warning-line">Isu / ditolak</option>
-                          <option value="ri-shield-check-line">Keselamatan</option>
-                          <option value="ri-user-settings-line">Akaun pengguna</option>
-                          <option value="ri-file-list-3-line">Dokumen / borang</option>
+                          <option value="ri-notification-3-line"><?= h(ntpl('notification_icon_general','General notification')) ?></option>
+                          <option value="ri-megaphone-line"><?= h(ntpl('notification_icon_announcement','Announcement')) ?></option>
+                          <option value="ri-alarm-warning-line"><?= h(ntpl('notification_icon_warning','Important warning')) ?></option>
+                          <option value="ri-time-line"><?= h(ntpl('notification_icon_reminder','Reminder / deadline')) ?></option>
+                          <option value="ri-task-line"><?= h(ntpl('notification_icon_workflow','Workflow task')) ?></option>
+                          <option value="ri-checkbox-circle-line"><?= h(ntpl('notification_icon_success','Successful / approved')) ?></option>
+                          <option value="ri-error-warning-line"><?= h(ntpl('notification_icon_issue','Issue / rejected')) ?></option>
+                          <option value="ri-shield-check-line"><?= h(ntpl('notification_icon_security','Security')) ?></option>
+                          <option value="ri-user-settings-line"><?= h(ntpl('notification_icon_account','User account')) ?></option>
+                          <option value="ri-file-list-3-line"><?= h(ntpl('notification_icon_document','Document / form')) ?></option>
                         </select>
                       </div>
                     </div>
@@ -365,7 +381,7 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
                   <div class="row g-3">
                     <div class="col-md-8">
                       <label class="form-label" for="nt_placeholders"><?= h(ntpl('notification_template_field_placeholders', 'Placeholders JSON')) ?></label>
-                      <textarea class="form-control font-monospace" id="nt_placeholders" name="placeholders" rows="5" placeholder='{"recipient_name":"User display name"}'></textarea>
+                      <textarea class="form-control font-monospace" id="nt_placeholders" name="placeholders" rows="5" maxlength="10000" placeholder='{"recipient_name":"User display name"}'></textarea>
                     </div>
                     <div class="col-md-4">
                       <div class="notification-template-preview p-3 h-100">
@@ -407,6 +423,7 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
 </div>
 
 <?php include __DIR__ . '/../includes/script.php'; ?>
+<script src="<?= h(base_url('assets/js/helpers/datatables-standard.js')) ?>?v=<?= h($version) ?>"></script>
 <script>
 (function () {
   'use strict';
@@ -421,6 +438,7 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
   const bodyEl = document.getElementById('notificationTemplateBody');
   const saveBtn = document.getElementById('notificationTemplateSaveBtn');
   const iconPreview = document.getElementById('nt_icon_preview');
+  let templateDt = null;
 
   const labels = {
     save: <?= json_encode(ntpl('notification_template_save', 'Save Template'), JSON_UNESCAPED_UNICODE) ?>,
@@ -476,22 +494,29 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
     bodyEl.innerHTML = records.map(function (row) {
       const active = Number(row.f_status || 0) === 1;
       const used = Number(row.usage_count || 0) > 0;
-      return '<tr>' +
+      return '<tr data-type="' + escapeHtml(row.f_type || '') + '" data-priority="' + escapeHtml(row.f_priority || '') + '" data-status="' + (active ? 'active' : 'archived') + '">' +
         '<td><div class="fw-semibold">' + escapeHtml(row.f_templateCode || '') + '</div><small class="text-muted">' + escapeHtml(row.f_moduleCode || '') + '</small></td>' +
         '<td><code>' + escapeHtml(row.f_eventCode || '') + '</code></td>' +
         '<td><div>' + escapeHtml(row.f_title_ms || '') + '</div><small class="text-muted">' + escapeHtml(row.f_title_en || '') + '</small></td>' +
-        '<td><span class="badge bg-light text-dark">' + escapeHtml(row.f_type || '') + '</span> <span class="badge bg-info-subtle text-info">' + escapeHtml(row.f_severity || '') + '</span> <span class="badge bg-secondary-subtle text-secondary">' + escapeHtml(row.f_priority || '') + '</span>' + (Number(row.f_requiresAction || 0) === 1 ? ' <span class="badge bg-warning-subtle text-warning">action</span>' : '') + '</td>' +
-        '<td><span class="badge ' + (active ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary') + '">' + escapeHtml(active ? labels.active : labels.archived) + '</span>' + (used ? '<div class="small text-muted mt-1">Diguna oleh ' + Number(row.usage_count || 0) + ' notification</div>' : '') + '</td>' +
+        '<td><span class="badge bg-light text-dark">' + escapeHtml(row.f_type || '') + '</span> <span class="badge bg-info-subtle text-info">' + escapeHtml(row.f_severity || '') + '</span> <span class="badge bg-secondary-subtle text-secondary">' + escapeHtml(row.f_priority || '') + '</span>' + (Number(row.f_requiresAction || 0) === 1 ? ' <span class="badge bg-warning-subtle text-warning">' + <?= json_encode(ntpl('notification_template_action_badge','Action'),JSON_UNESCAPED_UNICODE) ?> + '</span>' : '') + '</td>' +
+        '<td><span class="badge ' + (active ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary') + '">' + escapeHtml(active ? labels.active : labels.archived) + '</span>' + (used ? '<div class="small text-muted mt-1">' + <?= json_encode(ntpl('notification_template_used_by','Used by {count} notifications'),JSON_UNESCAPED_UNICODE) ?>.replace('{count}',Number(row.usage_count || 0)) + '</div>' : '') + '</td>' +
         '<td class="text-end">' +
           '<div class="btn-group btn-group-sm" data-template-id="' + Number(row.f_templateID || 0) + '">' +
             '<button type="button" class="btn btn-outline-primary" data-action="edit">' + escapeHtml(labels.edit) + '</button>' +
             '<button type="button" class="btn btn-outline-secondary" data-action="duplicate">' + escapeHtml(labels.duplicate) + '</button>' +
             '<button type="button" class="btn btn-outline-warning" data-action="' + (active ? 'archive' : 'restore') + '">' + escapeHtml(active ? labels.archive : labels.restore) + '</button>' +
-            '<button type="button" class="btn btn-outline-danger" data-action="delete" ' + (used ? 'disabled title="Template sedang digunakan. Archive template ini jika tidak mahu digunakan lagi."' : '') + '>' + escapeHtml(labels.deleteText) + '</button>' +
+            '<button type="button" class="btn btn-outline-danger" data-action="delete" ' + (used ? 'disabled title="' + escapeHtml(<?= json_encode(ntpl('notification_template_in_use_help','Template is in use. Archive it instead.'),JSON_UNESCAPED_UNICODE) ?>) + '"' : '') + '>' + escapeHtml(labels.deleteText) + '</button>' +
           '</div>' +
         '</td>' +
       '</tr>';
     }).join('');
+    if (window.jQuery && jQuery.fn && jQuery.fn.DataTable) {
+      if (templateDt) { templateDt.destroy(); templateDt = null; }
+      const options={pageLength:10,lengthMenu:[10,25,50,100],order:[[0,'asc']],language:{lengthMenu:"<?= h(__('userList_dt_length_menu')) ?>",search:"",info:"<?= h(__('userList_dt_info')) ?>",infoEmpty:"<?= h(__('userList_dt_info_empty')) ?>",emptyTable:"<?= h(__('userList_no_records')) ?>",paginate:{previous:"<?= h(__('userList_dt_paginate_prev')) ?>",next:"<?= h(__('userList_dt_paginate_next')) ?>"},zeroRecords:"<?= h(__('userList_dt_zero_records')) ?>"}};
+      templateDt=jQuery('#notificationTemplateTable').DataTable(window.DataTableStandard&&typeof window.DataTableStandard.options==='function'?window.DataTableStandard.options(options):options);
+      if(window.DataTableStandard)window.DataTableStandard.decorate('#notificationTemplateTable',{searchPlaceholder:<?= json_encode(ntpl('userList_dt_search_label','Search'),JSON_UNESCAPED_UNICODE) ?>});
+      applyTemplateFilters();
+    }
   }
 
   function findRecord(templateId) {
@@ -499,6 +524,21 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
     return records.find(function (row) {
       return Number(row.f_templateID || 0) === templateId;
     }) || null;
+  }
+
+  function initServerTable() {
+    if (!window.jQuery || !jQuery.fn || !jQuery.fn.DataTable) return;
+    const table=document.getElementById('notificationTemplateTable');
+    const options={processing:true,serverSide:true,searching:true,ordering:false,pageLength:10,lengthMenu:[10,25,50,100],ajax:function(request,callback){fetch(table.dataset.listUrl,{method:'POST',noLoader:true,credentials:'same-origin',headers:{Accept:'application/json','Content-Type':'application/json','X-CSRF-Token':csrfToken,'X-No-Loader':'1'},body:JSON.stringify({draw:request.draw,start:request.start,length:request.length,search:(request.search||{}).value||'',type:document.getElementById('ntplTypeFilter').value,priority:document.getElementById('ntplPriorityFilter').value,status:document.getElementById('ntplStatusFilter').value})}).then(function(r){return r.json().then(function(b){if(!r.ok||b.success===false)throw new Error(b.message||<?= json_encode(ntpl('notification_template_list_failed','Unable to load templates.'),JSON_UNESCAPED_UNICODE) ?>);return b.data||b;});}).then(function(data){records=data.items||[];updateSummary(data.summary||{});callback({draw:data.draw,recordsTotal:data.recordsTotal,recordsFiltered:data.recordsFiltered,data:records});}).catch(function(error){callback({draw:request.draw,recordsTotal:0,recordsFiltered:0,data:[]});setAlert('danger',error.message);});},columns:[
+      {data:null,render:function(_d,_t,r){return '<div class="fw-semibold">'+escapeHtml(r.f_templateCode||'')+'</div><small class="text-muted">'+escapeHtml(r.f_moduleCode||'')+'</small>'; }},
+      {data:'f_eventCode',render:function(v){return '<code>'+escapeHtml(v||'')+'</code>'; }},
+      {data:null,render:function(_d,_t,r){return '<div>'+escapeHtml(r.f_title_ms||'')+'</div><small class="text-muted">'+escapeHtml(r.f_title_en||'')+'</small>'; }},
+      {data:null,render:function(_d,_t,r){return '<span class="badge bg-light text-dark">'+escapeHtml(r.f_type||'')+'</span> <span class="badge bg-info-subtle text-info">'+escapeHtml(r.f_severity||'')+'</span> <span class="badge bg-secondary-subtle text-secondary">'+escapeHtml(r.f_priority||'')+'</span>'+(Number(r.f_requiresAction||0)===1?' <span class="badge bg-warning-subtle text-warning">'+<?= json_encode(ntpl('notification_template_action_badge','Action'),JSON_UNESCAPED_UNICODE) ?>+'</span>':'');}},
+      {data:null,render:function(_d,_t,r){const active=Number(r.f_status||0)===1,used=Number(r.usage_count||0)>0;return '<span class="badge '+(active?'bg-success-subtle text-success':'bg-secondary-subtle text-secondary')+'">'+escapeHtml(active?labels.active:labels.archived)+'</span>'+(used?'<div class="small text-muted mt-1">'+<?= json_encode(ntpl('notification_template_used_by','Used by {count} notifications'),JSON_UNESCAPED_UNICODE) ?>.replace('{count}',Number(r.usage_count||0))+'</div>':'');}},
+      {data:null,className:'text-end',render:function(_d,_t,r){const active=Number(r.f_status||0)===1,used=Number(r.usage_count||0)>0;return '<div class="btn-group btn-group-sm" data-template-id="'+Number(r.f_templateID||0)+'"><button type="button" class="btn btn-outline-primary" data-action="edit">'+escapeHtml(labels.edit)+'</button><button type="button" class="btn btn-outline-secondary" data-action="duplicate">'+escapeHtml(labels.duplicate)+'</button><button type="button" class="btn btn-outline-warning" data-action="'+(active?'archive':'restore')+'">'+escapeHtml(active?labels.archive:labels.restore)+'</button><button type="button" class="btn btn-outline-danger" data-action="delete" '+(used?'disabled title="'+escapeHtml(<?= json_encode(ntpl('notification_template_in_use_help','Template is in use. Archive it instead.'),JSON_UNESCAPED_UNICODE) ?>)+'"':'')+'>'+escapeHtml(labels.deleteText)+'</button></div>';}}
+    ],language:{lengthMenu:"<?= h(__('userList_dt_length_menu')) ?>",search:"",info:"<?= h(__('userList_dt_info')) ?>",infoEmpty:"<?= h(__('userList_dt_info_empty')) ?>",emptyTable:"<?= h(__('userList_no_records')) ?>",paginate:{previous:"<?= h(__('userList_dt_paginate_prev')) ?>",next:"<?= h(__('userList_dt_paginate_next')) ?>"},zeroRecords:"<?= h(__('userList_dt_zero_records')) ?>"}};
+    templateDt=jQuery(table).DataTable(window.DataTableStandard&&typeof window.DataTableStandard.options==='function'?window.DataTableStandard.options(options):options);
+    if(window.DataTableStandard)window.DataTableStandard.decorate('#notificationTemplateTable',{searchPlaceholder:<?= json_encode(ntpl('userList_dt_search_label','Search'),JSON_UNESCAPED_UNICODE) ?>});
   }
 
   function setIconValue(value) {
@@ -600,7 +640,7 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
         let data = {};
         try { data = raw ? JSON.parse(raw) : {}; } catch (e) { data = {}; }
         if (!response.ok || data.success === false) {
-          throw new Error(data.message || data.error || 'Template action failed.');
+          throw new Error(data.message || data.error || <?= json_encode(ntpl('notification_template_action_failed','Template action failed.'),JSON_UNESCAPED_UNICODE) ?>);
         }
         return data;
       });
@@ -608,11 +648,12 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
   }
 
   function updateFromResponse(data) {
-    records = data.records || [];
-    renderRows();
+    if(templateDt&&templateDt.ajax)templateDt.ajax.reload(null,false);
     updateSummary(data.summary || {});
-    setAlert('success', data.message || 'Done.');
+    setAlert('success', data.message || <?= json_encode(ntpl('notification_template_done','Done.'),JSON_UNESCAPED_UNICODE) ?>);
   }
+
+  function applyTemplateFilters() { if(templateDt&&templateDt.ajax)templateDt.ajax.reload(); }
 
   function updatePreview() {
     document.getElementById('nt_preview_title').textContent = document.getElementById('nt_title_ms').value || <?= json_encode(ntpl('notification_template_preview_empty', 'Template title preview'), JSON_UNESCAPED_UNICODE) ?>;
@@ -633,7 +674,7 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
     if (!group) return;
     const row = findRecord(group.dataset.templateId);
     if (!row) {
-      setAlert('danger', 'Template record not found.');
+      setAlert('danger', <?= json_encode(ntpl('notification_template_not_found','Template record not found.'),JSON_UNESCAPED_UNICODE) ?>);
       return;
     }
     const action = button.dataset.action;
@@ -646,22 +687,19 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
 
     if (action === 'delete') {
       if (Number(row.usage_count || 0) > 0) {
-        setAlert('warning', 'Template sedang digunakan. Archive template ini jika tidak mahu digunakan lagi.');
-        return;
-      }
-      if (!confirm(labels.confirmDelete)) {
+        setAlert('warning', <?= json_encode(ntpl('notification_template_in_use_help','Template is in use. Archive it instead.'),JSON_UNESCAPED_UNICODE) ?>);
         return;
       }
     }
-
-    post({ action: action, template_id: Number(row.f_templateID || 0) })
-      .then(updateFromResponse)
-      .catch(function (error) { setAlert('danger', error.message); });
+    const confirmText=action==='delete'?labels.confirmDelete:<?= json_encode(ntpl('notification_template_action_confirm','Confirm this template action?'),JSON_UNESCAPED_UNICODE) ?>;
+    const confirmation=window.Swal?window.Swal.fire({icon:action==='delete'?'warning':'question',title:confirmText,text:row.f_templateCode||'',showCancelButton:true,confirmButtonText:<?= json_encode(ntpl('notification_template_confirm','Confirm'),JSON_UNESCAPED_UNICODE) ?>,cancelButtonText:<?= json_encode(ntpl('common_cancel','Cancel'),JSON_UNESCAPED_UNICODE) ?>,focusCancel:action==='delete'}).then(function(result){return result.isConfirmed;}):Promise.resolve(window.confirm(confirmText));
+    confirmation.then(function(confirmed){if(!confirmed)return;button.disabled=true;post({action:action,template_id:Number(row.f_templateID||0)}).then(updateFromResponse).catch(function(error){setAlert('danger',error.message);}).finally(function(){button.disabled=false;});});
   });
 
   form.addEventListener('input', updatePreview);
   form.addEventListener('change', updatePreview);
   modalEl.addEventListener('shown.bs.modal', upgradeFieldHelp);
+  ['ntplTypeFilter','ntplPriorityFilter','ntplStatusFilter'].forEach(function(id){document.getElementById(id).addEventListener('change',applyTemplateFilters);});
 
   form.addEventListener('submit', function (event) {
     event.preventDefault();
@@ -682,7 +720,7 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
       });
   });
 
-  renderRows();
+  initServerTable();
   upgradeFieldHelp();
   }
 

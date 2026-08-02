@@ -3,108 +3,187 @@
  * IQS FRAMEWORK CORE FILE
  *
  * READ ONLY for downstream project programmers.
- * Do not modify this file directly in template or cloned projects.
- * Custom changes must be implemented in project-specific files
- * or approved extension points.
  */
 declare(strict_types=1);
 
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/User.php';
-require_once __DIR__ . '/GroupController.php';
+require_once __DIR__ . '/../classes/Group.php';
 
-/**
- * Controller untuk Access Matrix page
- * - Reuses GroupController to obtain group list and access resolution
- */
-class AccessController {
-  public string $lang = 'ms';
-  public array  $profile = [];
+/** Build the complete, read-only system access matrix in bulk. */
+class AccessController
+{
+    public string $lang = 'ms';
+    public array $profile = [];
 
-  /** @var GroupController */
-  protected GroupController $groupCtrl;
+    private PDO $pdo;
+    private Group $groupModel;
+    private array $matrix = ['roles' => [], 'modules' => [], 'totals' => []];
 
-  /** Roles selected for the matrix (array of groups: ['id'=>, 'kod'=>, 'nama'=>]) */
-  public array $roles = [];
-
-  /** Matrix rows (menus) */
-  public array $rows = [];
-
-  public function __construct()
-  {
-    if (session_status() === PHP_SESSION_NONE) session_start();
-
-    $this->groupCtrl = new GroupController();
-    $this->lang = $this->groupCtrl->lang ?? ($_SESSION['lang'] ?? 'ms');
-    $this->profile = $this->groupCtrl->profile ?? [];
-
-    // Use dynamic groups from GroupController — support any number of groups
-    $available = $this->groupCtrl->senaraiGroup ?? [];
-    $displayRoles = [];
-    foreach ($available as $g) {
-      $gid = (int)($g['f_groupID'] ?? 0);
-      $gname = trim((string)($g['f_groupName'] ?? $g['f_groupNama'] ?? ($g['f_groupKod'] ?? '')));
-      $gkod  = (string)($g['f_groupKod'] ?? '');
-      $displayRoles[] = ['key'=> 'g'.($gid), 'id'=>$gid, 'kod'=>$gkod, 'nama'=> $gname];
-    }
-    // Fallback: if no groups found, preserve empty roles to avoid breaking view
-    if (!$displayRoles) {
-      $displayRoles = [];
-    }
-    $this->roles = $displayRoles;
-
-    // Build modules+menus matrix using GroupController->getAccessDetail
-    $this->buildModules();
-  }
-
-  /** Build modules with menus and per-role permissions
-   * Output structure stored in $this->rows as modules[] where each module: ['id','nama','menus'=>[['id','nama','path','perms'=>[roleId=>bool]]]]
-   */
-  protected function buildModules(): void
-  {
-    $roles = $this->roles;
-    if (!$roles) { $this->rows = []; return; }
-
-    $modulesMap = []; // modulId => ['id','nama','menus' => menuId=>['id','nama','path','perms'=>[]]]
-
-    foreach ($roles as $r) {
-      $rid = (int)$r['id'];
-      $detail = $this->groupCtrl->getAccessDetail($rid);
-      $mods = $detail['modules'] ?? [];
-      foreach ($mods as $m) {
-        $mid = (int)($m['id'] ?? 0);
-        $mname = (string)($m['nama'] ?? '');
-        if (!isset($modulesMap[$mid])) {
-          $modulesMap[$mid] = ['id'=>$mid, 'nama'=>$mname, 'menus'=>[]];
+    public function __construct()
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
         }
-        $menus = $m['menus'] ?? [];
-        foreach ($menus as $mm) {
-          $menuId = (int)($mm['id'] ?? 0);
-          if ($menuId <= 0) continue;
-          if (!isset($modulesMap[$mid]['menus'][$menuId])) {
-            $modulesMap[$mid]['menus'][$menuId] = ['id'=>$menuId, 'nama'=>(string)($mm['nama'] ?? ''), 'path'=>(string)($mm['path'] ?? ''), 'perms'=>[]];
-          }
-          $modulesMap[$mid]['menus'][$menuId]['perms'][$rid] = true;
+
+        $this->lang = in_array(strtolower((string)($_SESSION['lang'] ?? 'ms')), ['ms', 'en'], true)
+            ? strtolower((string)$_SESSION['lang'])
+            : 'ms';
+        $this->pdo = Database::getInstance('mysql')->getConnection();
+        $this->groupModel = new Group($this->pdo);
+
+        $staffId = $_SESSION['f_stafID'] ?? null;
+        if ($staffId) {
+            $this->profile = (new User($this->pdo))->getProfile($staffId) ?? [];
         }
-      }
+        $themeSettings = json_decode((string)($this->profile['f_themeSetting'] ?? '{}'), true);
+        if (!is_array($themeSettings)) {
+            $themeSettings = [];
+        }
+        $_SESSION['theme.menu'] = $themeSettings['sidebarColor'] ?? ($_SESSION['theme.menu'] ?? 'light');
+        $_SESSION['theme.topbar'] = $themeSettings['topbarColor'] ?? ($_SESSION['theme.topbar'] ?? 'light');
+        $_SESSION['theme.layout'] = $themeSettings['layoutMode'] ?? ($_SESSION['theme.layout'] ?? 'light');
+
+        $this->matrix = $this->buildMatrix();
+        $this->auditView();
     }
 
-    // Convert menus map to ordered arrays
-    ksort($modulesMap, SORT_NUMERIC);
-    $modulesOut = [];
-    foreach ($modulesMap as $mod) {
-      $menus = $mod['menus'];
-      ksort($menus, SORT_NUMERIC);
-      $menusOut = array_values($menus);
-      $modulesOut[] = ['id'=>$mod['id'], 'nama'=>$mod['nama'], 'menus'=>$menusOut];
+    public function getMatrix(): array
+    {
+        return $this->matrix;
     }
 
-    $this->rows = $modulesOut;
-  }
+    private function buildMatrix(): array
+    {
+        $groups = $this->groupModel->getAll();
+        $roles = [];
+        $groupAccess = [];
 
-  /** Return matrix suitable for JSON or view */
-  public function getMatrix(): array
-  {
-    return ['roles'=>$this->roles, 'modules'=>$this->rows];
-  }
+        foreach ($groups as $group) {
+            $groupId = (int)($group['f_groupID'] ?? 0);
+            if ($groupId <= 0) {
+                continue;
+            }
+            $code = trim((string)($group['f_groupKod'] ?? ''));
+            $name = trim((string)($group['f_groupName'] ?? ''));
+            $roles[] = [
+                'id' => $groupId,
+                'kod' => $code,
+                'nama' => $name !== '' ? $name : $code,
+            ];
+            $groupAccess[$groupId] = [
+                'modules' => array_fill_keys($this->csvToIds((string)($group['f_modulAccess'] ?? '')), true),
+                'menus' => array_fill_keys($this->csvToIds((string)($group['f_menuAccess'] ?? '')), true),
+                'explicit_menus' => trim((string)($group['f_menuAccess'] ?? '')) !== '',
+            ];
+        }
+
+        $moduleName = $this->lang === 'en' ? 'f_modulName_en' : 'f_modulName_ms';
+        $menuName = $this->lang === 'en' ? 'f_menuName_en' : 'f_menuName_ms';
+        $modulesStmt = $this->pdo->query(
+            "SELECT f_modulID AS id, COALESCE(NULLIF($moduleName, ''), f_modulName_ms) AS nama
+             FROM tbl_m_modul
+             ORDER BY f_order ASC, f_modulID ASC"
+        );
+        $menusStmt = $this->pdo->query(
+             "SELECT f_menuID AS id, f_modulID AS modul_id,
+                    COALESCE(NULLIF($menuName, ''), f_menuName_ms) AS nama, f_path AS path
+             FROM tbl_m_menu
+             WHERE COALESCE(f_flag, 1) = 1
+             ORDER BY f_modulID ASC, f_order ASC, f_menuID ASC"
+        );
+
+        $modules = [];
+        foreach ($modulesStmt->fetchAll(PDO::FETCH_ASSOC) as $module) {
+            $moduleId = (int)$module['id'];
+            $modules[$moduleId] = [
+                'id' => $moduleId,
+                'nama' => (string)$module['nama'],
+                'menus' => [],
+            ];
+        }
+
+        $permissionCount = 0;
+        foreach ($menusStmt->fetchAll(PDO::FETCH_ASSOC) as $menu) {
+            $moduleId = (int)($menu['modul_id'] ?? 0);
+            if (!isset($modules[$moduleId])) {
+                $modules[$moduleId] = ['id' => $moduleId, 'nama' => 'Module #' . $moduleId, 'menus' => []];
+            }
+
+            $menuId = (int)$menu['id'];
+            $permissions = [];
+            foreach ($roles as $role) {
+                $roleId = (int)$role['id'];
+                $access = $groupAccess[$roleId];
+                $allowed = $access['explicit_menus']
+                    ? isset($access['menus'][$menuId])
+                    : isset($access['modules'][$moduleId]);
+                $permissions[$roleId] = $allowed;
+                if ($allowed) {
+                    $permissionCount++;
+                }
+            }
+
+            $modules[$moduleId]['menus'][] = [
+                'id' => $menuId,
+                'nama' => (string)$menu['nama'],
+                'path' => (string)($menu['path'] ?? ''),
+                'perms' => $permissions,
+            ];
+        }
+
+        $modules = array_values(array_filter($modules, static fn(array $module): bool => $module['menus'] !== []));
+        $menuCount = array_sum(array_map(static fn(array $module): int => count($module['menus']), $modules));
+
+        return [
+            'roles' => $roles,
+            'modules' => $modules,
+            'totals' => [
+                'roles' => count($roles),
+                'modules' => count($modules),
+                'menus' => $menuCount,
+                'permissions' => $permissionCount,
+            ],
+        ];
+    }
+
+    private function csvToIds(string $csv): array
+    {
+        $ids = [];
+        foreach (explode(',', $csv) as $value) {
+            $value = trim($value);
+            if ($value !== '' && ctype_digit($value) && (int)$value > 0) {
+                $ids[(int)$value] = (int)$value;
+            }
+        }
+        return array_values($ids);
+    }
+
+    private function auditView(): void
+    {
+        try {
+            require_once __DIR__ . '/../setting/helper/audit_helper.php';
+            if (!function_exists('audit_event')) {
+                return;
+            }
+            $totals = $this->matrix['totals'];
+            audit_event([
+                'event_type' => 'AUDIT_READ',
+                'severity' => 'INFO',
+                'outcome' => 'SUCCESS',
+                'target_type' => 'access_matrix',
+                'target_label' => 'System access matrix',
+                'message' => 'System access matrix viewed',
+                'user_id' => $_SESSION['f_stafID'] ?? null,
+                'session_id' => session_id(),
+                'meta' => [
+                    'role_count' => $totals['roles'] ?? 0,
+                    'module_count' => $totals['modules'] ?? 0,
+                    'menu_count' => $totals['menus'] ?? 0,
+                ],
+            ]);
+        } catch (Throwable $exception) {
+            error_log('[AccessController] Audit error: ' . $exception->getMessage());
+        }
+    }
 }

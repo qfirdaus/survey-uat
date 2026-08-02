@@ -269,7 +269,7 @@
           dataSrc: 'data'
         },
         columns: [
-          { data: null, title: 'No.' },
+          { data: null, title: I18N.table_number || 'No.' },
           { data: 'started' },
           { data: 'ip' },
           { data: 'device' },
@@ -386,7 +386,7 @@
           dataSrc: 'data'
         },
         columns: [
-          { data: null, title: 'No.' },
+          { data: null, title: I18N.table_number || 'No.' },
           { data: 'occurred_at' },
           { data: 'user' },
           { data: 'ip' },
@@ -592,15 +592,15 @@
                 </div>
                 <div class="audit-header-stats">
                   <div class="audit-mini-stat">
-                    <span class="audit-mini-stat-label">Meta</span>
+                    <span class="audit-mini-stat-label">${this._escapeHtml(I18N.audit_stat_meta)}</span>
                     <strong>${this._escapeHtml(String(metaFieldCount))}</strong>
                   </div>
                   <div class="audit-mini-stat">
-                    <span class="audit-mini-stat-label">Set</span>
+                    <span class="audit-mini-stat-label">${this._escapeHtml(I18N.audit_stat_sets)}</span>
                     <strong>${this._escapeHtml(String(changeSetCount))}</strong>
                   </div>
                   <div class="audit-mini-stat">
-                    <span class="audit-mini-stat-label">Diff</span>
+                    <span class="audit-mini-stat-label">${this._escapeHtml(I18N.audit_stat_changes)}</span>
                     <strong>${this._escapeHtml(String(changeFieldCount))}</strong>
                   </div>
                 </div>

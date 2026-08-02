@@ -155,6 +155,7 @@ try {
   echo json_encode(['error'=>false, 'message'=>(string)__('userGroup_ok'), 'modulID'=>$modulID, 'swapped'=>['a'=>$aID,'b'=>$bID]], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e){
   if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
+  error_log('[menu-swap] ' . $e->getMessage());
   http_response_code(500);
-  echo json_encode(['error'=>true,'message'=>(string)__('userGroup_server_error_prefix') . ' ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+  echo json_encode(['error'=>true,'message'=>(string)__('userGroup_err_server')], JSON_UNESCAPED_UNICODE);
 }

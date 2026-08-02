@@ -147,22 +147,6 @@
         }
     }
 
-    var emailTemplateLoaderTokens = {};
-
-    function showPageLoader(key, message) {
-        hidePageLoader(key);
-        var pageData = window.EmailTemplatePageData || {};
-        var text = message || pageData.loadingProcessingText || pageData.loadingPreviewText || 'Loading...';
-        emailTemplateLoaderTokens[key] = text;
-    }
-
-    function hidePageLoader(key) {
-        if (!emailTemplateLoaderTokens[key]) {
-            return;
-        }
-        delete emailTemplateLoaderTokens[key];
-    }
-
     function syncSampleVariablesField(field, fallbackJson) {
         if (!field) {
             return {};
@@ -285,8 +269,40 @@
         var emptyStateContainer = document.getElementById('emailTemplateEmptyStateContainer');
         var tableEl = document.getElementById('emailTemplateDT');
         var tableBody = tableEl ? tableEl.querySelector('tbody') : null;
+        var unsavedIndicator = document.getElementById('emailTemplateUnsaved');
         var activeField = null;
         var templateTable = null;
+        var formDirty = false;
+        var allowModalClose = false;
+        var previewController = null;
+        var previewSequence = 0;
+
+        function setFormDirty(isDirty) {
+            formDirty = !!isDirty;
+            if (unsavedIndicator) {
+                unsavedIndicator.classList.toggle('is-visible', formDirty);
+                unsavedIndicator.setAttribute('aria-hidden', formDirty ? 'false' : 'true');
+            }
+        }
+
+        function confirmDiscardChanges() {
+            if (window.Swal && typeof window.Swal.fire === 'function') {
+                return window.Swal.fire({
+                    icon: 'warning',
+                    title: pageData.unsavedConfirmTitle || '',
+                    text: pageData.unsavedConfirmText || '',
+                    showCancelButton: true,
+                    confirmButtonText: pageData.unsavedConfirmDiscard || '',
+                    cancelButtonText: pageData.commonCancel || '',
+                    confirmButtonColor: '#dc3545',
+                    reverseButtons: true
+                }).then(function (result) {
+                    return !!result.isConfirmed;
+                });
+            }
+
+            return Promise.resolve(window.confirm(pageData.unsavedConfirmText || ''));
+        }
 
         function showModalSafe() {
             if (modal && typeof modal.show === 'function') {
@@ -491,6 +507,7 @@
                 setButtonLoading(submitNode, false);
                 submitNode.disabled = false;
             }
+            setFormDirty(false);
         }
 
         function focusFirstInvalidField() {
@@ -516,11 +533,12 @@
 
             clearFieldErrors(form);
             setButtonLoading(submitNode, true, pageData.loadingProcessingText || '');
-            showPageLoader('templateSubmit', pageData.loadingProcessingText || '');
 
             return requestTemplateAction(new FormData(form))
                 .then(function (payload) {
                     refreshTableUi(payload.table || {});
+                    setFormDirty(false);
+                    allowModalClose = true;
                     hideModalSafe();
                     return showAlert('success', pageData.flashSuccessTitle || '', payload.message || '');
                 })
@@ -532,7 +550,6 @@
                 })
                 .finally(function () {
                     setButtonLoading(submitNode, false);
-                    hidePageLoader('templateSubmit');
                 });
         }
 
@@ -684,6 +701,7 @@
             }
             renderDeveloperGuide();
             syncDynamicSampleVariablesField(false);
+            setFormDirty(false);
         }
 
         function applyEditMode(payload) {
@@ -704,6 +722,7 @@
             }
             renderDeveloperGuide();
             syncDynamicSampleVariablesField(true);
+            setFormDirty(false);
         }
 
         function attachCurrentFilters(formData) {
@@ -1095,14 +1114,49 @@
         }
 
         if (modalEl) {
+            modalEl.addEventListener('hide.bs.modal', function (event) {
+                if (!formDirty || allowModalClose) {
+                    return;
+                }
+
+                event.preventDefault();
+                confirmDiscardChanges().then(function (confirmed) {
+                    if (!confirmed) {
+                        return;
+                    }
+                    allowModalClose = true;
+                    setFormDirty(false);
+                    hideModalSafe();
+                });
+            });
+
             modalEl.addEventListener('hidden.bs.modal', function () {
                 if (form) {
                     resetForm(form);
                 }
                 resetModalTransientState();
                 activateModalTab('editor');
+                allowModalClose = false;
             });
         }
+
+        if (form) {
+            ['input', 'change'].forEach(function (eventName) {
+                form.addEventListener(eventName, function (event) {
+                    if (event.target && event.target.matches('[data-field]')) {
+                        setFormDirty(true);
+                    }
+                });
+            });
+        }
+
+        window.addEventListener('beforeunload', function (event) {
+            if (!formDirty) {
+                return;
+            }
+            event.preventDefault();
+            event.returnValue = '';
+        });
 
         if (previewButton) {
             previewButton.addEventListener('click', function () {
@@ -1113,12 +1167,17 @@
                     return;
                 }
 
+                if (previewController) {
+                    previewController.abort();
+                }
+                previewController = typeof AbortController !== 'undefined' ? new AbortController() : null;
+                var currentPreviewSequence = ++previewSequence;
                 setButtonLoading(previewButton, true, pageData.loadingPreviewText || '');
-                showPageLoader('templatePreview', pageData.loadingPreviewText || '');
                 fetch(pageData.previewUrl || '', {
                     method: 'POST',
                     body: getFormPayload(),
                     noLoader: true,
+                    signal: previewController ? previewController.signal : undefined,
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         'X-No-Loader': '1',
@@ -1131,6 +1190,9 @@
                         });
                     })
                     .then(function (payload) {
+                        if (currentPreviewSequence !== previewSequence) {
+                            return;
+                        }
                         if (!payload || payload.success !== true) {
                             throw new Error((payload && payload.message) || (pageData.previewFailedTitle || 'Preview Gagal'));
                         }
@@ -1139,11 +1201,16 @@
                         setPreviewAccordionState(true, false);
                     })
                     .catch(function (error) {
+                        if (error && error.name === 'AbortError') {
+                            return;
+                        }
                         showAlert('error', pageData.previewFailedTitle || 'Preview Gagal', error.message || pageData.networkErrorText);
                     })
                     .finally(function () {
-                        setButtonLoading(previewButton, false);
-                        hidePageLoader('templatePreview');
+                        if (currentPreviewSequence === previewSequence) {
+                            setButtonLoading(previewButton, false);
+                            previewController = null;
+                        }
                     });
             });
         }
@@ -1165,10 +1232,39 @@
 
                 var formData = getFormPayload();
                 formData.append('test_email', emailValue);
+                var subjectField = form ? form.querySelector('[data-field="subject_template"]') : null;
+                var subjectValue = subjectField ? String(subjectField.value || '').trim() : '-';
+                var confirmation;
 
-                setButtonLoading(testSendButton, true, pageData.loadingSendingText || '');
-                showPageLoader('templateTestSend', pageData.loadingSendingText || '');
-                fetch(pageData.testSendUrl || '', {
+                if (window.Swal && typeof window.Swal.fire === 'function') {
+                    confirmation = window.Swal.fire({
+                        icon: 'question',
+                        title: pageData.testSendConfirmTitle || '',
+                        text: pageData.testSendConfirmText || '',
+                        html: '<p class="mb-3">' + escapeHtml(pageData.testSendConfirmText || '') + '</p>' +
+                            '<div class="text-start rounded border p-3">' +
+                            '<small class="d-block text-muted mb-1">' + escapeHtml(pageData.testSendRecipientLabel || '') + '</small>' +
+                            '<strong class="d-block mb-3">' + escapeHtml(emailValue) + '</strong>' +
+                            '<small class="d-block text-muted mb-1">' + escapeHtml(pageData.testSendSubjectLabel || '') + '</small>' +
+                            '<strong class="d-block text-break">' + escapeHtml(subjectValue || '-') + '</strong></div>',
+                        showCancelButton: true,
+                        confirmButtonText: pageData.testSendConfirmButton || '',
+                        cancelButtonText: pageData.commonCancel || '',
+                        reverseButtons: true
+                    }).then(function (result) {
+                        return !!result.isConfirmed;
+                    });
+                } else {
+                    confirmation = Promise.resolve(window.confirm(pageData.testSendConfirmText || ''));
+                }
+
+                confirmation.then(function (confirmed) {
+                    if (!confirmed) {
+                        return;
+                    }
+
+                    setButtonLoading(testSendButton, true, pageData.loadingSendingText || '');
+                    return fetch(pageData.testSendUrl || '', {
                     method: 'POST',
                     body: formData,
                     noLoader: true,
@@ -1177,7 +1273,7 @@
                         'X-No-Loader': '1',
                         'Accept': 'application/json'
                     }
-                })
+                    })
                     .then(function (response) {
                         return response.json().catch(function () {
                             throw new Error(pageData.networkErrorText || 'Ralat rangkaian semasa memproses permintaan.');
@@ -1194,8 +1290,8 @@
                     })
                     .finally(function () {
                         setButtonLoading(testSendButton, false);
-                        hidePageLoader('templateTestSend');
                     });
+                });
             });
         }
 

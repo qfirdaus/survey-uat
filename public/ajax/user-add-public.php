@@ -21,6 +21,10 @@ try {
     require_once __DIR__ . '/_helpers.php';
     logAjaxUnexpectedOutput('user-add-public:init.php', $initOutput);
 
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+        jsonErrorResponse((string)__('userList_ajax_method_not_allowed'), 405);
+    }
+
     if (empty($_SESSION['f_stafID'])) {
         jsonErrorResponse((string)(__('unauthorized_access') ?: 'Sila log masuk terlebih dahulu.'), 401);
     }
@@ -30,10 +34,13 @@ try {
 
     $pdo = Database::getInstance('mysql')->getConnection();
     ensureAjaxGroupManagePermission($pdo);
+    if (!userListCanAddUsers($pdo)) {
+        jsonErrorResponse((string)__('userList_err_no_permission'), 403);
+    }
     $userSchema = new User($pdo);
 
     if (!checkRateLimit('user_add_public', 20, 60)) {
-        jsonErrorResponse('Terlalu banyak permintaan. Sila cuba lagi selepas beberapa saat.', 429);
+        jsonErrorResponse((string)__('userList_ajax_rate_limited'), 429);
     }
 
     $readPayload = static function (): array {
@@ -41,7 +48,7 @@ try {
         $data = json_decode($rawInput, true);
 
         if (!is_array($data)) {
-            jsonErrorResponse('Data tidak sah.', 400);
+            jsonErrorResponse((string)__('userList_ajax_invalid_data'), 400);
         }
 
         if (!isValidCsrfToken((string)($data['csrf_token'] ?? ''))) {
@@ -61,23 +68,23 @@ try {
         $flag = isset($data['flag']) ? (int)$data['flag'] : 1;
 
         if ($scope !== 'public' && $scope !== 'umum') {
-            jsonErrorResponse('Flow tambah pengguna ini khusus untuk umum sahaja.', 400);
+            jsonErrorResponse((string)__('userList_ajax_public_scope_only'), 400);
         }
 
         if ($name === '') {
-            jsonErrorResponse('Nama tidak boleh kosong.', 400);
+            jsonErrorResponse((string)__('userList_ajax_name_required'), 400);
         }
 
         if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            jsonErrorResponse('Alamat emel tidak sah.', 400);
+            jsonErrorResponse((string)__('userList_ajax_invalid_email'), 400);
         }
 
         if ($password === '' || strlen($password) < 6) {
-            jsonErrorResponse('Kata laluan mesti sekurang-kurangnya 6 aksara.', 400);
+            jsonErrorResponse((string)__('userList_ajax_password_min'), 400);
         }
 
         if ($passwordConfirm !== $password) {
-            jsonErrorResponse('Pengesahan kata laluan tidak sepadan.', 400);
+            jsonErrorResponse((string)__('userList_ajax_password_confirm_mismatch'), 400);
         }
 
         if (!in_array($flag, [0, 1], true)) {
@@ -99,7 +106,7 @@ try {
 
     $resolveGroup = static function (PDO $pdo, int $groupID): array {
         if ($groupID <= 0) {
-            jsonErrorResponse('Kumpulan pengguna tidak sah atau tidak wujud dalam sistem.', 400);
+            jsonErrorResponse((string)__('userList_ajax_invalid_group'), 400);
         }
 
         $sql = "SELECT f_groupID, f_groupKod, f_categoryUser FROM tbl_m_group WHERE f_groupID = :groupID LIMIT 1";
@@ -108,11 +115,11 @@ try {
         $groupRow = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$groupRow) {
-            jsonErrorResponse('Kumpulan pengguna tidak sah atau tidak wujud dalam sistem.', 400);
+            jsonErrorResponse((string)__('userList_ajax_invalid_group'), 400);
         }
 
         if (strtoupper(trim((string)($groupRow['f_categoryUser'] ?? ''))) !== 'UMUM') {
-            jsonErrorResponse('Kumpulan yang dipilih tidak sah untuk akses umum.', 400);
+            jsonErrorResponse((string)__('userList_ajax_invalid_public_group'), 400);
         }
 
         return [
@@ -133,7 +140,7 @@ try {
             ':email' => $email,
         ]);
         if ($stmt->fetch(PDO::FETCH_ASSOC)) {
-            jsonErrorResponse('Pengguna dengan alamat emel ini sudah wujud dalam sistem.', 409);
+            jsonErrorResponse((string)__('userList_ajax_email_exists'), 409);
         }
     };
 
@@ -304,17 +311,17 @@ try {
     }
 
     jsonSuccessResponse([
-        'message' => 'Pengguna umum berjaya ditambah.',
+        'message' => (string)__('userList_ajax_success_add_public'),
         'userID' => $newUserId,
         'row' => $insertedRow,
     ]);
 } catch (PDOException $e) {
     error_log('[user-add-public] PDO Error: ' . $e->getMessage());
     if ($e->getCode() == 23000 || strpos($e->getMessage(), 'Duplicate') !== false) {
-        jsonErrorResponse('Pengguna dengan alamat emel ini sudah wujud dalam sistem.', 409);
+        jsonErrorResponse((string)__('userList_ajax_email_exists'), 409);
     }
-    jsonErrorResponse('Ralat database: ' . $e->getMessage(), 500);
+    jsonErrorResponse((string)__('userList_ajax_database_error'), 500);
 } catch (Throwable $e) {
     error_log('[user-add-public] Error: ' . $e->getMessage());
-    jsonErrorResponse('Ralat sistem semasa menambah pengguna umum.', 500);
+    jsonErrorResponse((string)__('userList_ajax_add_public_system_error'), 500);
 }

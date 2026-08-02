@@ -263,14 +263,14 @@
     return false;
   }
 
-  window.__tetapanSubmitFormWithValidation = window.__tetapanSubmitFormWithValidation || function (form, button) {
+  window.__tetapanSubmitFormWithValidation = function (form, button) {
     if (typeof window.__tetapanSubmitFormWithValidationImpl === 'function') {
       return window.__tetapanSubmitFormWithValidationImpl(form, button);
     }
     return fallbackSubmitAjax(form, button);
   };
 
-  window.__tetapanHandleEmailTest = window.__tetapanHandleEmailTest || function () {
+  window.__tetapanHandleEmailTest = function () {
     if (typeof window.__tetapanHandleEmailTestImpl === 'function') {
       return window.__tetapanHandleEmailTestImpl();
     }

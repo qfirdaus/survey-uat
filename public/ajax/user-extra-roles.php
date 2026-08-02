@@ -172,6 +172,8 @@ try {
         exit;
     }
 
+    userListEnsureTargetUserEditable($pdo, $userRow);
+
     // Save roles (sync)
     $selected = $data['roles'] ?? [];
     if (!is_array($selected)) $selected = [];
@@ -184,13 +186,19 @@ try {
 
     // Valid roles lookup
     if ($scopeCategory !== null) {
-        $stmtValid = $pdo->prepare("SELECT f_groupID FROM tbl_m_group WHERE TRIM(COALESCE(f_categoryUser, '')) = :category");
+        $stmtValid = $pdo->prepare("SELECT f_groupID, f_groupKod, f_groupName, f_categoryUser FROM tbl_m_group WHERE TRIM(COALESCE(f_categoryUser, '')) = :category");
         $stmtValid->execute([':category' => $scopeCategory]);
-        $allRoleIds = $stmtValid->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        $validRoleRows = $stmtValid->fetchAll(PDO::FETCH_ASSOC) ?: [];
     } else {
-        $allRoleIds = $pdo->query("SELECT f_groupID FROM tbl_m_group")->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        $validRoleRows = $pdo->query("SELECT f_groupID, f_groupKod, f_groupName, f_categoryUser FROM tbl_m_group")->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
-    $allRoleIds = array_map('intval', $allRoleIds);
+    $allRoleIds = array_map(
+        static fn(array $role): int => (int)($role['f_groupID'] ?? 0),
+        array_values(array_filter(
+            $validRoleRows,
+            static fn($role): bool => is_array($role) && userListCanAssignGroup($pdo, $role)
+        ))
+    );
     $validMap = array_fill_keys($allRoleIds, true);
     $selectedIds = array_values(array_filter($selectedIds, fn($id) => isset($validMap[$id])));
 

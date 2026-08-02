@@ -524,10 +524,15 @@ final class NotificationPublisher
         if ($url === '') {
             return '';
         }
-        if (preg_match('/^(https?:)?\/\//i', $url) || str_starts_with(strtolower($url), 'javascript:') || str_starts_with(strtolower($url), 'data:')) {
+        if (preg_match('/^(https?:)?\/\//i', $url)
+            || preg_match('/^(?:javascript|data):/i', $url)
+            || str_contains($url, '..')
+            || str_contains($url, '\\')
+            || preg_match('/[\x00-\x1F\x7F]/', $url)) {
             return '';
         }
-        return ltrim($url, '/');
+        $url = ltrim($url, '/');
+        return preg_match('/^[A-Za-z0-9_.\/-]+(?:\?[A-Za-z0-9_=&%+.,:@\/-]*)?(?:#[A-Za-z0-9_.-]*)?$/', $url) ? $url : '';
     }
 
     /**

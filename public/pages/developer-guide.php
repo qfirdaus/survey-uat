@@ -31,7 +31,7 @@ function dg(string $key, string $fallback): string
 }
 
 $lang = (string)($_SESSION['lang'] ?? 'ms');
-$version = (string)($_ENV['APP_ASSET_VER'] ?? date('ymdHis'));
+$version = (string)($_ENV['APP_ASSET_VER'] ?? '1');
 $PAGE_TITLE = dg('developerGuide_page_title', 'Developer Guide');
 $notificationDeveloperSamples = require __DIR__ . '/../includes/notification-developer-samples.php';
 
@@ -48,6 +48,33 @@ $guideTabs = [
     'email' => ['icon' => 'ri-mail-send-line', 'label' => dg('developerGuide_tab_email', 'Email')],
     'ui' => ['icon' => 'ri-layout-4-line', 'label' => dg('developerGuide_tab_ui', 'UI Patterns')],
     'checklist' => ['icon' => 'ri-list-check-3', 'label' => dg('developerGuide_tab_checklist', 'Checklist')],
+];
+$guideUi = [
+    'rules' => dg('developerGuide_ui_rules', 'Rules'),
+    'references' => dg('developerGuide_ui_references', 'References'),
+    'core_boundary' => dg('developerGuide_ui_core_boundary', 'Core Boundary'),
+    'page_file' => dg('developerGuide_ui_page_file', 'Page File'),
+    'controller' => dg('developerGuide_ui_controller', 'Controller'),
+    'separation' => dg('developerGuide_ui_separation', 'Separation'),
+    'sample' => dg('developerGuide_ui_sample', 'Sample'),
+    'main_mysql' => dg('developerGuide_ui_main_mysql', 'Main MySQL'),
+    'additional_db' => dg('developerGuide_ui_additional_db', 'Additional DB'),
+    'transaction' => dg('developerGuide_ui_transaction', 'Transaction'),
+    'endpoint' => dg('developerGuide_ui_endpoint', 'Endpoint'),
+    'external_service' => dg('developerGuide_ui_external_service', 'External Service'),
+    'event' => dg('developerGuide_ui_event', 'Event'),
+    'workflow' => dg('developerGuide_ui_workflow', 'Workflow'),
+    'admin_samples' => dg('developerGuide_ui_admin_samples', 'Admin Samples'),
+    'custom_keys' => dg('developerGuide_ui_custom_keys', 'Custom Keys'),
+    'setup_flow' => dg('developerGuide_ui_setup_flow', 'Setup Flow'),
+    'reference' => dg('developerGuide_ui_reference', 'Reference'),
+    'audit_event' => dg('developerGuide_ui_audit_event', 'Audit Event'),
+    'view_as' => dg('developerGuide_ui_view_as', 'View As'),
+    'template' => dg('developerGuide_ui_template', 'Template'),
+    'components' => dg('developerGuide_ui_components', 'Components'),
+    'boundary' => dg('developerGuide_ui_boundary', 'Boundary'),
+    'before_coding' => dg('developerGuide_ui_before_coding', 'Before Coding'),
+    'before_handover' => dg('developerGuide_ui_before_handover', 'Before Handover'),
 ];
 
 $docLinks = [
@@ -176,6 +203,8 @@ require_login();
 require_page_access('pages/my-module.php');
 require_once __DIR__ . '/_helpers.php';
 
+checkRateLimit('my_module_save', 30, 60);
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     jsonErrorResponse('Method not allowed.', 405);
 }
@@ -252,14 +281,16 @@ try {
     $stmt = $pdo->prepare('UPDATE my_record SET status = :status WHERE id = :id');
     $stmt->execute([':status' => 'approved', ':id' => $recordId]);
 
+    $pdo->commit();
+
     audit_event([
-        'event_type' => 'my_record.approved',
-        'outcome' => 'success',
+        'event_type' => 'MY_RECORD_APPROVED',
+        'outcome' => 'SUCCESS',
+        'severity' => 'INFO',
+        'message' => 'Record approved after transaction commit.',
         'target_type' => 'my_record',
         'target_id' => (string)$recordId,
     ]);
-
-    $pdo->commit();
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
@@ -410,10 +441,10 @@ PHP,
         'title' => 'Audit Event',
         'code' => <<<'PHP'
 audit_event([
-    'event_type' => 'my_module.record_update',
-    'outcome' => 'success',
-    'severity' => 'info',
-    'summary' => 'Record updated by module workflow.',
+    'event_type' => 'MY_MODULE_RECORD_UPDATE',
+    'outcome' => 'SUCCESS',
+    'severity' => 'INFO',
+    'message' => 'Record updated by module workflow.',
     'target_type' => 'my_record',
     'target_id' => (string)$recordId,
     'meta' => [
@@ -434,8 +465,10 @@ $effectiveUser = function_exists('impersonation_current_effective_user_context')
     : ['login_id' => $_SESSION['f_loginID'] ?? ''];
 
 audit_event([
-    'event_type' => 'my_module.support_action',
-    'outcome' => 'success',
+    'event_type' => 'MY_MODULE_SUPPORT_ACTION',
+    'outcome' => 'SUCCESS',
+    'severity' => 'INFO',
+    'message' => 'Support action completed.',
     'target_type' => 'my_record',
     'target_id' => (string)$recordId,
     'meta' => [
@@ -481,7 +514,7 @@ function renderCodeCard(string $sampleId, array $samples): void
                 <span class="dg-code-kicker">Sample Code</span>
                 <h6><?= h((string)$sample['title']) ?></h6>
             </div>
-            <button type="button" class="btn btn-sm btn-outline-secondary dg-copy-btn" data-copy-code="<?= h($code) ?>">
+            <button type="button" class="btn btn-sm btn-outline-secondary dg-copy-btn" aria-label="<?= h(dg('developerGuide_copy_code', 'Copy code sample')) ?>">
                 <i class="ri-file-copy-line me-1"></i><?= h(dg('developerGuide_copy', 'Copy')) ?>
             </button>
         </div>
@@ -504,7 +537,7 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
                         <p class="mb-0 text-muted small"><?= h((string)$sample['description']) ?></p>
                     <?php endif; ?>
                 </div>
-                <button type="button" class="btn btn-sm btn-outline-secondary dg-copy-btn" data-copy-code="<?= h($code) ?>">
+                <button type="button" class="btn btn-sm btn-outline-secondary dg-copy-btn" aria-label="<?= h(dg('developerGuide_copy_code', 'Copy code sample')) ?>">
                     <i class="ri-file-copy-line me-1"></i><?= h(dg('developerGuide_copy', 'Copy')) ?>
                 </button>
             </div>
@@ -513,6 +546,11 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
         <?php
     }
 }
+$guideStats = [
+    ['icon' => 'ri-book-open-line', 'value' => count($guideTabs), 'label' => dg('developerGuide_kpi_topics', 'Guide topics')],
+    ['icon' => 'ri-code-box-line', 'value' => count($samples) + count($notificationDeveloperSamples), 'label' => dg('developerGuide_kpi_samples', 'Code samples')],
+    ['icon' => 'ri-file-list-3-line', 'value' => count($docLinks), 'label' => dg('developerGuide_kpi_references', 'References')],
+];
 ?>
 <!doctype html>
 <html lang="<?= h($lang) ?>" data-bs-theme="<?= h($_SESSION['theme.layout'] ?? 'light') ?>">
@@ -524,6 +562,7 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
     $NEED_SELECT2 = false;
     include __DIR__ . '/../includes/head.php';
     ?>
+    <meta name="referrer" content="no-referrer">
     <style>
         .developer-guide-shell { width: 100%; }
         .dg-hero {
@@ -719,6 +758,7 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
             .dg-boundary-row { grid-template-columns: 1fr; }
         }
     </style>
+    <link href="<?= h(base_url('assets/css/pages/developer-guide.css')) ?>?v=<?= h($version) ?>" rel="stylesheet">
 </head>
 <body data-topbar-color="<?= h($_SESSION['theme.topbar'] ?? 'light') ?>"
       data-menu-color="<?= h($_SESSION['theme.menu'] ?? $_SESSION['theme.sidebar'] ?? 'dark') ?>"
@@ -747,9 +787,24 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
                 </div>
 
                 <div class="dg-hero mb-3">
-                    <span class="dg-badge"><i class="ri-shield-keyhole-line"></i><?= h(dg('developerGuide_core_safe_badge', 'Core-safe reference')) ?></span>
-                    <h4 class="mt-3"><?= h(dg('developerGuide_heading', 'Central developer guide for IQS Framework modules')) ?></h4>
-                    <p><?= h(dg('developerGuide_intro', 'Use this page as the standard reference for building project modules without editing protected framework core files. Copy the samples, keep module logic in project files, and configure access through the system UI.')) ?></p>
+                    <div class="dg-hero__content">
+                        <span class="dg-badge"><i class="ri-shield-keyhole-line"></i><?= h(dg('developerGuide_core_safe_badge', 'Core-safe reference')) ?></span>
+                        <h4 class="mt-3"><?= h(dg('developerGuide_heading', 'Central developer guide for IQS Framework modules')) ?></h4>
+                        <p><?= h(dg('developerGuide_intro', 'Use this page as the standard reference for building project modules without editing protected framework core files. Copy the samples, keep module logic in project files, and configure access through the system UI.')) ?></p>
+                    </div>
+                    <div class="dg-hero__status"><i class="ri-checkbox-circle-line"></i><div><strong><?= h(dg('developerGuide_current_title', 'Framework aligned')) ?></strong><span><?= h(dg('developerGuide_current_text', 'Samples follow current security and audit patterns.')) ?></span></div></div>
+                </div>
+
+                <div class="dg-stats mb-3">
+                    <?php foreach ($guideStats as $stat): ?>
+                        <div class="dg-stat"><span class="dg-stat__icon"><i class="<?= h($stat['icon']) ?>"></i></span><div><strong><?= h((string)$stat['value']) ?></strong><span><?= h($stat['label']) ?></span></div></div>
+                    <?php endforeach; ?>
+                    <label class="dg-search-card" for="dg-guide-search"><span><?= h(dg('developerGuide_search_label', 'Search this guide')) ?></span><div><i class="ri-search-line"></i><input type="search" id="dg-guide-search" placeholder="<?= h(dg('developerGuide_search_placeholder', 'Search topics, rules or samples...')) ?>" autocomplete="off"><kbd>/</kbd></div></label>
+                </div>
+
+                <div class="dg-search-summary mb-3 d-none" id="dg-search-summary" aria-live="polite">
+                    <span id="dg-search-result-text"></span>
+                    <button type="button" class="btn btn-sm" id="dg-search-clear"><i class="ri-close-line"></i> <?= h(dg('developerGuide_clear_search', 'Clear search')) ?></button>
                 </div>
 
                 <div class="row g-3">
@@ -778,18 +833,18 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
                                     <div class="dg-panel-title"><i class="ri-compass-3-line"></i><h5><?= h(dg('developerGuide_overview_title', 'Core-safe development rules')) ?></h5></div>
                                     <p class="dg-muted"><?= h(dg('developerGuide_overview_text', 'Programmers should build project modules by consuming framework APIs and UI-managed configuration, not by editing core runtime files.')) ?></p>
                                     <div class="nav dg-subtabs" id="dg-overview-subtabs" role="tablist">
-                                        <button class="nav-link active" id="dg-overview-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-overview-pane-rules" type="button" role="tab" aria-controls="dg-overview-pane-rules" aria-selected="true">Rules</button>
-                                        <button class="nav-link" id="dg-overview-subtab-docs" data-bs-toggle="pill" data-bs-target="#dg-overview-pane-docs" type="button" role="tab" aria-controls="dg-overview-pane-docs" aria-selected="false">References</button>
-                                        <button class="nav-link" id="dg-overview-subtab-boundary" data-bs-toggle="pill" data-bs-target="#dg-overview-pane-boundary" type="button" role="tab" aria-controls="dg-overview-pane-boundary" aria-selected="false">Core Boundary</button>
+                                        <button class="nav-link active" id="dg-overview-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-overview-pane-rules" type="button" role="tab" aria-controls="dg-overview-pane-rules" aria-selected="true"><?= h($guideUi['rules']) ?></button>
+                                        <button class="nav-link" id="dg-overview-subtab-docs" data-bs-toggle="pill" data-bs-target="#dg-overview-pane-docs" type="button" role="tab" aria-controls="dg-overview-pane-docs" aria-selected="false"><?= h($guideUi['references']) ?></button>
+                                        <button class="nav-link" id="dg-overview-subtab-boundary" data-bs-toggle="pill" data-bs-target="#dg-overview-pane-boundary" type="button" role="tab" aria-controls="dg-overview-pane-boundary" aria-selected="false"><?= h($guideUi['core_boundary']) ?></button>
                                     </div>
                                     <div class="tab-content">
                                         <div class="tab-pane fade show active" id="dg-overview-pane-rules" role="tabpanel" aria-labelledby="dg-overview-subtab-rules">
                                             <div class="dg-rule-grid mt-3">
-                                                <div class="dg-rule-card"><h6>Do</h6><p>Use services, controllers, AJAX helpers, custom language files, and UI-managed menu/access setup.</p></div>
-                                                <div class="dg-rule-card"><h6>Do Not</h6><p>Do not edit sidebar, topbar, init, Database core, Notification core, Audit core, or core language files for project needs.</p></div>
-                                                <div class="dg-rule-card"><h6>Register</h6><p>After creating a page, register module/menu/subgroup and group access from User Groups, not from source code.</p></div>
+                                                <div class="dg-rule-card"><h6><?= h(dg('developerGuide_rule_do_title', 'Do')) ?></h6><p><?= h(dg('developerGuide_rule_do_text', 'Use services, controllers, AJAX helpers, custom language files, and UI-managed menu/access setup.')) ?></p></div>
+                                                <div class="dg-rule-card"><h6><?= h(dg('developerGuide_rule_dont_title', 'Do Not')) ?></h6><p><?= h(dg('developerGuide_rule_dont_text', 'Do not edit sidebar, topbar, init, Database core, Notification core, Audit core, or core language files for project needs.')) ?></p></div>
+                                                <div class="dg-rule-card"><h6><?= h(dg('developerGuide_rule_register_title', 'Register')) ?></h6><p><?= h(dg('developerGuide_rule_register_text', 'After creating a page, register module/menu/subgroup and group access from User Groups, not from source code.')) ?></p></div>
                                             </div>
-                                            <div class="dg-callout mt-3">Recommended flow: generate or create page files, add controller/service/AJAX, add language keys in custom files, register menu/access in UI, then test authorization and audit behavior.</div>
+                                            <div class="dg-callout mt-3"><?= h(dg('developerGuide_recommended_flow', 'Recommended flow: generate or create page files, add controller/service/AJAX, add language keys in custom files, register menu/access in UI, then test authorization and audit behavior.')) ?></div>
                                         </div>
                                         <div class="tab-pane fade" id="dg-overview-pane-docs" role="tabpanel" aria-labelledby="dg-overview-subtab-docs">
                                             <div class="dg-doc-grid">
@@ -800,6 +855,7 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
                                                             <h6><?= h((string)$doc['title']) ?></h6>
                                                             <code><?= h((string)$doc['path']) ?></code>
                                                         </div>
+                                                        <button type="button" class="btn btn-sm dg-copy-text" data-copy-text="<?= h((string)$doc['path']) ?>" aria-label="<?= h(dg('developerGuide_copy_path', 'Copy document path')) ?>"><i class="ri-file-copy-line"></i></button>
                                                     </div>
                                                 <?php endforeach; ?>
                                             </div>
@@ -826,7 +882,7 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
 
                             <div class="tab-pane fade" id="dg-pane-page" role="tabpanel" aria-labelledby="dg-tab-page">
                                 <div class="dg-panel">
-                                    <div class="dg-panel-title"><i class="ri-pages-line"></i><h5>Page Skeleton</h5></div>
+                                    <div class="dg-panel-title"><i class="ri-pages-line"></i><h5><?= h($guideTabs['page']['label']) ?></h5></div>
                                     <div class="nav dg-subtabs" id="dg-page-subtabs" role="tablist">
                                         <button class="nav-link active" id="dg-page-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-page-pane-rules" type="button" role="tab" aria-controls="dg-page-pane-rules" aria-selected="true">Rules</button>
                                         <button class="nav-link" id="dg-page-subtab-page" data-bs-toggle="pill" data-bs-target="#dg-page-pane-page" type="button" role="tab" aria-controls="dg-page-pane-page" aria-selected="false">Page File</button>
@@ -852,7 +908,7 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
 
                             <div class="tab-pane fade" id="dg-pane-service" role="tabpanel" aria-labelledby="dg-tab-service">
                                 <div class="dg-panel">
-                                    <div class="dg-panel-title"><i class="ri-service-line"></i><h5>Service Pattern</h5></div>
+                                    <div class="dg-panel-title"><i class="ri-service-line"></i><h5><?= h($guideTabs['service']['label']) ?></h5></div>
                                     <div class="nav dg-subtabs" id="dg-service-subtabs" role="tablist">
                                         <button class="nav-link active" id="dg-service-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-service-pane-rules" type="button" role="tab" aria-controls="dg-service-pane-rules" aria-selected="true">Separation</button>
                                         <button class="nav-link" id="dg-service-subtab-sample" data-bs-toggle="pill" data-bs-target="#dg-service-pane-sample" type="button" role="tab" aria-controls="dg-service-pane-sample" aria-selected="false">Sample</button>
@@ -875,7 +931,7 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
 
                             <div class="tab-pane fade" id="dg-pane-database" role="tabpanel" aria-labelledby="dg-tab-database">
                                 <div class="dg-panel">
-                                    <div class="dg-panel-title"><i class="ri-database-2-line"></i><h5>Database</h5></div>
+                                    <div class="dg-panel-title"><i class="ri-database-2-line"></i><h5><?= h($guideTabs['database']['label']) ?></h5></div>
                                     <div class="nav dg-subtabs" id="dg-database-subtabs" role="tablist">
                                         <button class="nav-link active" id="dg-database-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-database-pane-rules" type="button" role="tab" aria-controls="dg-database-pane-rules" aria-selected="true">Rules</button>
                                         <button class="nav-link" id="dg-database-subtab-main" data-bs-toggle="pill" data-bs-target="#dg-database-pane-main" type="button" role="tab" aria-controls="dg-database-pane-main" aria-selected="false">Main MySQL</button>
@@ -905,7 +961,7 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
 
                             <div class="tab-pane fade" id="dg-pane-ajax" role="tabpanel" aria-labelledby="dg-tab-ajax">
                                 <div class="dg-panel">
-                                    <div class="dg-panel-title"><i class="ri-terminal-box-line"></i><h5>AJAX & CSRF</h5></div>
+                                    <div class="dg-panel-title"><i class="ri-terminal-box-line"></i><h5><?= h($guideTabs['ajax']['label']) ?></h5></div>
                                     <div class="nav dg-subtabs" id="dg-ajax-subtabs" role="tablist">
                                         <button class="nav-link active" id="dg-ajax-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-ajax-pane-rules" type="button" role="tab" aria-controls="dg-ajax-pane-rules" aria-selected="true">Rules</button>
                                         <button class="nav-link" id="dg-ajax-subtab-endpoint" data-bs-toggle="pill" data-bs-target="#dg-ajax-pane-endpoint" type="button" role="tab" aria-controls="dg-ajax-pane-endpoint" aria-selected="false">Endpoint</button>
@@ -942,7 +998,7 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
 
                             <div class="tab-pane fade" id="dg-pane-notification" role="tabpanel" aria-labelledby="dg-tab-notification">
                                 <div class="dg-panel">
-                                    <div class="dg-panel-title"><i class="ri-notification-3-line"></i><h5>Notification</h5></div>
+                                    <div class="dg-panel-title"><i class="ri-notification-3-line"></i><h5><?= h($guideTabs['notification']['label']) ?></h5></div>
                                     <div class="nav dg-subtabs" id="dg-notification-subtabs" role="tablist">
                                         <button class="nav-link active" id="dg-notification-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-notification-pane-rules" type="button" role="tab" aria-controls="dg-notification-pane-rules" aria-selected="true">Rules</button>
                                         <button class="nav-link" id="dg-notification-subtab-event" data-bs-toggle="pill" data-bs-target="#dg-notification-pane-event" type="button" role="tab" aria-controls="dg-notification-pane-event" aria-selected="false">Event</button>
@@ -972,7 +1028,7 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
 
                             <div class="tab-pane fade" id="dg-pane-language" role="tabpanel" aria-labelledby="dg-tab-language">
                                 <div class="dg-panel">
-                                    <div class="dg-panel-title"><i class="ri-translate-2"></i><h5>Language</h5></div>
+                                    <div class="dg-panel-title"><i class="ri-translate-2"></i><h5><?= h($guideTabs['language']['label']) ?></h5></div>
                                     <div class="nav dg-subtabs" id="dg-language-subtabs" role="tablist">
                                         <button class="nav-link active" id="dg-language-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-language-pane-rules" type="button" role="tab" aria-controls="dg-language-pane-rules" aria-selected="true">Rules</button>
                                         <button class="nav-link" id="dg-language-subtab-sample" data-bs-toggle="pill" data-bs-target="#dg-language-pane-sample" type="button" role="tab" aria-controls="dg-language-pane-sample" aria-selected="false">Custom Keys</button>
@@ -994,7 +1050,7 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
 
                             <div class="tab-pane fade" id="dg-pane-menu" role="tabpanel" aria-labelledby="dg-tab-menu">
                                 <div class="dg-panel">
-                                    <div class="dg-panel-title"><i class="ri-menu-2-line"></i><h5>Menu & Access</h5></div>
+                                    <div class="dg-panel-title"><i class="ri-menu-2-line"></i><h5><?= h($guideTabs['menu']['label']) ?></h5></div>
                                     <div class="nav dg-subtabs" id="dg-menu-subtabs" role="tablist">
                                         <button class="nav-link active" id="dg-menu-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-menu-pane-rules" type="button" role="tab" aria-controls="dg-menu-pane-rules" aria-selected="true">Rules</button>
                                         <button class="nav-link" id="dg-menu-subtab-flow" data-bs-toggle="pill" data-bs-target="#dg-menu-pane-flow" type="button" role="tab" aria-controls="dg-menu-pane-flow" aria-selected="false">Setup Flow</button>
@@ -1042,7 +1098,7 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
 
                             <div class="tab-pane fade" id="dg-pane-audit" role="tabpanel" aria-labelledby="dg-tab-audit">
                                 <div class="dg-panel">
-                                    <div class="dg-panel-title"><i class="ri-shield-check-line"></i><h5>Audit</h5></div>
+                                    <div class="dg-panel-title"><i class="ri-shield-check-line"></i><h5><?= h($guideTabs['audit']['label']) ?></h5></div>
                                     <div class="nav dg-subtabs" id="dg-audit-subtabs" role="tablist">
                                         <button class="nav-link active" id="dg-audit-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-audit-pane-rules" type="button" role="tab" aria-controls="dg-audit-pane-rules" aria-selected="true">Rules</button>
                                         <button class="nav-link" id="dg-audit-subtab-event" data-bs-toggle="pill" data-bs-target="#dg-audit-pane-event" type="button" role="tab" aria-controls="dg-audit-pane-event" aria-selected="false">Audit Event</button>
@@ -1069,7 +1125,7 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
 
                             <div class="tab-pane fade" id="dg-pane-email" role="tabpanel" aria-labelledby="dg-tab-email">
                                 <div class="dg-panel">
-                                    <div class="dg-panel-title"><i class="ri-mail-send-line"></i><h5>Email</h5></div>
+                                    <div class="dg-panel-title"><i class="ri-mail-send-line"></i><h5><?= h($guideTabs['email']['label']) ?></h5></div>
                                     <div class="nav dg-subtabs" id="dg-email-subtabs" role="tablist">
                                         <button class="nav-link active" id="dg-email-subtab-rules" data-bs-toggle="pill" data-bs-target="#dg-email-pane-rules" type="button" role="tab" aria-controls="dg-email-pane-rules" aria-selected="true">Rules</button>
                                         <button class="nav-link" id="dg-email-subtab-template" data-bs-toggle="pill" data-bs-target="#dg-email-pane-template" type="button" role="tab" aria-controls="dg-email-pane-template" aria-selected="false">Template</button>
@@ -1093,7 +1149,7 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
 
                             <div class="tab-pane fade" id="dg-pane-ui" role="tabpanel" aria-labelledby="dg-tab-ui">
                                 <div class="dg-panel">
-                                    <div class="dg-panel-title"><i class="ri-layout-4-line"></i><h5>UI Patterns</h5></div>
+                                    <div class="dg-panel-title"><i class="ri-layout-4-line"></i><h5><?= h($guideTabs['ui']['label']) ?></h5></div>
                                     <div class="nav dg-subtabs" id="dg-ui-subtabs" role="tablist">
                                         <button class="nav-link active" id="dg-ui-subtab-components" data-bs-toggle="pill" data-bs-target="#dg-ui-pane-components" type="button" role="tab" aria-controls="dg-ui-pane-components" aria-selected="true">Components</button>
                                         <button class="nav-link" id="dg-ui-subtab-boundary" data-bs-toggle="pill" data-bs-target="#dg-ui-pane-boundary" type="button" role="tab" aria-controls="dg-ui-pane-boundary" aria-selected="false">Boundary</button>
@@ -1132,7 +1188,7 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
 
                             <div class="tab-pane fade" id="dg-pane-checklist" role="tabpanel" aria-labelledby="dg-tab-checklist">
                                 <div class="dg-panel">
-                                    <div class="dg-panel-title"><i class="ri-list-check-3"></i><h5>Release Checklist</h5></div>
+                                    <div class="dg-panel-title"><i class="ri-list-check-3"></i><h5><?= h($guideTabs['checklist']['label']) ?></h5></div>
                                     <div class="nav dg-subtabs" id="dg-checklist-subtabs" role="tablist">
                                         <button class="nav-link active" id="dg-checklist-subtab-before" data-bs-toggle="pill" data-bs-target="#dg-checklist-pane-before" type="button" role="tab" aria-controls="dg-checklist-pane-before" aria-selected="true">Before Coding</button>
                                         <button class="nav-link" id="dg-checklist-subtab-handover" data-bs-toggle="pill" data-bs-target="#dg-checklist-pane-handover" type="button" role="tab" aria-controls="dg-checklist-pane-handover" aria-selected="false">Before Handover</button>
@@ -1175,42 +1231,16 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
 
 <?php include __DIR__ . '/../includes/script.php'; ?>
 <script>
-(function () {
-  function setButtonDone(button) {
-    if (!button) return;
-    var original = button.getAttribute('data-original-label') || button.innerHTML;
-    button.setAttribute('data-original-label', original);
-    button.innerHTML = '<i class="ri-check-line me-1"></i><?= h(dg('developerGuide_copied', 'Copied')) ?>';
-    setTimeout(function () { button.innerHTML = original; }, 1200);
-  }
-
-  function fallbackCopy(text, button) {
-    var textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.setAttribute('readonly', 'readonly');
-    textarea.style.position = 'fixed';
-    textarea.style.left = '-9999px';
-    document.body.appendChild(textarea);
-    textarea.select();
-    try { document.execCommand('copy'); setButtonDone(button); } catch (e) {}
-    document.body.removeChild(textarea);
-  }
-
-  document.addEventListener('click', function (event) {
-    var button = event.target && event.target.closest ? event.target.closest('.dg-copy-btn[data-copy-code]') : null;
-    if (!button) return;
-    var text = button.getAttribute('data-copy-code') || '';
-    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-      navigator.clipboard.writeText(text).then(function () {
-        setButtonDone(button);
-      }).catch(function () {
-        fallbackCopy(text, button);
-      });
-      return;
-    }
-    fallbackCopy(text, button);
-  });
-})();
+window.DeveloperGuideI18n = <?= json_encode([
+    'copied' => dg('developerGuide_copied', 'Copied'),
+    'result' => dg('developerGuide_search_result', '%d topics match your search'),
+    'noResult' => dg('developerGuide_search_no_result', 'No topics match your search.'),
+    'ui' => array_merge($guideUi, [
+        'fetch' => 'Fetch',
+        'datatable' => 'DataTable',
+    ]),
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 </script>
+<script src="<?= h(base_url('assets/js/pages/developer-guide.js')) ?>?v=<?= h($version) ?>"></script>
 </body>
 </html>

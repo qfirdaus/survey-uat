@@ -31,7 +31,7 @@ try {
         http_response_code(429);
         echo json_encode([
             'success' => false,
-            'message' => 'Terlalu banyak percubaan. Sila tunggu sebentar.'
+            'message' => (string)__('profile_session_rate_limit')
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -41,7 +41,7 @@ try {
         http_response_code(405);
         echo json_encode([
             'success' => false,
-            'message' => 'Method not allowed'
+            'message' => (string)__('profile_session_method_invalid')
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -54,7 +54,7 @@ try {
         http_response_code(400);
         echo json_encode([
             'success' => false,
-            'message' => 'Invalid JSON input'
+            'message' => (string)__('profile_session_json_invalid')
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -75,7 +75,7 @@ try {
         http_response_code(400);
         echo json_encode([
             'success' => false,
-            'message' => 'ID sesi tidak ditentukan.'
+            'message' => (string)__('profile_session_id_required')
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -86,7 +86,7 @@ try {
         http_response_code(400);
         echo json_encode([
             'success' => false,
-            'message' => 'Tidak boleh tamatkan sesi semasa.'
+            'message' => (string)__('profile_session_current_denied')
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -103,7 +103,7 @@ try {
         http_response_code(401);
         echo json_encode([
             'success' => false,
-            'message' => 'Sila log masuk terlebih dahulu.'
+            'message' => (string)__('profile_session_login_required')
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -118,7 +118,7 @@ try {
         http_response_code(404);
         echo json_encode([
             'success' => false,
-            'message' => 'Pengguna tidak ditemui.'
+            'message' => (string)__('profile_session_user_not_found')
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -153,7 +153,7 @@ try {
         http_response_code(404);
         echo json_encode([
             'success' => false,
-            'message' => 'Sesi tidak ditemui atau tidak milik anda.'
+            'message' => (string)__('profile_session_not_owned')
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -163,7 +163,7 @@ try {
         http_response_code(400);
         echo json_encode([
             'success' => false,
-            'message' => 'Sesi ini sudah tamat.'
+            'message' => (string)__('profile_session_already_ended')
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -231,13 +231,13 @@ try {
         
         echo json_encode([
             'success' => true,
-            'message' => 'Sesi berjaya ditamatkan.'
+            'message' => (string)__('profile_session_terminate_success')
         ], JSON_UNESCAPED_UNICODE);
     } else {
         http_response_code(500);
         echo json_encode([
             'success' => false,
-            'message' => 'Gagal tamatkan sesi. Sesi mungkin sudah tamat.'
+            'message' => (string)__('profile_session_terminate_failed')
         ], JSON_UNESCAPED_UNICODE);
     }
     
@@ -246,7 +246,7 @@ try {
     http_response_code(500);
     $resp = [
         'success' => false,
-        'message' => 'Ralat pangkalan data. Sila cuba lagi.'
+        'message' => (string)__('profile_session_database_error')
     ];
     if (function_exists('is_development_mode') && is_development_mode()) {
         $resp['debug'] = $e->getMessage();
@@ -257,7 +257,7 @@ try {
     http_response_code(500);
     $resp = [
         'success' => false,
-        'message' => 'Ralat sistem. Sila cuba lagi.'
+        'message' => (string)__('profile_session_system_error')
     ];
     if (function_exists('is_development_mode') && is_development_mode()) {
         $resp['debug'] = $e->getMessage();

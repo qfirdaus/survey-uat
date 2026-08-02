@@ -180,5 +180,6 @@ try {
     echo json_encode(['error' => false, 'message' => __('userGroup_delete_group_success')], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     http_response_code(500);
-    echo json_encode(['error' => true, 'message' => __('userGroup_server_error_prefix') . ' ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    error_log('[group-delete] ' . $e->getMessage());
+    echo json_encode(['error' => true, 'message' => (string)__('userGroup_err_server')], JSON_UNESCAPED_UNICODE);
 }

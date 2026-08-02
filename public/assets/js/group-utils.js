@@ -88,7 +88,8 @@ const GroupUtils = {
       return JSON.parse(txt);
     } catch (e) {
       const snippet = txt.slice(0, 240).replace(/\s+/g, ' ').trim();
-      throw new Error(this.t('non_json_response', 'Server did not return JSON. Preview:') + ' ' + snippet);
+      console.error('[group-utils] Non-JSON response:', snippet);
+      throw new Error(this.t('non_json_response', 'Server did not return a valid response.'));
     }
   },
   
@@ -157,7 +158,6 @@ document.addEventListener('show.bs.modal', function (e) {
 
 // Export untuk global access
 window.GroupUtils = GroupUtils;
-
 
 
 

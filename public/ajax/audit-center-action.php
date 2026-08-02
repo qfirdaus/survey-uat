@@ -50,7 +50,7 @@ function ac_normalize_scope_key(string $scopeType, ?string $scopeKey): string
 
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        jsonErrorResponse('Method not allowed', 405);
+        jsonErrorResponse(ac('action_method_not_allowed', 'Method not allowed.'), 405);
     }
 
     if (!isValidCsrfToken()) {
@@ -193,5 +193,17 @@ try {
     jsonSuccessResponse(['message' => ac('action_session_terminated', 'Sesi berjaya ditamatkan.')]);
 } catch (Throwable $e) {
     error_log('[audit-center-action] ' . $e->getMessage());
+    if (function_exists('audit_event')) {
+        try {
+            audit_event([
+                'event_type' => 'ADMIN_ACTION', 'severity' => 'WARNING', 'outcome' => 'FAILURE',
+                'target_type' => 'audit_center_action', 'target_id' => 'system-error',
+                'target_label' => 'Audit Center action', 'message' => 'Audit Center action failed',
+                'meta' => ['reason_type' => get_class($e)],
+            ]);
+        } catch (Throwable $auditError) {
+            error_log('[audit-center-action] Failure audit error: ' . $auditError->getMessage());
+        }
+    }
     jsonErrorResponse(ac('action_server_error', 'Ralat sistem semasa memproses tindakan Audit Center.'), 500);
 }

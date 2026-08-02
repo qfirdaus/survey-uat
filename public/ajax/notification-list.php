@@ -26,6 +26,10 @@ try {
         jsonErrorResponse((string)(__('userGroup_csrf_invalid') ?: 'CSRF token tidak sah.'), 403);
     }
 
+    if (!checkRateLimit('notification_list', 120, 60)) {
+        jsonErrorResponse((string)(__('notification_rate_limited') ?: 'Terlalu banyak permintaan. Sila cuba sebentar lagi.'), 429);
+    }
+
     $raw = file_get_contents('php://input');
     $data = json_decode((string)$raw, true);
     if (!is_array($data)) {
@@ -33,7 +37,7 @@ try {
     }
 
     $mode = strtolower((string)($data['mode'] ?? 'topbar'));
-    $limitDefault = $mode === 'page' ? 25 : 10;
+    $limitDefault = $mode === 'page' ? 20 : 10;
     $limitMax = $mode === 'page' ? 100 : 25;
     $limit = max(1, min($limitMax, (int)($data['limit'] ?? $limitDefault)));
     $filter = strtolower((string)($data['filter'] ?? 'all'));
@@ -41,6 +45,9 @@ try {
     if (!in_array($filter, $allowedFilters, true)) {
         $filter = 'all';
     }
+    $page = max(1, min(10000, (int)($data['page'] ?? 1)));
+    $search = mb_substr(trim((string)($data['search'] ?? '')), 0, 100);
+    $offset = $mode === 'page' ? ($page - 1) * $limit : 0;
 
     $lang = (string)($_SESSION['lang'] ?? 'ms');
     $service = new NotificationService(Database::getInstance('mysql')->getConnection());
@@ -50,12 +57,26 @@ try {
         'limit' => $limit,
         'mode' => $mode,
         'filter' => $filter,
+        'offset' => $offset,
+        'search' => $search,
     ]);
 
-    jsonSuccessResponse([
+    $payload = [
         'unread' => $service->countUnread($actor),
         'items' => $items,
-    ]);
+    ];
+    if ($mode === 'page') {
+        $total = $service->countNotifications($actor, ['filter' => $filter, 'search' => $search]);
+        $payload['summary'] = $service->getNotificationSummary($actor);
+        $payload['pagination'] = [
+            'page' => $page,
+            'per_page' => $limit,
+            'total' => $total,
+            'total_pages' => max(1, (int)ceil($total / $limit)),
+        ];
+    }
+
+    jsonSuccessResponse($payload);
 } catch (Throwable $e) {
     error_log('[notification-list] ' . $e->getMessage());
     jsonErrorResponse((string)(__('topbar_notification_load_failed') ?: 'Tidak dapat memuatkan notifikasi.'), 500);

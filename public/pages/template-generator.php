@@ -15,7 +15,20 @@ require_once __DIR__ . '/../ajax/_helpers.php';
 require_once __DIR__ . '/../classes/Database.php';
 
 $pdoPerm = Database::getInstance('mysql')->getConnection();
-ensurePageGroupManagePermission($pdoPerm);
+$templateGeneratorProfile = function_exists('userListResolveCurrentProfile')
+    ? userListResolveCurrentProfile($pdoPerm)
+    : [];
+$isTemplateGeneratorAdmin = $templateGeneratorProfile
+    && function_exists('is_user_super_admin')
+    && is_user_super_admin($templateGeneratorProfile, $pdoPerm);
+if (!$isTemplateGeneratorAdmin) {
+    http_response_code(403);
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!doctype html><html lang="' . htmlspecialchars((string)($_SESSION['lang'] ?? 'ms'), ENT_QUOTES, 'UTF-8') . '"><head><meta charset="utf-8"><title>403</title></head><body>';
+    echo htmlspecialchars((string)__('pageTemplateGenerator_error_permission'), ENT_QUOTES, 'UTF-8');
+    echo '</body></html>';
+    exit;
+}
 
 require_once __DIR__ . '/../controllers/SystemTemplateController.php';
 $controller = null;
@@ -23,7 +36,8 @@ $bootstrapError = null;
 try {
     $controller = new SystemTemplateController();
 } catch (Throwable $e) {
-    $bootstrapError = $e->getMessage();
+    error_log('[template-generator] Bootstrap failed: ' . $e->getMessage());
+    $bootstrapError = (string)__('pageTemplateGenerator_error_bootstrap');
 }
 
 if (!function_exists('h')) {
@@ -99,6 +113,8 @@ $hasFileCollision = !empty($existsMap['page']) || !empty($existsMap['controller'
 $hasDbCollision = $dbSlugExists || $dbControllerExists;
 $hasCollision = $hasFileCollision || $hasDbCollision;
 $shouldOpenModal = (($previewResult !== null || $errorMessage !== null) && !($generationResult && !$errorMessage));
+$generatedCount = count(array_filter($records, static fn(array $record): bool => strtoupper((string)($record['f_status'] ?? 'GENERATED')) === 'GENERATED'));
+$archivedCount = count(array_filter($records, static fn(array $record): bool => strtoupper((string)($record['f_status'] ?? '')) === 'ARCHIVED'));
 ?>
 <!DOCTYPE html>
 <html lang="<?= h($lang) ?>" data-bs-theme="<?= h($_SESSION['theme.layout'] ?? 'light') ?>">
@@ -138,6 +154,22 @@ $shouldOpenModal = (($previewResult !== null || $errorMessage !== null) && !($ge
                     <div class="alert alert-danger"><?= h($errorMessage) ?></div>
                 <?php endif; ?>
 
+                <section class="tg-hero mb-4">
+                    <div class="tg-hero-copy">
+                        <span class="tg-eyebrow"><i class="ri-code-box-line"></i><?= h(t('pageTemplateGenerator_eyebrow', 'Developer Workspace')) ?></span>
+                        <h1><?= h(t('pageTemplateGenerator_hero_title', 'Build governed pages with confidence')) ?></h1>
+                        <p><?= h(t('pageTemplateGenerator_hero_subtitle', 'Create consistent page foundations, validate every output, and retain a clear generation record.')) ?></p>
+                        <button type="button" class="btn btn-primary tg-primary-btn" data-bs-toggle="modal" data-bs-target="#createTemplateModal">
+                            <i class="ri-add-line me-1"></i><?= h(t('pageTemplateGenerator_action_create', 'Create New Template')) ?>
+                        </button>
+                    </div>
+                    <div class="tg-hero-metrics" aria-label="<?= h(t('pageTemplateGenerator_summary_label', 'Template summary')) ?>">
+                        <div><span><?= count($records) ?></span><small><?= h(t('pageTemplateGenerator_metric_total', 'Total templates')) ?></small></div>
+                        <div><span><?= $generatedCount ?></span><small><?= h(t('pageTemplateGenerator_metric_generated', 'Ready')) ?></small></div>
+                        <div><span><?= $archivedCount ?></span><small><?= h(t('pageTemplateGenerator_metric_archived', 'Archived')) ?></small></div>
+                    </div>
+                </section>
+
                 <div class="row g-4">
                     <div class="col-12">
                         <div class="card template-generator-shell">
@@ -146,9 +178,7 @@ $shouldOpenModal = (($previewResult !== null || $errorMessage !== null) && !($ge
                                     <h5 class="card-title mb-1"><?= h(t('pageTemplateGenerator_list_title', 'Generated Templates')) ?></h5>
                                     <p class="text-muted mb-0"><?= h(t('pageTemplateGenerator_list_subtitle', 'Manage generated page templates and review the output artifacts created by the system.')) ?></p>
                                 </div>
-                                <button type="button" class="btn btn-primary tg-primary-btn" data-bs-toggle="modal" data-bs-target="#createTemplateModal">
-                                    <i class="ri-add-line me-1"></i><?= h(t('pageTemplateGenerator_action_create', 'Create New Template')) ?>
-                                </button>
+                                <span class="tg-security-note"><i class="ri-shield-check-line"></i><?= h(t('pageTemplateGenerator_super_admin_note', 'Super Admin controlled')) ?></span>
                             </div>
                         </div>
                     </div>
@@ -211,7 +241,7 @@ $shouldOpenModal = (($previewResult !== null || $errorMessage !== null) && !($ge
                                             <td class="col-type"><span class="badge tg-type-badge"><?= h(ucfirst((string)($record['f_templateType'] ?? ''))) ?></span></td>
                                             <td class="col-page">
                                                 <div class="fw-semibold truncate-1line"><?= h((string)($record['f_pageSlug'] ?? '')) ?></div>
-                                                <div class="small text-muted truncate-1line" title="<?= h((string)($record['f_outputPagePath'] ?? '')) ?>"><?= h((string)($record['f_outputPagePath'] ?? '')) ?></div>
+                                                <div class="small text-muted truncate-1line"><?= h('pages/' . (string)($record['f_pageSlug'] ?? '') . '.php') ?></div>
                                             </td>
                                             <td class="col-status"><span class="badge <?= h($statusClass) ?>"><?= h(t('pageTemplateGenerator_status_' . strtolower($status), $status)) ?></span></td>
                                             <td class="col-updated">
@@ -261,7 +291,7 @@ $shouldOpenModal = (($previewResult !== null || $errorMessage !== null) && !($ge
                     <h5 class="modal-title"><?= h(t('pageTemplateGenerator_modal_create_title', 'Create New Template')) ?></h5>
                     <p class="mb-0 text-white-50 small"><?= h(t('pageTemplateGenerator_modal_create_subtitle', 'Define the template identity, review the output, and create the generated files in one flow.')) ?></p>
                 </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="<?= h(t('pageTemplateGenerator_btn_close', 'Close')) ?>"></button>
             </div>
             <div class="modal-body">
                 <?php if ($errorMessage): ?>
@@ -284,15 +314,15 @@ $shouldOpenModal = (($previewResult !== null || $errorMessage !== null) && !($ge
                                         <span class="badge bg-info-subtle text-info-emphasis"><?= h(t('pageTemplateGenerator_governance_access', 'Access control')) ?></span>
                                     </div>
                                 </div>
-                                <ul class="nav nav-pills tg-form-tabs mb-3" id="templateGeneratorCreateTabs" role="tablist">
+                                <ul class="nav nav-pills tg-form-tabs tg-stepper mb-3" id="templateGeneratorCreateTabs" role="tablist">
                                     <li class="nav-item" role="presentation">
-                                        <button class="nav-link active" id="template-generator-form-tab" data-bs-toggle="tab" data-bs-target="#template-generator-form-pane" type="button" role="tab" aria-controls="template-generator-form-pane" aria-selected="true"><?= h(t('pageTemplateGenerator_tab_form', 'Template Form')) ?></button>
+                                        <button class="nav-link active" id="template-generator-form-tab" data-bs-toggle="tab" data-bs-target="#template-generator-form-pane" type="button" role="tab" aria-controls="template-generator-form-pane" aria-selected="true"><span>1</span><?= h(t('pageTemplateGenerator_step_identity', 'Page information')) ?></button>
                                     </li>
                                     <li class="nav-item" role="presentation">
-                                        <button class="nav-link" id="template-generator-icon-tab" data-bs-toggle="tab" data-bs-target="#template-generator-icon-pane" type="button" role="tab" aria-controls="template-generator-icon-pane" aria-selected="false"><?= h(t('pageTemplateGenerator_tab_page_icon', 'Page Icon')) ?></button>
+                                        <button class="nav-link" id="template-generator-icon-tab" data-bs-toggle="tab" data-bs-target="#template-generator-icon-pane" type="button" role="tab" aria-controls="template-generator-icon-pane" aria-selected="false"><span>2</span><?= h(t('pageTemplateGenerator_step_branding', 'Icon selection')) ?></button>
                                     </li>
                                     <li class="nav-item" role="presentation">
-                                        <button class="nav-link" id="template-generator-access-tab" data-bs-toggle="tab" data-bs-target="#template-generator-access-pane" type="button" role="tab" aria-controls="template-generator-access-pane" aria-selected="false"><?= h(t('pageTemplateGenerator_tab_access_mode', 'Access Mode')) ?></button>
+                                        <button class="nav-link" id="template-generator-access-tab" data-bs-toggle="tab" data-bs-target="#template-generator-access-pane" type="button" role="tab" aria-controls="template-generator-access-pane" aria-selected="false"><span>3</span><?= h(t('pageTemplateGenerator_step_access', 'Access policy')) ?></button>
                                     </li>
                                 </ul>
                                 <div class="tab-content tg-form-tab-content">
@@ -300,7 +330,7 @@ $shouldOpenModal = (($previewResult !== null || $errorMessage !== null) && !($ge
                                         <div class="row g-3">
                                             <div class="col-md-6">
                                                 <label for="template_name" class="form-label"><?= h(t('pageTemplateGenerator_field_template_name', 'Template Name')) ?> <span class="text-danger">*</span></label>
-                                                <input type="text" class="form-control <?= isset($fieldErrors['template_name']) ? 'is-invalid' : '' ?>" id="template_name" name="template_name" value="<?= h($form['template_name'] ?? '') ?>" placeholder="<?= h(t('pageTemplateGenerator_field_template_name_placeholder', 'Example: Student Listing Base')) ?>" required>
+                                                <input type="text" maxlength="120" class="form-control <?= isset($fieldErrors['template_name']) ? 'is-invalid' : '' ?>" id="template_name" name="template_name" value="<?= h($form['template_name'] ?? '') ?>" placeholder="<?= h(t('pageTemplateGenerator_field_template_name_placeholder', 'Example: Student Listing Base')) ?>" required>
                                                 <?php if (isset($fieldErrors['template_name'])): ?><div class="invalid-feedback d-block"><?= h((string)$fieldErrors['template_name']) ?></div><?php endif; ?>
                                             </div>
                                             <div class="col-md-6">
@@ -315,17 +345,17 @@ $shouldOpenModal = (($previewResult !== null || $errorMessage !== null) && !($ge
                                             </div>
                                             <div class="col-md-6">
                                                 <label for="page_title_ms" class="form-label"><?= h(t('pageTemplateGenerator_field_title_ms', 'Page Title (MS)')) ?> <span class="text-danger">*</span></label>
-                                                <input type="text" class="form-control <?= isset($fieldErrors['page_title_ms']) ? 'is-invalid' : '' ?>" id="page_title_ms" name="page_title_ms" value="<?= h($form['page_title_ms'] ?? '') ?>" placeholder="<?= h(t('pageTemplateGenerator_field_title_ms_placeholder', 'Contoh: Senarai Pelajar')) ?>" required>
+                                                <input type="text" maxlength="160" class="form-control <?= isset($fieldErrors['page_title_ms']) ? 'is-invalid' : '' ?>" id="page_title_ms" name="page_title_ms" value="<?= h($form['page_title_ms'] ?? '') ?>" placeholder="<?= h(t('pageTemplateGenerator_field_title_ms_placeholder', 'Contoh: Senarai Pelajar')) ?>" required>
                                                 <?php if (isset($fieldErrors['page_title_ms'])): ?><div class="invalid-feedback d-block"><?= h((string)$fieldErrors['page_title_ms']) ?></div><?php endif; ?>
                                             </div>
                                             <div class="col-md-6">
                                                 <label for="page_title_en" class="form-label"><?= h(t('pageTemplateGenerator_field_title_en', 'Page Title (EN)')) ?> <span class="text-danger">*</span></label>
-                                                <input type="text" class="form-control <?= isset($fieldErrors['page_title_en']) ? 'is-invalid' : '' ?>" id="page_title_en" name="page_title_en" value="<?= h($form['page_title_en'] ?? '') ?>" placeholder="<?= h(t('pageTemplateGenerator_field_title_en_placeholder', 'Example: Student List')) ?>" required>
+                                                <input type="text" maxlength="160" class="form-control <?= isset($fieldErrors['page_title_en']) ? 'is-invalid' : '' ?>" id="page_title_en" name="page_title_en" value="<?= h($form['page_title_en'] ?? '') ?>" placeholder="<?= h(t('pageTemplateGenerator_field_title_en_placeholder', 'Example: Student List')) ?>" required>
                                                 <?php if (isset($fieldErrors['page_title_en'])): ?><div class="invalid-feedback d-block"><?= h((string)$fieldErrors['page_title_en']) ?></div><?php endif; ?>
                                             </div>
                                             <div class="col-12">
                                                 <label for="page_name" class="form-label"><?= h(t('pageTemplateGenerator_field_page_name', 'Page Name')) ?> <span class="text-danger">*</span></label>
-                                                <input type="text" class="form-control <?= isset($fieldErrors['page_name']) ? 'is-invalid' : '' ?>" id="page_name" name="page_name" value="<?= h($form['page_name'] ?? '') ?>" placeholder="<?= h(t('pageTemplateGenerator_field_page_name_placeholder', 'Example: senarai pelajar')) ?>" required>
+                                                <input type="text" maxlength="80" class="form-control <?= isset($fieldErrors['page_name']) ? 'is-invalid' : '' ?>" id="page_name" name="page_name" value="<?= h($form['page_name'] ?? '') ?>" placeholder="<?= h(t('pageTemplateGenerator_field_page_name_placeholder', 'Example: senarai pelajar')) ?>" required>
                                                 <?php if (isset($fieldErrors['page_name'])): ?><div class="invalid-feedback d-block"><?= h((string)$fieldErrors['page_name']) ?></div><?php endif; ?>
                                                 <div class="form-text"><?= h(t('pageTemplateGenerator_field_page_name_help', 'The system will normalize this value into a page slug and controller class name.')) ?></div>
                                             </div>
@@ -423,7 +453,7 @@ $shouldOpenModal = (($previewResult !== null || $errorMessage !== null) && !($ge
                                         </div>
                                         <div>
                                             <span class="tg-preview-label d-block"><?= h(t('pageTemplateGenerator_generation_status', 'Generation Status')) ?></span>
-                                            <strong class="<?= $hasCollision ? 'text-danger' : 'text-success' ?>"><?= h($hasCollision ? t('pageTemplateGenerator_generation_status_blocked', 'Blocked') : t('pageTemplateGenerator_generation_status_ready', 'Ready to generate')) ?></strong>
+                                            <div class="tg-readiness <?= $hasCollision ? 'is-blocked' : 'is-ready' ?>"><i class="<?= $hasCollision ? 'ri-error-warning-line' : 'ri-checkbox-circle-line' ?>"></i><strong><?= h($hasCollision ? t('pageTemplateGenerator_generation_status_blocked', 'Blocked') : t('pageTemplateGenerator_generation_status_ready', 'Ready to generate')) ?></strong></div>
                                             <?php if ($hasCollision): ?><div class="small text-danger mt-2"><?= h(t('pageTemplateGenerator_generation_blocked', 'Generation disabled because one or more target files already exist.')) ?></div><?php endif; ?>
                                         </div>
                                     </div>
@@ -450,20 +480,18 @@ $shouldOpenModal = (($previewResult !== null || $errorMessage !== null) && !($ge
                     <h5 class="modal-title"><?= h(t('pageTemplateGenerator_detail_title', 'Template Details')) ?></h5>
                     <p class="mb-0 text-white-50 small"><?= h(t('pageTemplateGenerator_detail_subtitle', 'Review the generated metadata and output paths for this template record.')) ?></p>
                 </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="<?= h(t('pageTemplateGenerator_btn_close', 'Close')) ?>"></button>
             </div>
             <div class="modal-body">
-                <div class="row g-3">
-                    <div class="col-md-6"><span class="tg-preview-label d-block"><?= h(t('pageTemplateGenerator_col_template_name', 'Template Name')) ?></span><div class="fw-semibold" data-detail-template-name>-</div></div>
+                <div class="tg-detail-overview mb-3"><div class="tg-detail-icon"><i class="ri-pages-line"></i></div><div><span class="tg-preview-label"><?= h(t('pageTemplateGenerator_detail_overview', 'Generated asset')) ?></span><h5 class="mb-0" data-detail-template-name>-</h5></div><span class="badge bg-success-subtle text-success ms-auto" data-detail-status>-</span></div>
+                <div class="row g-3 tg-detail-grid">
                     <div class="col-md-6"><span class="tg-preview-label d-block"><?= h(t('pageTemplateGenerator_col_type', 'Type')) ?></span><div class="fw-semibold" data-detail-template-type>-</div></div>
                     <div class="col-md-6"><span class="tg-preview-label d-block"><?= h(t('pageTemplateGenerator_preview_slug', 'Page Slug')) ?></span><div class="fw-semibold" data-detail-page-slug>-</div></div>
                     <div class="col-md-6"><span class="tg-preview-label d-block"><?= h(t('pageTemplateGenerator_preview_controller', 'Controller Class')) ?></span><div class="fw-semibold" data-detail-controller-class>-</div></div>
                     <div class="col-md-6"><span class="tg-preview-label d-block"><?= h(t('pageTemplateGenerator_field_access_mode', 'Access Mode')) ?></span><div class="fw-semibold" data-detail-access-mode>-</div></div>
-                    <div class="col-md-6"><span class="tg-preview-label d-block"><?= h(t('pageTemplateGenerator_col_status', 'Status')) ?></span><div class="fw-semibold" data-detail-status>-</div></div>
+                    <div class="col-md-6"><span class="tg-preview-label d-block"><?= h(t('pageTemplateGenerator_detail_created_by', 'Generated by')) ?></span><div class="fw-semibold" data-detail-update-by>-</div></div>
                     <div class="col-md-6"><span class="tg-preview-label d-block"><?= h(t('pageTemplateGenerator_col_last_updated', 'Last Updated')) ?></span><div class="fw-semibold" data-detail-updated-at>-</div></div>
-                    <div class="col-md-6"><span class="tg-preview-label d-block"><?= h(t('pageTemplateGenerator_preview_page_file', 'Page File')) ?></span><div class="small text-break" data-detail-page-path>-</div></div>
-                    <div class="col-md-6"><span class="tg-preview-label d-block"><?= h(t('pageTemplateGenerator_preview_controller_file', 'Controller File')) ?></span><div class="small text-break" data-detail-controller-path>-</div></div>
-                    <div class="col-12"><span class="tg-preview-label d-block"><?= h(t('pageTemplateGenerator_preview_css_file', 'CSS File')) ?></span><div class="small text-break" data-detail-css-path>-</div></div>
+                    <div class="col-12"><span class="tg-preview-label d-block"><?= h(t('pageTemplateGenerator_detail_outputs', 'Output files')) ?></span><div class="tg-output-list"><div><i class="ri-pages-line"></i><code data-detail-page-path>-</code><button type="button" data-copy-detail="page_path" aria-label="<?= h(t('pageTemplateGenerator_btn_copy', 'Copy path')) ?>"><i class="ri-file-copy-line"></i></button></div><div><i class="ri-code-s-slash-line"></i><code data-detail-controller-path>-</code><button type="button" data-copy-detail="controller_path" aria-label="<?= h(t('pageTemplateGenerator_btn_copy', 'Copy path')) ?>"><i class="ri-file-copy-line"></i></button></div><div><i class="ri-palette-line"></i><code data-detail-css-path>-</code><button type="button" data-copy-detail="css_path" aria-label="<?= h(t('pageTemplateGenerator_btn_copy', 'Copy path')) ?>"><i class="ri-file-copy-line"></i></button></div></div></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -488,6 +516,8 @@ window.TemplateGeneratorPageData = <?= json_encode([
         FileGenerationService::ACCESS_MODE_GROUP_MENU => t('pageTemplateGenerator_access_mode_group_menu_based', 'Group Menu Based'),
         FileGenerationService::ACCESS_MODE_SUPER_ADMIN_ONLY => t('pageTemplateGenerator_access_mode_super_admin_only', 'Super Admin Only'),
     ],
+    'copySuccess' => t('pageTemplateGenerator_copy_success', 'Path copied'),
+    'copyFailed' => t('pageTemplateGenerator_copy_failed', 'Unable to copy path'),
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 </script>
 <script src="<?= h(base_url('assets/js/pages/template-generator.js')) ?>?v=<?= h($version) ?>"></script>

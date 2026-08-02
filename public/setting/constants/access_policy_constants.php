@@ -121,6 +121,7 @@ if (!defined('ACCESS_POLICY_SUPER_ADMIN_ONLY_AJAX')) {
  */
 if (!defined('ACCESS_POLICY_CUSTOM_GUARD_AJAX')) {
     define('ACCESS_POLICY_CUSTOM_GUARD_AJAX', [
+        'ajax/manual-delete.php',
         'ajax/manual-sync-groups.php',
         'ajax/manual-upload.php',
         'ajax/manual-view.php',

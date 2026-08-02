@@ -46,10 +46,17 @@ final class SystemTemplateCreationService
 
         try {
             $filesResult = $this->fileGenerationService->generateFilesOnly($normalized['template_key'], $generationInput);
+            $startedTransaction = !$this->pdoMysql->inTransaction();
+            if ($startedTransaction) {
+                $this->pdoMysql->beginTransaction();
+            }
             $templateId = $this->insertRecord(
                 $this->buildDbPayload($normalized, $preview, $filesResult, $context)
             );
             $langResult = $this->fileGenerationService->appendLanguageEntriesForTemplate($normalized['template_key'], $generationInput);
+            if ($startedTransaction && $this->pdoMysql->inTransaction()) {
+                $this->pdoMysql->commit();
+            }
 
             return [
                 'template_id' => $templateId,
@@ -66,11 +73,15 @@ final class SystemTemplateCreationService
                 ],
             ];
         } catch (Throwable $e) {
-            if ($langResult !== null) {
-                $this->fileGenerationService->rollbackLanguageBlocks((string)($langResult['page_key_prefix'] ?? ''));
+            if (isset($startedTransaction) && $startedTransaction && $this->pdoMysql->inTransaction()) {
+                $this->pdoMysql->rollBack();
             }
 
-            if ($templateId !== null) {
+            if ($filesResult !== null) {
+                $this->fileGenerationService->rollbackLanguageBlocks((string)($filesResult['page_key_prefix'] ?? ''));
+            }
+
+            if ($templateId !== null && (!isset($startedTransaction) || !$startedTransaction)) {
                 $this->systemTemplateModel->deleteRecord((int)$templateId);
             }
 
@@ -101,6 +112,17 @@ final class SystemTemplateCreationService
             if ($normalized[$key] === '') {
                 throw new InvalidArgumentException('Missing required template creation fields.');
             }
+        }
+
+        $limits = ['template_name' => 120, 'page_name' => 80, 'page_title_ms' => 160, 'page_title_en' => 160, 'page_icon' => 80];
+        foreach ($limits as $key => $limit) {
+            if (mb_strlen($normalized[$key]) > $limit) {
+                throw new InvalidArgumentException('Template field exceeds the permitted length.');
+            }
+        }
+
+        if (!preg_match('/^ri-[a-z0-9-]+$/', $normalized['page_icon'])) {
+            throw new InvalidArgumentException('Invalid page icon.');
         }
 
         $normalized['access_mode'] = trim((string)($input['access_mode'] ?? FileGenerationService::ACCESS_MODE_GROUP_MENU));

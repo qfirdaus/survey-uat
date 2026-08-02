@@ -14,6 +14,12 @@ require_login();
 require_once __DIR__ . '/_helpers.php';
 require_once __DIR__ . '/../classes/Database.php';
 
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['error' => true, 'message' => (string)__('userGroup_method_not_allowed')], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 function menuSubgroupAuditActorLabel(): ?string
 {
     $name = $_SESSION['user']['f_nama'] ?? $_SESSION['f_nama'] ?? null;
@@ -200,5 +206,6 @@ try {
         $pdo->rollBack();
     }
     http_response_code(400);
-    echo json_encode(['error' => true, 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    error_log('[menu-subgroup-save] ' . $e->getMessage());
+    echo json_encode(['error' => true, 'message' => (string)__('userGroup_err_server')], JSON_UNESCAPED_UNICODE);
 }

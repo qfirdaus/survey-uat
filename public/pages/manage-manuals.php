@@ -22,18 +22,16 @@ if (!function_exists('h')) {
 }
 
 // Check if user is allowed to manage manuals
-$activeGroupId = (int)($_SESSION['group_active_id'] ?? 0);
-$userLevel = (int)($_SESSION['user_level'] ?? 0);
-
 require_once __DIR__ . '/../classes/Database.php';
 $db = Database::getInstance()->getConnection();
-$stmt = $db->prepare("SELECT f_groupKod FROM tbl_m_group WHERE f_groupID = ?");
-$stmt->execute([$activeGroupId]);
-$roleKod = $stmt->fetchColumn();
 
 // Only allow super admins and admins to manage the manuals
-if (!manual_is_admin_role((string)$roleKod)) {
-    die(htmlspecialchars((string)__('manual_unauthorized_access')));
+if (!manual_can_manage($db)) {
+    if (function_exists('prestasi_render_page_forbidden')) {
+        prestasi_render_page_forbidden((string)__('manual_unauthorized_access'));
+    }
+    http_response_code(403);
+    exit(h((string)__('manual_unauthorized_access')));
 }
 
 require_once __DIR__ . '/../controllers/ManualController.php';
@@ -78,9 +76,21 @@ if ($message !== '') {
 }
 
 $manualsData = $controller->getAllManuals();
+$manualTotal = count($manualsData);
+$manualAvailable = 0;
+foreach ($manualsData as &$manualRow) {
+    $manualRow['_has_manual'] = !empty($manualRow['f_file_path'])
+        && $controller->manualFileExists((string)$manualRow['f_file_path']);
+    if ($manualRow['_has_manual']) {
+        $manualAvailable++;
+    }
+}
+unset($manualRow);
+$manualMissing = max(0, $manualTotal - $manualAvailable);
+$manualCoverage = $manualTotal > 0 ? (int)round(($manualAvailable / $manualTotal) * 100) : 0;
 
 $lang = (string)($_SESSION['lang'] ?? 'ms');
-$version = date('ymdHis');
+$version = (string)($_ENV['APP_ASSET_VER'] ?? '1');
 ?>
 <!DOCTYPE html>
 <html lang="<?= h($lang) ?>" data-bs-theme="<?= h($_SESSION['theme.layout'] ?? 'light') ?>">
@@ -629,15 +639,18 @@ $version = date('ymdHis');
             color: #e2e8f0 !important;
         }
     </style>
+    <link href="<?= h(base_url('assets/css/pages/manage-manuals.css')) ?>?v=<?= h($version) ?>" rel="stylesheet">
 </head>
-<body>
+<body data-topbar-color="<?= h($_SESSION['theme.topbar'] ?? 'light') ?>"
+      data-menu-color="<?= h($_SESSION['theme.menu'] ?? 'light') ?>"
+      data-layout="vertical" data-sidebar-size="default" class="loading">
     <div class="wrapper">
         <?php include __DIR__ . '/../includes/topbar.php'; ?>
         <?php include __DIR__ . '/../includes/sidebar.php'; ?>
         
         <div class="content-page">
             <div class="content">
-                <div class="container-fluid">
+                <div class="container-fluid manage-manuals-page">
 
                     <div class="row mb-3">
                         <div class="col-12">
@@ -657,10 +670,31 @@ $version = date('ymdHis');
                         </div>
                     </div>
                     
+                    <section class="manual-hero">
+                        <div>
+                            <span class="manual-eyebrow"><i class="ri-shield-check-line"></i> <?= h(__('manual_hero_eyebrow')) ?></span>
+                            <h1><?= h(__('manual_hero_title')) ?></h1>
+                            <p><?= h(__('manual_hero_text')) ?></p>
+                        </div>
+                        <div class="manual-hero__notice"><i class="ri-file-shield-2-line"></i><div><strong><?= h(__('manual_secure_title')) ?></strong><span><?= h(sprintf((string)__('manual_secure_text'), $manualMaxMb)) ?></span></div></div>
+                    </section>
+
+                    <section class="manual-stats" aria-label="<?= h(__('manual_summary_label')) ?>">
+                        <?php foreach ([
+                            ['ri-team-line', __('manual_kpi_groups'), $manualTotal, 'primary', 'manualKpiTotal'],
+                            ['ri-file-check-line', __('manual_kpi_available'), $manualAvailable, 'success', 'manualKpiAvailable'],
+                            ['ri-file-warning-line', __('manual_kpi_missing'), $manualMissing, 'warning', 'manualKpiMissing'],
+                            ['ri-pie-chart-2-line', __('manual_kpi_coverage'), $manualCoverage . '%', 'info', 'manualKpiCoverage'],
+                        ] as $stat): ?>
+                            <article class="manual-stat manual-stat--<?= h($stat[3]) ?>"><span class="manual-stat__icon"><i class="<?= h($stat[0]) ?>"></i></span><div><span><?= h($stat[1]) ?></span><strong id="<?= h($stat[4]) ?>"><?= h((string)$stat[2]) ?></strong></div></article>
+                        <?php endforeach; ?>
+                    </section>
+
                     <div class="row">
                         <div class="col-12">
-                            <div class="card">
+                            <div class="card manual-list-card">
                                 <div class="card-body">
+                                    <div class="manual-list-heading"><div><span class="manual-eyebrow"><?= h(__('manual_list_eyebrow')) ?></span><h2><?= h(__('manual_list_title')) ?></h2><p><?= h(__('manual_list_text')) ?></p></div><div class="manual-list-legend"><span><i class="ri-checkbox-circle-fill"></i><?= h(__('manual_status_saved')) ?></span><span><i class="ri-time-line"></i><?= h(__('manual_status_not_uploaded')) ?></span></div></div>
                                     <div class="table-responsive dt-standard">
                                     <table class="table table-bordered align-middle" id="userDT">
                                     <thead>
@@ -677,7 +711,7 @@ $version = date('ymdHis');
                                             <tr><td colspan="5" class="text-center text-muted"><?= h(__('manual_no_groups_found')) ?></td></tr>
                                         <?php else: ?>
                                             <?php foreach ($manualsData as $i => $row): ?>
-                                                <?php $hasManual = !empty($row['f_file_path']) && file_exists(__DIR__ . '/../' . $row['f_file_path']); ?>
+                                                <?php $hasManual = !empty($row['_has_manual']); ?>
                                                 <tr data-group-id="<?= (int)$row['f_groupID'] ?>">
                                                     <td class="col-bil"></td>
                                                     <td class="col-role">
@@ -709,7 +743,7 @@ $version = date('ymdHis');
                                                             <i class="ri-upload-2-line"></i>
                                                         </button>
                                                         <?php if ($hasManual): ?>
-                                                            <a href="<?= h(base_url('ajax/manual-view.php?group_id=' . (int)$row['f_groupID'])) ?>" target="_blank" class="btn btn-outline-secondary btn-sm icon-btn" title="<?= h(__('manual_action_view')) ?>">
+                                                            <a href="<?= h(base_url('ajax/manual-view.php?group_id=' . (int)$row['f_groupID'])) ?>" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm icon-btn" title="<?= h(__('manual_action_view')) ?>">
                                                                 <i class="ri-eye-line"></i>
                                                             </a>
                                                             <button class="btn btn-outline-danger btn-sm icon-btn btn-delete" 
@@ -765,6 +799,7 @@ $version = date('ymdHis');
                             <div class="manual-upload-dropzone">
                                 <label class="form-label"><?= h(sprintf((string)__('manual_upload_field_label'), $manualMaxMb)) ?></label>
                                 <input type="file" name="manual_file" id="uploadManualFile" class="form-control" accept="application/pdf" required>
+                                <div class="manual-file-preview d-none" id="manualFilePreview" aria-live="polite"><i class="ri-file-pdf-2-line"></i><div><strong id="manualFileName"></strong><span id="manualFileSize"></span></div><i class="ri-checkbox-circle-fill"></i></div>
                                 <div class="manual-upload-help"><?= h(__('manual_upload_help_text')) ?></div>
                                 <div class="manual-upload-replace" id="uploadReplaceNotice"><?= h(__('manual_upload_replace_notice')) ?></div>
                             </div>
@@ -801,6 +836,10 @@ $version = date('ymdHis');
             const uploadSubmitBtn = document.getElementById('uploadSubmitBtn');
             const uploadSubmitLabel = uploadSubmitBtn?.querySelector('.submit-label');
             const uploadReplaceNotice = document.getElementById('uploadReplaceNotice');
+            const filePreview = document.getElementById('manualFilePreview');
+            const filePreviewName = document.getElementById('manualFileName');
+            const filePreviewSize = document.getElementById('manualFileSize');
+            let uploadWasReplacement = false;
 
             const T = {
                 uploadInvalidType: <?= json_encode(__('manual_upload_pdf_only'), JSON_UNESCAPED_UNICODE) ?>,
@@ -835,10 +874,12 @@ $version = date('ymdHis');
                     const id = this.getAttribute('data-id');
                     const name = this.getAttribute('data-name');
                     const hasManual = this.getAttribute('data-has-manual') === '1';
+                    uploadWasReplacement = hasManual;
 
                     uploadGroupId.value = id;
                     uploadGroupName.textContent = name;
                     uploadForm.reset();
+                    filePreview.classList.add('d-none');
                     uploadReplaceNotice.classList.toggle('is-visible', hasManual);
                     setUploadBusy(false);
                     uploadModal.show();
@@ -865,41 +906,97 @@ $version = date('ymdHis');
                                 confirmButton: 'swal2-manual-confirm',
                                 cancelButton: 'swal2-manual-cancel'
                             }
-                        }).then((result) => {
+                        }).then(async (result) => {
                             if (result.isConfirmed) {
-                                document.getElementById('deleteGroupId').value = id;
-                                document.getElementById('deleteForm').submit();
+                                await deleteManual(id, this);
                             }
                         });
-                    } else {
-                        document.getElementById('deleteGroupId').value = id;
-                        document.getElementById('deleteForm').submit();
+                    } else if (window.confirm((<?= json_encode(__('manual_delete_confirm_text'), JSON_UNESCAPED_UNICODE) ?>).replace('{group}', name))) {
+                        deleteManual(id, this);
                     }
                 });
             }
 
+            function escapeHtml(value) {
+                return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+                })[char]);
+            }
+
+            function updateCoverage(delta) {
+                const totalEl = document.getElementById('manualKpiTotal');
+                const availableEl = document.getElementById('manualKpiAvailable');
+                const missingEl = document.getElementById('manualKpiMissing');
+                const coverageEl = document.getElementById('manualKpiCoverage');
+                const total = Number(totalEl?.textContent || 0);
+                const available = Math.max(0, Math.min(total, Number(availableEl?.textContent || 0) + delta));
+                if (availableEl) availableEl.textContent = String(available);
+                if (missingEl) missingEl.textContent = String(Math.max(0, total - available));
+                if (coverageEl) coverageEl.textContent = `${total > 0 ? Math.round((available / total) * 100) : 0}%`;
+            }
+
             function buildActionsHtml(data) {
-                const safeName = (data.groupName || '').replace(/"/g, '&quot;');
+                const safeName = escapeHtml(data.groupName || '');
                 return `
                     <div class="manual-actions">
                         <button class="btn btn-outline-primary btn-sm icon-btn btn-upload"
                             data-id="${data.groupId}"
                             data-name="${safeName}"
                             data-has-manual="1"
-                            title="${T.actionUpload}">
+                            title="${escapeHtml(T.actionUpload)}">
                             <i class="ri-upload-2-line"></i>
                         </button>
-                        <a href="${data.fileUrl}" target="_blank" class="btn btn-outline-secondary btn-sm icon-btn" title="${T.actionView}">
+                        <a href="${escapeHtml(data.fileUrl)}" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm icon-btn" title="${escapeHtml(T.actionView)}">
                             <i class="ri-eye-line"></i>
                         </a>
                         <button class="btn btn-outline-danger btn-sm icon-btn btn-delete"
                             data-id="${data.groupId}"
                             data-name="${safeName}"
-                            title="${T.actionDelete}">
+                            title="${escapeHtml(T.actionDelete)}">
                             <i class="ri-delete-bin-line"></i>
                         </button>
                     </div>
                 `;
+            }
+
+            async function deleteManual(groupId, button) {
+                if (button) button.disabled = true;
+                try {
+                    const response = await fetch('<?= h(base_url('ajax/manual-delete.php')) ?>', {
+                        method: 'POST',
+                        noLoader: true,
+                        credentials: 'same-origin',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': csrfToken,
+                            'X-No-Loader': '1'
+                        },
+                        body: JSON.stringify({ group_id: Number(groupId) })
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result || result.error) {
+                        throw new Error((result && result.message) || T.uploadNetworkError);
+                    }
+                    const row = document.querySelector(`tr[data-group-id="${Number(groupId)}"]`);
+                    if (row) {
+                        const name = row.querySelector('.col-role .fw-semibold')?.textContent || '';
+                        row.querySelector('.manual-status-cell').innerHTML = `<span class="badge bg-secondary">${escapeHtml(<?= json_encode(__('manual_status_not_uploaded'), JSON_UNESCAPED_UNICODE) ?>)}</span>`;
+                        row.querySelector('.manual-updated-cell').innerHTML = `<span class="manual-updated-badge">${escapeHtml(T.none)}</span>`;
+                        const actionsCell = row.querySelector('.manual-actions-cell');
+                        actionsCell.innerHTML = `<div class="manual-actions"><button class="btn btn-outline-primary btn-sm icon-btn btn-upload" data-id="${Number(groupId)}" data-name="${escapeHtml(name)}" data-has-manual="0" title="${escapeHtml(T.actionUpload)}"><i class="ri-upload-2-line"></i></button></div>`;
+                        const uploadButton = actionsCell.querySelector('.btn-upload');
+                        if (uploadButton) bindUploadButton(uploadButton);
+                        if (window.jQuery && jQuery.fn && jQuery.fn.DataTable && jQuery.fn.dataTable.isDataTable('#userDT')) {
+                            jQuery('#userDT').DataTable().row(row).invalidate('dom').draw(false);
+                        }
+                    }
+                    updateCoverage(-1);
+                    if (window.Swal) await Swal.fire({ icon: 'success', title: <?= json_encode(__('manual_alert_success_title'), JSON_UNESCAPED_UNICODE) ?>, text: result.message || '', confirmButtonText: T.close });
+                } catch (error) {
+                    if (window.Swal) await Swal.fire({ icon: 'error', title: <?= json_encode(__('manual_alert_error_title'), JSON_UNESCAPED_UNICODE) ?>, text: error.message || T.uploadNetworkError, confirmButtonText: T.close });
+                    if (button) button.disabled = false;
+                }
             }
 
             function refreshManualRow(data) {
@@ -1019,7 +1116,8 @@ $version = date('ymdHis');
                         const $topLeft = jQuery('#userDT_wrapper .dt-top-left').addClass('d-flex align-items-center gap-2 flex-nowrap');
                         const $topRight = jQuery('#userDT_wrapper .dt-top-right');
                         $topRight.addClass('align-items-center gap-2 flex-nowrap');
-                        if ($topRight.length && !jQuery('#btnSyncManualGroups').length) {
+                        const manualSyncEnabled = false;
+                        if (manualSyncEnabled && $topRight.length && !jQuery('#btnSyncManualGroups').length) {
                             const $btn = jQuery(
                                 '<button type="button" id="btnSyncManualGroups" class="btn btn-primary sync-groups-btn">' +
                                 '<span class="sync-groups-spinner" aria-hidden="true"></span>' +
@@ -1070,6 +1168,16 @@ $version = date('ymdHis');
 
             document.querySelectorAll('.btn-upload').forEach(bindUploadButton);
             document.querySelectorAll('.btn-delete').forEach(bindDeleteButton);
+
+            uploadFileInput.addEventListener('change', function () {
+                const file = this.files && this.files[0] ? this.files[0] : null;
+                filePreview.classList.toggle('d-none', !file);
+                if (!file) return;
+                filePreviewName.textContent = file.name || '';
+                filePreviewSize.textContent = file.size < 1024 * 1024
+                    ? `${(file.size / 1024).toFixed(1)} KB`
+                    : `${(file.size / (1024 * 1024)).toFixed(2)} MB`;
+            });
 
             uploadForm.addEventListener('submit', async function(event) {
                 event.preventDefault();
@@ -1151,8 +1259,10 @@ $version = date('ymdHis');
                     }
 
                     refreshManualRow(result.data || {});
+                    if (!uploadWasReplacement) updateCoverage(1);
                     uploadModal.hide();
                     uploadForm.reset();
+                    filePreview.classList.add('d-none');
                     uploadReplaceNotice.classList.remove('is-visible');
 
                     if (window.Swal) {

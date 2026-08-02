@@ -11,11 +11,12 @@
 require_once __DIR__ . '/../includes/init.php';
 require_login();
 require_once __DIR__ . '/../setting/constants/manual_constants.php';
-require_once __DIR__ . '/../controllers/ManualController.php';
+require_once __DIR__ . '/_helpers.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
 try {
+    checkRateLimit('manual_sync_groups', 5, 60);
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         http_response_code(405);
         echo json_encode(['error' => true, 'message' => __('manual_method_not_allowed')], JSON_UNESCAPED_UNICODE);
@@ -31,26 +32,17 @@ try {
         exit;
     }
 
-    $activeGroupId = (int)($_SESSION['group_active_id'] ?? 0);
     $db = Database::getInstance()->getConnection();
-    $stmt = $db->prepare("SELECT f_groupKod FROM tbl_m_group WHERE f_groupID = ?");
-    $stmt->execute([$activeGroupId]);
-    $roleKod = $stmt->fetchColumn();
-
-    if (!manual_is_admin_role((string)$roleKod)) {
+    if (!manual_can_manage($db)) {
         http_response_code(403);
         echo json_encode(['error' => true, 'message' => __('manual_action_forbidden')], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
-    $controller = new ManualController();
-    $result = $controller->syncManualGroups();
-
-    echo json_encode([
-        'error' => !($result['success'] ?? false),
-        'message' => (string)($result['message'] ?? '')
-    ], JSON_UNESCAPED_UNICODE);
+    http_response_code(410);
+    echo json_encode(['error' => true, 'message' => __('manual_sync_retired')], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
+    error_log('[manual-sync-groups] ' . $e->getMessage());
     http_response_code(500);
     echo json_encode(['error' => true, 'message' => __('manual_server_sync_error')], JSON_UNESCAPED_UNICODE);
 }

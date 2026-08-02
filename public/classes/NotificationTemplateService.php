@@ -33,6 +33,39 @@ final class NotificationTemplateService
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
+    /** @param array<string,mixed> $options @return array{total:int,filtered:int,items:array<int,array<string,mixed>>} */
+    public function getList(array $options = []): array
+    {
+        $limit = max(5, min(100, (int)($options['limit'] ?? 10)));
+        $offset = max(0, min(100000, (int)($options['offset'] ?? 0)));
+        $rawSearch = trim((string)($options['search'] ?? ''));
+        $search = function_exists('mb_substr') ? mb_substr($rawSearch, 0, 100) : substr($rawSearch, 0, 100);
+        $type = strtolower(trim((string)($options['type'] ?? '')));
+        $priority = strtolower(trim((string)($options['priority'] ?? '')));
+        $status = strtolower(trim((string)($options['status'] ?? 'all')));
+        $where = [];
+        if ($search !== '') $where[] = '(t.f_templateCode LIKE :search_code OR t.f_eventCode LIKE :search_event OR t.f_title_ms LIKE :search_title OR t.f_title_en LIKE :search_title_en)';
+        if (in_array($type, ['event','announcement','reminder','workflow'], true)) $where[] = 't.f_type = :type';
+        if (in_array($priority, ['low','normal','high','urgent'], true)) $where[] = 't.f_priority = :priority';
+        if ($status === 'active') $where[] = 't.f_status = 1';
+        if ($status === 'archived') $where[] = 't.f_status = 0';
+        $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+        $countStmt = $this->pdo->prepare("SELECT COUNT(*) FROM tbl_notification_template t {$whereSql}");
+        $this->bindListFilters($countStmt, $search, $type, $priority); $countStmt->execute();
+        $filtered = (int)$countStmt->fetchColumn();
+        $total = (int)$this->pdo->query('SELECT COUNT(*) FROM tbl_notification_template')->fetchColumn();
+        $stmt = $this->pdo->prepare("SELECT t.*,(SELECT COUNT(DISTINCT n.f_notificationID) FROM tbl_notification n WHERE n.f_templateCode=t.f_templateCode OR n.f_eventCode=t.f_eventCode) AS usage_count FROM tbl_notification_template t {$whereSql} ORDER BY t.f_status DESC,t.f_templateCode ASC LIMIT :limit OFFSET :offset");
+        $this->bindListFilters($stmt, $search, $type, $priority); $stmt->bindValue(':limit',$limit,PDO::PARAM_INT); $stmt->bindValue(':offset',$offset,PDO::PARAM_INT); $stmt->execute();
+        return ['total'=>$total,'filtered'=>$filtered,'items'=>$stmt->fetchAll(PDO::FETCH_ASSOC) ?: []];
+    }
+
+    private function bindListFilters(PDOStatement $stmt, string $search, string $type, string $priority): void
+    {
+        if ($search !== '') { $like='%'.$search.'%'; foreach ([':search_code',':search_event',':search_title',':search_title_en'] as $key) $stmt->bindValue($key,$like); }
+        if (in_array($type,['event','announcement','reminder','workflow'],true)) $stmt->bindValue(':type',$type);
+        if (in_array($priority,['low','normal','high','urgent'],true)) $stmt->bindValue(':priority',$priority);
+    }
+
     public function findById(int $templateId): ?array
     {
         if ($templateId <= 0) {
@@ -58,6 +91,10 @@ final class NotificationTemplateService
     {
         $data = $this->validate($input);
         $templateId = (int)($input['template_id'] ?? $input['f_templateID'] ?? 0);
+        if ($templateId > 0 && !$this->findById($templateId)) {
+            throw new RuntimeException((string)(__('notification_template_not_found') ?: 'Notification template not found.'));
+        }
+        $this->assertUniqueCodes($data['template_code'], $data['event_code'], $templateId);
 
         if ($templateId > 0) {
             $stmt = $this->pdo->prepare("
@@ -257,7 +294,10 @@ final class NotificationTemplateService
         ];
 
         if ($data['template_code'] === '' || $data['event_code'] === '' || $data['title_ms'] === '') {
-            throw new InvalidArgumentException('Template code, event code, and MS title are required.');
+            throw new InvalidArgumentException((string)(__('notification_template_validation_required') ?: 'Template code, event code, and MS title are required.'));
+        }
+        foreach (['body_ms','body_en'] as $field) {
+            if (strlen((string)($data[$field] ?? '')) > 10000) throw new InvalidArgumentException((string)(__('notification_template_validation_body_length') ?: 'Template content must not exceed 10,000 characters.'));
         }
 
         $data['title_ms'] = $this->limit($data['title_ms'], 255);
@@ -313,6 +353,14 @@ final class NotificationTemplateService
             ':status' => $status === 1 ? 1 : 0,
             ':insert_by' => $updateBy,
         ]);
+        if ($stmt->rowCount() === 0 && !$this->findById($templateId)) throw new RuntimeException((string)(__('notification_template_not_found') ?: 'Notification template not found.'));
+    }
+
+    private function assertUniqueCodes(string $templateCode, string $eventCode, int $excludeId): void
+    {
+        $stmt=$this->pdo->prepare('SELECT f_templateID FROM tbl_notification_template WHERE (f_templateCode=:template_code OR f_eventCode=:event_code) AND f_templateID<>:exclude_id LIMIT 1');
+        $stmt->execute([':template_code'=>$templateCode,':event_code'=>$eventCode,':exclude_id'=>$excludeId]);
+        if ($stmt->fetchColumn()) throw new InvalidArgumentException((string)(__('notification_template_validation_unique') ?: 'Template code and event code must be unique.'));
     }
 
     /**
@@ -371,8 +419,10 @@ final class NotificationTemplateService
 
         json_decode($value, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new InvalidArgumentException('Placeholders must be valid JSON.');
+            throw new InvalidArgumentException((string)(__('notification_template_validation_json') ?: 'Placeholders must be valid JSON.'));
         }
+        $decoded=json_decode($value,true);
+        if (!is_array($decoded) || array_is_list($decoded) || count($decoded)>100 || strlen($value)>10000) throw new InvalidArgumentException((string)(__('notification_template_validation_json_object') ?: 'Placeholders must be a JSON object with no more than 100 entries.'));
 
         return $value;
     }

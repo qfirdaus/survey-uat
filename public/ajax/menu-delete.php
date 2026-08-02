@@ -13,6 +13,12 @@ require_login();
 require_once __DIR__ . '/_helpers.php';
 header('Content-Type: application/json; charset=utf-8');
 
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['error' => true, 'message' => (string)__('userGroup_method_not_allowed')], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 try {
     $rawBody = file_get_contents('php://input');
     $body = json_decode($rawBody, true) ?: [];
@@ -157,5 +163,6 @@ try {
 } catch (Throwable $e) {
     if (!empty($db) && $db->inTransaction()) $db->rollBack();
     http_response_code(500);
-    echo json_encode(['error'=>true, 'message'=>(string)__('userGroup_server_error_prefix') . ' ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    error_log('[menu-delete] ' . $e->getMessage());
+    echo json_encode(['error'=>true, 'message'=>(string)__('userGroup_err_server')], JSON_UNESCAPED_UNICODE);
 }

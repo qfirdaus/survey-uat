@@ -231,7 +231,13 @@ function render_meta_button(string $kind, array $data = [], ?string $label = nul
 $controller = new AuditCenterController();
 if (!$controller->isSuperAdmin()) {
     http_response_code(403);
-    echo json_encode(['ok' => false, 'message' => 'Forbidden']);
+    echo json_encode(['ok' => false, 'message' => ac('access_denied_text', 'Audit Center is available to Super Admin only.')], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if (function_exists('checkRateLimit') && !checkRateLimit('audit_center_panel', 120, 60)) {
+    http_response_code(429);
+    echo json_encode(['ok' => false, 'message' => ac('panel_rate_limited', 'Terlalu banyak permintaan Audit Center.')], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -241,7 +247,7 @@ if (!in_array($tab, $allowedTabs, true)) {
     $tab = 'events';
 }
 
-$search = trim((string)($_GET['q'] ?? ''));
+$search = mb_substr(trim((string)($_GET['q'] ?? '')), 0, 120);
 $limit = (int)($_GET['limit'] ?? 10);
 $filters = $controller->normalizeFilters($_GET);
 $advancedOpen = (string)($_GET['advanced_open'] ?? '') === '1';

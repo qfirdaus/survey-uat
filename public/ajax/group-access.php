@@ -219,6 +219,7 @@ try {
   echo json_encode($result, JSON_UNESCAPED_UNICODE);
 
 } catch (Throwable $e) {
+  error_log('[group-access] ' . $e->getMessage());
   http_response_code(500);
-  echo json_encode(['error' => true, 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+  echo json_encode(['error' => true, 'message' => (string)__('userGroup_err_server')], JSON_UNESCAPED_UNICODE);
 }

@@ -2103,6 +2103,253 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') ==
       color: #e2e8f0 !important;
     }
 
+    /* Professional group-management workspace */
+    .user-group-page {
+      --ug-accent: var(--ct-accent, var(--ct-primary));
+      --ug-accent-start: var(--ct-primary-start, var(--ct-primary));
+      --ug-accent-end: var(--ct-primary-end, var(--ct-primary));
+      --ug-accent-soft: var(--ct-accent-soft, rgba(var(--ct-primary-rgb), .08));
+      --ug-border: rgba(148, 163, 184, .17);
+      --ug-surface: rgba(255, 255, 255, .97);
+      --ug-surface-soft: rgba(248, 250, 252, .9);
+      --ug-ink: #172033;
+      --ug-muted: #64748b;
+    }
+    .user-group-page .page-title-box {
+      min-height: 82px;
+      padding: 1rem 1.15rem;
+      border: 1px solid var(--ct-page-strip-border, var(--ug-border));
+      border-radius: 12px;
+      background: var(--ct-page-strip-bg, var(--ug-surface));
+      box-shadow: 0 12px 28px rgba(15, 23, 42, .045);
+    }
+    .user-group-page .page-title-main { min-width: 0; }
+    .user-group-page .page-title {
+      display: flex;
+      align-items: center;
+      gap: .55rem;
+      margin: 0;
+      color: var(--ug-ink);
+      font-size: 1.08rem;
+      font-weight: 750;
+    }
+    .user-group-page .page-title > i {
+      display: inline-flex;
+      width: 36px;
+      height: 36px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 9px;
+      color: var(--ug-accent-end);
+      background: var(--ug-accent-soft);
+    }
+    .user-group-page .page-title-subtitle {
+      margin: .4rem 0 0 2.95rem;
+      color: var(--ug-muted);
+      font-size: .82rem;
+      line-height: 1.5;
+    }
+    .user-group-page .group-workspace {
+      overflow: hidden;
+      border: 1px solid var(--ug-border);
+      border-radius: 14px;
+      background: var(--ug-surface);
+      box-shadow: 0 18px 44px rgba(15, 23, 42, .06);
+    }
+    .user-group-page .group-workspace-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: .85rem 1rem;
+      border-bottom: 1px solid var(--ug-border);
+      background: linear-gradient(180deg, var(--ug-surface), var(--ug-surface-soft));
+    }
+    .user-group-page .group-workspace-intro {
+      margin: 0;
+      color: var(--ug-muted);
+      font-size: .84rem;
+    }
+    .user-group-page .group-primary-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .45rem;
+    }
+    .user-group-page .group-primary-actions .btn {
+      min-height: 38px;
+      padding: .5rem .78rem;
+      border: 1px solid var(--ug-border);
+      border-radius: 8px;
+      color: var(--ug-ink);
+      background: var(--ug-surface);
+      font-weight: 700;
+      box-shadow: 0 7px 16px rgba(15, 23, 42, .05);
+    }
+    .user-group-page .group-primary-actions .btn:hover {
+      color: var(--ug-accent-end);
+      border-color: rgba(var(--ct-primary-rgb), .25);
+      transform: translateY(-1px);
+    }
+    .user-group-page .group-primary-actions .btn-primary {
+      color: #fff;
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--ug-accent-start), var(--ug-accent-end));
+    }
+    .user-group-page .group-workspace-body { padding: 1rem; }
+    .user-group-page .group-workspace-body .dt-standard {
+      overflow: hidden;
+      border: 1px solid var(--ug-border);
+      border-radius: 10px;
+    }
+    .user-group-page #groupTable { margin-bottom: 0 !important; border: 0; }
+    .user-group-page #groupTable .icon-btn {
+      display: inline-flex;
+      width: 34px;
+      height: 34px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+    }
+    .user-group-page #groupTable .group-table-category-chip { border-radius: 7px; }
+    .user-group-page #groupTable .group-color-bar {
+      width: 9px;
+      min-width: 9px;
+      height: 34px;
+      border-radius: 5px;
+    }
+    /* One visual standard for every group-management modal. */
+    .user-group-page .modal-content {
+      overflow: hidden;
+      border: 1px solid var(--ug-border) !important;
+      border-radius: 13px !important;
+      background: var(--ug-surface);
+      box-shadow: 0 28px 72px rgba(15, 23, 42, .24) !important;
+    }
+    .user-group-page .modal-content::before,
+    .user-group-page .modal-content::after { display: none !important; }
+    .user-group-page .modal-header,
+    .user-group-page .modal-header.bg-body-tertiary,
+    .user-group-page .modal-themed .modal-header,
+    .user-group-page .modal-child-accent .modal-header,
+    .user-group-page .modal-add-accent .modal-header {
+      min-height: 60px;
+      padding: .9rem 1.15rem;
+      border: 0 !important;
+      color: #fff !important;
+      background: linear-gradient(135deg, var(--ug-accent-start), var(--ug-accent-end)) !important;
+    }
+    .user-group-page .modal-header .modal-title {
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+      margin: 0;
+      color: #fff !important;
+      font-size: 1rem;
+      font-weight: 750;
+    }
+    .user-group-page .modal-header .modal-title i {
+      display: inline-flex;
+      width: 29px;
+      height: 29px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .14);
+    }
+    .user-group-page .modal-header .btn-close {
+      filter: brightness(0) invert(1);
+      opacity: .9;
+    }
+    .user-group-page .modal-subtitle {
+      min-height: 42px;
+      padding: .7rem 1.15rem;
+      border-bottom: 1px solid var(--ug-border);
+      color: var(--ug-muted);
+      background: var(--ug-surface-soft);
+      font-size: .82rem;
+    }
+    .user-group-page .modal-body {
+      padding: 1.15rem;
+      background: var(--ug-surface);
+    }
+    .user-group-page .modal-footer,
+    .user-group-page .modal-child-accent .modal-footer,
+    .user-group-page .modal-add-accent .modal-footer {
+      gap: .45rem;
+      min-height: 64px;
+      padding: .8rem 1.15rem;
+      border-top: 1px solid var(--ug-border) !important;
+      background: var(--ug-surface-soft) !important;
+    }
+    .user-group-page .modal-footer .btn {
+      min-height: 38px;
+      padding: .48rem .82rem;
+      border-radius: 8px !important;
+      font-weight: 700;
+    }
+    .user-group-page .modal-footer .btn-primary,
+    .user-group-page .modal-footer .btn-success {
+      border-color: transparent !important;
+      color: #fff !important;
+      background: linear-gradient(135deg, var(--ug-accent-start), var(--ug-accent-end)) !important;
+      box-shadow: 0 8px 18px rgba(var(--ct-primary-rgb), .17);
+    }
+    .user-group-page .modal-body .form-control,
+    .user-group-page .modal-body .form-select,
+    .user-group-page .modal-body .input-group-text {
+      min-height: 40px;
+      border-color: var(--ug-border);
+      border-radius: 8px;
+      box-shadow: none;
+    }
+    .user-group-page .modal-body .form-control:focus,
+    .user-group-page .modal-body .form-select:focus {
+      border-color: rgba(var(--ct-primary-rgb), .5);
+      box-shadow: 0 0 0 3px rgba(var(--ct-primary-rgb), .12);
+    }
+    .user-group-page .modal-body .form-label {
+      margin-bottom: .45rem;
+      color: var(--ug-ink);
+      font-size: .8rem;
+      font-weight: 750;
+    }
+    .user-group-page .group-create-section-title,
+    .user-group-page .subgroup-section-title,
+    .user-group-page .module-create-panel-title {
+      color: var(--ug-ink);
+      font-weight: 750;
+    }
+    .user-group-page .group-create-preview,
+    .user-group-page .subgroup-form-section,
+    .user-group-page .module-create-panel,
+    .user-group-page .subgroup-table-card {
+      border: 1px solid var(--ug-border) !important;
+      border-radius: 10px !important;
+      background: var(--ug-surface-soft) !important;
+      box-shadow: none !important;
+    }
+    .user-group-page .modal-loading {
+      border: 1px dashed var(--ug-border);
+      border-radius: 10px;
+      background: var(--ug-surface-soft);
+    }
+    [data-bs-theme="dark"] .user-group-page {
+      --ug-surface: rgba(20, 27, 39, .96);
+      --ug-surface-soft: rgba(30, 41, 59, .72);
+      --ug-border: rgba(148, 163, 184, .16);
+      --ug-ink: #f1f5f9;
+      --ug-muted: #9aa9bc;
+    }
+    @media (max-width: 767.98px) {
+      .user-group-page .page-title-box,
+      .user-group-page .group-workspace-toolbar { align-items: flex-start !important; }
+      .user-group-page .page-title-subtitle { margin-left: 0; }
+      .user-group-page .group-workspace-toolbar { flex-direction: column; }
+      .user-group-page .group-primary-actions { width: 100%; }
+      .user-group-page .group-primary-actions .btn { flex: 1 1 auto; }
+      .user-group-page .group-workspace-body { padding: .7rem; }
+    }
+
 
   </style>
 </head>
@@ -2112,7 +2359,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') ==
   data-menu-color="<?= h($_SESSION['theme.menu'] ?? 'light') ?>"
   data-layout="vertical"
   data-sidebar-size="default"
-  class="loading">
+  class="loading user-group-page">
 
 <div class="wrapper">
   <?php include __DIR__ . '/../includes/topbar.php'; ?>
@@ -2126,7 +2373,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') ==
         <div class="row mb-3">
           <div class="col-12">
             <div class="page-title-box d-flex justify-content-between align-items-center flex-wrap">
-              <h4 class="page-title"><i class="ri-team-line me-1"></i> <?= __('userGroup_page_title') ?></h4>
+              <div class="page-title-main">
+                <h4 class="page-title"><i class="ri-team-line"></i> <?= h(__('userGroup_page_title')) ?></h4>
+                <p class="page-title-subtitle"><?= h(__('userGroup_intro')) ?></p>
+              </div>
               <div class="page-title-right">
                   <ol class="breadcrumb m-0">
                   <li class="breadcrumb-item">
@@ -2142,11 +2392,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') ==
         </div>
 
         <!-- Jadual Kumpulan -->
-        <div class="row">
-          <div class="col-12">
-            <div class="card">
-              <div class="card-body">
-                <p class="text-muted mb-3"><?= __('userGroup_intro') ?></p>
+        <section class="group-workspace">
+          <div class="group-workspace-toolbar">
+            <p class="group-workspace-intro"><?= h(__('userGroup_intro')) ?></p>
+            <?php if ($canManageGroups): ?>
+              <div class="group-primary-actions" aria-label="<?= h(__('userGroup_col_actions')) ?>">
+                <button type="button" id="btnAddMenuPage" class="btn btn-light">
+                  <i class="ri-menu-add-line me-1"></i><?= h(__('userGroup_btn_menu_label')) ?>
+                </button>
+                <button type="button" id="btnAddModule" class="btn btn-light">
+                  <i class="ri-stack-line me-1"></i><?= h(__('userGroup_btn_module_label')) ?>
+                </button>
+                <button type="button" id="btnAddGroup" class="btn btn-primary">
+                  <i class="ri-group-line me-1"></i><?= h(__('userGroup_btn_group_label')) ?>
+                </button>
+              </div>
+            <?php endif; ?>
+          </div>
+          <div class="group-workspace-body">
 
                 <div class="table-responsive dt-standard">
                   <table class="table table-bordered align-middle" id="groupTable">
@@ -2282,17 +2545,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') ==
                         <?php endforeach; ?>
                       <?php else: ?>
                         <tr>
-                          <td colspan="7" class="text-center text-muted"><?= __('userGroup_no_records') ?></td>
+                          <td colspan="8" class="text-center text-muted"><?= h(__('userGroup_no_records')) ?></td>
                         </tr>
                       <?php endif; ?>
                     </tbody>
                   </table>
                 </div>
 
-              </div>
-            </div>
           </div>
-        </div>
+        </section>
 
       </div><!-- /.container-fluid -->
     </div><!-- /.content -->
@@ -2729,7 +2990,7 @@ window.GroupPageRuntime = Object.assign({}, window.GroupPageRuntime || {}, {
                   <div class="col-md-6">
                     <label class="form-label"><?= h(__('userGroup_field_color')) ?></label>
                     <div class="input-group">
-                      <input type="color" class="form-control form-control-color" id="gc_color_picker" value="#50a4c1" title="Pilih warna">
+                      <input type="color" class="form-control form-control-color" id="gc_color_picker" value="#50a4c1" title="<?= h(__('userGroup_color_picker_title')) ?>">
                       <input type="text" class="form-control" id="gc_color" name="color" placeholder="#50a4c1" readonly>
                     </div>
                     <div class="form-text"><?= h(__('userGroup_field_color_help')) ?></div>
@@ -2868,57 +3129,7 @@ window.hasDT = function() {
 
 (function(){
   const canManageGroups = <?= $canManageGroups ? 'true' : 'false' ?>;
-  // =========================================================
-  // 🔧 KONFIG: Lock semua AJAX ke path yang betul sahaja
-  // Tukar ikut deploy path (root → '/ajax/', subfolder → '/e-prestasi/ajax/')
-  // =========================================================
-  //const AJAX_BASE = '/ajax/'; // <-- UBAH jika perlu
-  // Base path projek yang betul di semua environment (dev subfolder / production root)
-  const __RAW_BASE_PATH =
-    document.querySelector('meta[name="base-path"]')?.getAttribute('content') ||
-    // fallback kalau meta tak wujud: buang /pages atau /ajax dari pathname
-    (location.pathname.replace(/\/(pages|ajax)(\/.*)?$/, '') || '');
-
-  const __BASE_PATH = String(__RAW_BASE_PATH || '').replace(/\/+$/, '') === '/'
-    ? ''
-    : String(__RAW_BASE_PATH || '').replace(/\/+$/, '');
-  const AJAX_BASE = (__BASE_PATH || '') + '/ajax/';
-
-
-  const CSRF  = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-  const hasDT = window.hasDT; // Use global function
-  const esc = (s)=> (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   window.GroupModuleOptions = <?= json_encode($menuModalModuleOptions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-
-  // Utility untuk bina URL endpoint di bawah AJAX_BASE
-  function apiUrl(file, params){
-    const u = new URL(AJAX_BASE + file, window.location.origin);
-    if (params && typeof params === 'object'){
-      Object.entries(params).forEach(([k,v])=>u.searchParams.set(k, String(v)));
-    }
-    u.searchParams.set('_', Date.now()); // cache-bust
-    return u.toString();
-  }
-  // ↓↓↓ tambah baris ni supaya boleh guna di console
-  window.apiUrl = apiUrl;
-
-  // Helper: fetch → cuba parse JSON, kalau HTML/teks lain bagi error mesra
-  async function fetchJSONSafe(url, opts){
-    const requestOpts = Object.assign({}, opts || {});
-    requestOpts.headers = Object.assign(
-      {'Accept':'application/json', 'X-Requested-With':'XMLHttpRequest'},
-      (opts && opts.headers) || {}
-    );
-    requestOpts.credentials = requestOpts.credentials || 'same-origin';
-
-    const r = await fetch(url, requestOpts);
-    const txt = await r.text();
-    try { return JSON.parse(txt); }
-    catch(e){
-      const snippet = txt.slice(0, 240).replace(/\s+/g,' ').trim();
-      throw new Error('Server did not return JSON. Preview: ' + snippet);
-    }
-  }
 
   // ===================== I18N ringkas ======================
   const T = {
@@ -2992,6 +3203,7 @@ window.hasDT = function() {
     delete_module_fail: <?= json_encode(__('userGroup_delete_module_fail')) ?>,
     delete_module_success: <?= json_encode(__('userGroup_delete_module_success')) ?>,
     delete_module_network_fail: <?= json_encode(__('userGroup_delete_module_network_fail')) ?>,
+    delete_module_label: <?= json_encode(__('userGroup_module_delete_label')) ?>,
     success_title: <?= json_encode(__('config_js_berjaya')) ?>,
     btn_ok: <?= json_encode(__('config_js_btn_ok')) ?>,
     btn_cancel: <?= json_encode(__('config_js_btn_cancel')) ?>,
@@ -3007,10 +3219,18 @@ window.hasDT = function() {
     dt_paginate_previous: <?= json_encode(__('userGroup_dt_paginate_previous')) ?>,
     modal_group_create_title: <?= json_encode(__('userGroup_modal_group_create_title')) ?>,
     modal_group_edit_title: <?= json_encode(__('userGroup_modal_group_edit_title')) ?>,
+    modal_add_menu_title: <?= json_encode(__('userGroup_modal_add_menu_title')) ?>,
+    modal_edit_menu_title: <?= json_encode(__('userGroup_modal_edit_menu_title')) ?>,
     field_group_preview: <?= json_encode(__('userGroup_field_group_preview')) ?>,
     btn_save: <?= json_encode(__('btn_save')) ?>,
     btn_update: <?= json_encode(__('btn_update')) ?>,
     btn_close: <?= json_encode(__('btn_close')) ?>,
+    done: <?= json_encode(__('userGroup_done')) ?>,
+    error: <?= json_encode(__('userGroup_error')) ?>,
+    group_create_success: <?= json_encode(__('userGroup_group_create_success')) ?>,
+    group_update_success: <?= json_encode(__('userGroup_group_update_success')) ?>,
+    loading_access: <?= json_encode(__('userGroup_loading_access')) ?>,
+    loading_menu: <?= json_encode(__('userGroup_loading_menu')) ?>,
     err_group_code_name_required: <?= json_encode(__('userGroup_err_group_code_name_required')) ?>,
     confirm_title: <?= json_encode(__('userGroup_confirm_title')) ?>,
     confirm_delete_group_text: <?= json_encode(__('userGroup_confirm_delete_group_text')) ?>,
@@ -3026,6 +3246,11 @@ window.hasDT = function() {
     btn_menu_label: <?= json_encode(__('userGroup_btn_menu_label')) ?>,
     btn_module_label: <?= json_encode(__('userGroup_btn_module_label')) ?>,
     btn_group_label: <?= json_encode(__('userGroup_btn_group_label')) ?>,
+    userGroup_col_group_access: <?= json_encode(__('userGroup_col_group_access')) ?>,
+    userGroup_col_module_access: <?= json_encode(__('userGroup_col_module_access')) ?>,
+    userGroup_col_menu_access: <?= json_encode(__('userGroup_col_menu_access')) ?>,
+    userGroup_edit_group: <?= json_encode(__('userGroup_edit_group')) ?>,
+    userGroup_delete_group: <?= json_encode(__('userGroup_delete_group')) ?>,
     label_group: <?= json_encode(__('userGroup_label_group')) ?>,
     col_visibility: <?= json_encode(__('userGroup_col_visibility')) ?>,
     menu_path_info: <?= json_encode(__('userGroup_menu_path_info')) ?>,
@@ -3073,8 +3298,8 @@ window.hasDT = function() {
     group_system_protected: <?= json_encode(__('userGroup_group_system_protected')) ?>,
     group_users_assigned: <?= json_encode(__('userGroup_group_users_assigned')) ?>,
     ok: <?= json_encode(__('userGroup_ok')) ?>,
+    confirm_yes: <?= json_encode(__('userGroup_confirm_yes')) ?>,
     non_json_response: <?= json_encode(__('userGroup_non_json_response')) ?>,
-    btn_ok: <?= json_encode(__('config_js_btn_ok')) ?>,
     menu_save_success_create: <?= json_encode(__('userGroup_menu_save_success_create')) ?>,
     menu_save_success_update: <?= json_encode(__('userGroup_menu_save_success_update')) ?>
   };
@@ -3353,22 +3578,12 @@ window.hasDT = function() {
         if ($topRightContainer.length && $filterBlock.length) {
           $filterBlock.appendTo($topRightContainer);
         }
-        // Add "Tambah Kumpulan" (and page-level Tambah Menu) buttons beside controls
-        const $right = jQuery('#groupTable_wrapper .dt-top-right');
-        if ($right.length && canManageGroups) {
-          // Add "Tambah Menu" (page-level) and "Tambah Kumpulan" buttons
-          // Use full action labels for visible buttons
-          const fullMenuLabel = T.btn_menu_label || 'Menu';
-          const fullModuleLabel = T.btn_module_label || 'Modul';
-          const fullGroupLabel = T.btn_group_label || 'Kumpulan';
-
-          // Visible text shows full labels; also include title/aria-label for accessibility
-          const $btnMenu = jQuery('<button type="button" id="btnAddMenuPage" class="btn btn-sm btn-primary me-2" title="' + GroupUtils.esc(fullMenuLabel) + '" aria-label="' + GroupUtils.esc(fullMenuLabel) + '"><i class="ri-menu-2-line"></i> ' + GroupUtils.esc(fullMenuLabel) + '</button>');
-          const $btnModule = jQuery('<button type="button" id="btnAddModule" class="btn btn-sm btn-primary me-2" title="' + GroupUtils.esc(fullModuleLabel) + '" aria-label="' + GroupUtils.esc(fullModuleLabel) + '"><i class="ri-stack-line"></i> ' + GroupUtils.esc(fullModuleLabel) + '</button>');
-          const $btn = jQuery('<button type="button" id="btnAddGroup" class="btn btn-sm btn-primary" title="' + GroupUtils.esc(fullGroupLabel) + '" aria-label="' + GroupUtils.esc(fullGroupLabel) + '"><i class="ri-group-line"></i> ' + GroupUtils.esc(fullGroupLabel) + '</button>');
-
-          // Append in order: Menu, Modul, Group
-          $right.append($btnMenu).append($btnModule).append($btn);
+        // Butang tindakan kekal dalam toolbar halaman supaya tidak berubah kedudukan
+        // apabila DataTable dimuat semula atau dilukis semula.
+        if (canManageGroups) {
+          const $btnMenu = jQuery('#btnAddMenuPage');
+          const $btnModule = jQuery('#btnAddModule');
+          const $btn = jQuery('#btnAddGroup');
 
           // Page-level Add Menu handler: delegate to MenuAccess.handleAddMenu when available
           $btnMenu.off('click').on('click', function(){
@@ -3385,12 +3600,12 @@ window.hasDT = function() {
                 icon: 'info',
                 title: T.info_title || 'Makluman',
                 text: T.info_select_group_first || 'Sila pilih kumpulan dahulu melalui butang Akses Menu.',
-                confirmButtonText: 'OK'
+                confirmButtonText: T.btn_ok
               }) : Swal.fire({
                 icon: 'info',
                 title: T.info_title || 'Makluman',
                 text: T.info_select_group_first || 'Sila pilih kumpulan dahulu melalui butang Akses Menu.',
-                confirmButtonText: 'OK'
+                confirmButtonText: T.btn_ok
               }));
             } else {
               alert(T.info_select_group_first || 'Sila pilih kumpulan dahulu melalui butang Akses Menu.');
@@ -3550,12 +3765,12 @@ window.hasDT = function() {
             icon: 'info',
             title: undoTitle,
             text: `${undoMsg} ${undoInfo}`.trim(),
-            confirmButtonText: 'OK'
+            confirmButtonText: T.btn_ok
           }) : Swal.fire({
             icon: 'info',
             title: undoTitle,
             text: `${undoMsg} ${undoInfo}`.trim(),
-            confirmButtonText: 'OK'
+            confirmButtonText: T.btn_ok
           }));
         }
       };

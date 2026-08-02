@@ -1755,6 +1755,46 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
         font-size: 0.875rem !important;
         line-height: 1.45 !important;
       }
+      /* Pastikan medan carian Select2 tidak runtuh/tersembunyi dalam modal. */
+      #addUserModal .select2-container--open .select2-dropdown {
+        z-index: 1065;
+        border: 1px solid #dbe4f0 !important;
+        background: #fff !important;
+        overflow: hidden;
+      }
+      #addUserModal .select2-container--open .select2-search--dropdown {
+        display: block !important;
+        padding: 0.65rem !important;
+        background: #f8fafc !important;
+      }
+      #addUserModal .select2-container--open .select2-search--dropdown .select2-search__field {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        width: 100% !important;
+        height: 40px !important;
+        min-height: 40px !important;
+        padding: 0.55rem 0.75rem !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 7px !important;
+        outline: none !important;
+        background: #fff !important;
+        color: #0f172a !important;
+        font-size: 0.875rem !important;
+        line-height: 1.4 !important;
+      }
+      #addUserModal .select2-container--open .select2-search--dropdown .select2-search__field:focus {
+        border-color: #6b8be4 !important;
+        box-shadow: 0 0 0 3px rgba(107, 139, 228, 0.16) !important;
+      }
+      #addUserModal .select2-container--open .select2-results,
+      #addUserModal .select2-container--open .select2-results__options {
+        display: block !important;
+      }
+      #addUserModal .select2-container--open .select2-results__options {
+        max-height: 250px !important;
+        overflow-y: auto !important;
+      }
       #addUserModal .form-select:focus,
       #userGroupModal .form-select:focus,
       .form-select:focus {
@@ -2324,6 +2364,248 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
       border-color: rgba(32, 201, 151, 0.45);
       color: #fff;
     }
+
+    /* User access workspace redesign */
+    .user-list-page{
+      --ul-accent: var(--ct-accent, var(--ct-primary));
+      --ul-accent-start: var(--ct-primary-start, var(--ct-primary));
+      --ul-accent-end: var(--ct-primary-end, var(--ct-primary));
+      --ul-accent-soft: var(--ct-accent-soft, rgba(var(--ct-primary-rgb), .08));
+      --ul-accent-border: var(--ct-accent-border, rgba(var(--ct-primary-rgb), .16));
+      --ul-surface: rgba(255,255,255,.97);
+      --ul-surface-soft: rgba(248,250,252,.9);
+      --ul-border: rgba(148,163,184,.16);
+      --ul-ink: #172033;
+      --ul-muted: #64748b;
+    }
+    .user-list-page .page-title-box{
+      min-height: 82px;
+      padding: 1rem 1.15rem;
+      border: 1px solid var(--ct-page-strip-border, var(--ul-border));
+      border-radius: 12px;
+      background: var(--ct-page-strip-bg, var(--ul-surface));
+      box-shadow: 0 12px 28px rgba(15,23,42,.045);
+    }
+    .user-list-page .page-title-main{
+      min-width: 0;
+    }
+    .user-list-page .page-title{
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      margin: 0;
+      color: var(--ul-ink);
+      font-size: 1.08rem;
+      font-weight: 750;
+    }
+    .user-list-page .page-title > i{
+      display: inline-flex;
+      width: 36px;
+      height: 36px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 9px;
+      color: var(--ul-accent-end);
+      background: var(--ul-accent-soft);
+    }
+    .user-list-page .page-title-subtitle{
+      margin: .4rem 0 0 2.9rem;
+      color: var(--ul-muted);
+      font-size: .82rem;
+      line-height: 1.5;
+    }
+    .user-list-page .user-list-workspace{
+      overflow: hidden;
+      border: 1px solid var(--ul-border);
+      border-radius: 14px;
+      background: var(--ul-surface);
+      box-shadow: 0 18px 44px rgba(15,23,42,.06);
+    }
+    .user-list-page .user-list-tabs-wrap{
+      padding: .7rem .75rem;
+      border-bottom: 1px solid var(--ul-border);
+      background: linear-gradient(180deg, var(--ul-surface), var(--ul-surface-soft));
+    }
+    .user-list-page #userAccessTabs{
+      display: inline-flex;
+      gap: .45rem;
+      width: fit-content;
+      max-width: 100%;
+      margin: 0;
+      padding: .35rem;
+      border: 1px solid var(--ul-border);
+      border-radius: 13px;
+      background: var(--ul-surface-soft);
+    }
+    .user-list-page #userAccessTabs .nav-link{
+      display: inline-flex;
+      min-height: 42px;
+      align-items: center;
+      gap: .25rem;
+      padding: .58rem .9rem;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      color: var(--ul-muted);
+      font-weight: 700;
+      white-space: nowrap;
+      transition: .18s ease;
+    }
+    .user-list-page #userAccessTabs .nav-link i{
+      display: inline-flex;
+      width: 27px;
+      height: 27px;
+      align-items: center;
+      justify-content: center;
+      margin-left: -.3rem;
+      border-radius: 8px;
+      color: var(--ul-accent-end);
+      background: var(--ul-accent-soft);
+    }
+    .user-list-page #userAccessTabs .nav-link:hover{
+      color: var(--ul-accent-end);
+      border-color: var(--ul-accent-border);
+      background: var(--ul-surface);
+      transform: translateY(-1px);
+    }
+    .user-list-page #userAccessTabs .nav-link.active{
+      color: var(--ul-accent-end);
+      border-color: var(--ul-accent-border);
+      background: var(--ul-surface);
+      box-shadow: 0 7px 18px rgba(15,23,42,.07), inset 0 -3px 0 var(--ul-accent-end);
+    }
+    .user-list-page #userAccessTabs .nav-link.active i{
+      color: #fff;
+      background: linear-gradient(135deg, var(--ul-accent-start), var(--ul-accent-end));
+    }
+    .user-list-page #userAccessTabsContent{
+      padding: 1rem;
+    }
+    .user-list-page #userAccessTabsContent .dt-standard{
+      overflow: hidden;
+      border: 1px solid var(--ul-border);
+      border-radius: 10px;
+      box-shadow: none;
+    }
+    .user-list-page .user-access-table{
+      box-shadow: none;
+    }
+    .user-list-page .user-access-table thead th{
+      background: linear-gradient(180deg, var(--ul-accent-soft), var(--ul-surface-soft));
+      color: var(--ul-muted);
+    }
+    .user-list-page #userAccessTabsContent .dataTables_wrapper .dt-top-left,
+    .user-list-page #userAccessTabsContent .dataTables_wrapper .dt-top-right{
+      min-height: 48px;
+      align-items: center;
+    }
+    .user-list-page #userAccessTabsContent .dataTables_wrapper .form-control,
+    .user-list-page #userAccessTabsContent .dataTables_wrapper .form-select,
+    .user-list-page #userAccessTabsContent .dataTables_wrapper .btn{
+      min-height: 38px;
+      border-radius: 8px;
+    }
+    .user-list-page #userAccessTabsContent .dataTables_wrapper .btn-primary,
+    .user-list-page #userAccessTabsContent .dataTables_wrapper .btn-success{
+      border: 0;
+      background: linear-gradient(135deg, var(--ul-accent-start), var(--ul-accent-end));
+      box-shadow: 0 7px 16px rgba(var(--ct-primary-rgb), .15);
+    }
+    .user-list-page .modal-content{
+      border: 1px solid var(--ul-border);
+      border-radius: 13px;
+      box-shadow: 0 28px 72px rgba(15,23,42,.22) !important;
+    }
+    .user-list-page #userGroupModal .modal-header,
+    .user-list-page #roleExtraModal .modal-header,
+    .user-list-page #addUserModal .modal-header{
+      background: linear-gradient(135deg, var(--ul-accent-start), var(--ul-accent-end));
+    }
+    .user-list-page .form-section,
+    .user-list-page .info-card{
+      border-radius: 10px !important;
+      box-shadow: none !important;
+    }
+    .user-list-page #addUserModal .au-modal-tabs{
+      display: inline-flex;
+      flex-wrap: nowrap;
+      gap: .45rem;
+      width: fit-content;
+      max-width: 100%;
+      margin: 0 0 1rem;
+      padding: .35rem;
+      overflow-x: auto;
+      border: 1px solid var(--ul-border);
+      border-radius: 13px;
+      background: var(--ul-surface-soft);
+    }
+    .user-list-page #addUserModal .au-modal-tabs .nav-link{
+      display: inline-flex;
+      min-height: 42px;
+      align-items: center;
+      gap: .25rem;
+      margin: 0;
+      padding: .58rem .9rem;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      color: var(--ul-muted);
+      background: transparent;
+      box-shadow: none;
+      font-weight: 700;
+      white-space: nowrap;
+      transition: .18s ease;
+    }
+    .user-list-page #addUserModal .au-modal-tabs .nav-link i{
+      display: inline-flex;
+      width: 27px;
+      height: 27px;
+      align-items: center;
+      justify-content: center;
+      margin-left: -.3rem;
+      border-radius: 8px;
+      color: var(--ul-accent-end);
+      background: var(--ul-accent-soft);
+    }
+    .user-list-page #addUserModal .au-modal-tabs .nav-link:hover{
+      color: var(--ul-accent-end);
+      border-color: var(--ul-accent-border);
+      background: var(--ul-surface);
+      transform: translateY(-1px);
+    }
+    .user-list-page #addUserModal .au-modal-tabs .nav-link.active{
+      color: var(--ul-accent-end);
+      border-color: var(--ul-accent-border);
+      background: var(--ul-surface);
+      box-shadow: 0 7px 18px rgba(15,23,42,.07), inset 0 -3px 0 var(--ul-accent-end);
+    }
+    .user-list-page #addUserModal .au-modal-tabs .nav-link.active i{
+      color: #fff;
+      background: linear-gradient(135deg, var(--ul-accent-start), var(--ul-accent-end));
+    }
+    [data-bs-theme="dark"] .user-list-page{
+      --ul-surface: rgba(20,27,39,.96);
+      --ul-surface-soft: rgba(30,41,59,.72);
+      --ul-border: rgba(148,163,184,.15);
+      --ul-ink: #f1f5f9;
+      --ul-muted: #9aa9bc;
+    }
+    @media (max-width: 767.98px){
+      .user-list-page .page-title-box{
+        align-items: flex-start !important;
+        gap: .7rem;
+      }
+      .user-list-page .page-title-subtitle{
+        margin-left: 0;
+      }
+      .user-list-page .user-list-tabs-wrap{
+        overflow-x: auto;
+      }
+      .user-list-page #userAccessTabs{
+        flex-wrap: nowrap;
+      }
+      .user-list-page #userAccessTabsContent{
+        padding: .7rem;
+      }
+    }
   </style>
 </head>
 
@@ -2332,7 +2614,7 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
   data-menu-color="<?= h($_SESSION['theme.menu'] ?? 'light') ?>"
   data-layout="vertical"
   data-sidebar-size="default"
-  class="loading">
+  class="loading user-list-page">
 
 <div class="wrapper">
   <?php include __DIR__ . '/../includes/topbar.php'; ?>
@@ -2346,7 +2628,10 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
         <div class="row mb-3">
           <div class="col-12">
             <div class="page-title-box d-flex justify-content-between align-items-center flex-wrap">
-              <h4 class="page-title"><i class="ri-user-settings-line me-1"></i> <?= __('userList_page_heading_main') ?></h4>
+              <div class="page-title-main">
+                <h4 class="page-title"><i class="ri-user-settings-line me-1"></i> <?= h(__('userList_page_heading_main')) ?></h4>
+                <p class="page-title-subtitle"><?= h(__('userList_page_intro')) ?></p>
+              </div>
               <div class="page-title-right">
                 <ol class="breadcrumb m-0">
                   <li class="breadcrumb-item">
@@ -2361,8 +2646,8 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
           </div>
         </div>
 
-        <div class="row mb-3">
-          <div class="col-12">
+        <section class="user-list-workspace">
+        <div class="user-list-tabs-wrap">
             <ul class="nav nav-tabs nav-bordered" id="userAccessTabs" role="tablist">
               <li class="nav-item" role="presentation">
                 <button
@@ -2406,7 +2691,6 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
                 </button>
               </li>
             </ul>
-          </div>
         </div>
 
         <div class="tab-content" id="userAccessTabsContent">
@@ -2517,6 +2801,7 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
             ); ?>
           </div>
         </div>
+        </section>
 
       </div><!-- /.container-fluid -->
     </div><!-- /.content -->
@@ -2526,21 +2811,12 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
 
 <?php include __DIR__ . '/../includes/script.php'; ?>
 
-<!-- ✅ Select2 JS (untuk dropdown) -->
-<script src="<?= base_url('assets/vendor/select2/js/select2.min.js') ?>?v=<?= h($version) ?>" defer></script>
-
-<!-- Select2 JS (untuk dropdown staf dalam modal tambah pengguna) - NO defer, must load before our code -->
-<script>
-// Load Select2 synchronously to ensure it's available
-(function() {
-  var script = document.createElement('script');
-  script.src = '<?= base_url('assets/vendor/select2/js/select2.full.min.js') ?>?v=<?= time() ?>';
-  script.onload = function() {
-    window.__select2ScriptLoaded = true;
-  };
-  document.head.appendChild(script);
-})();
-</script>
+<!--
+  vendor.min.js dimuat secara defer dan mengandungi jQuery. Muat Select2 secara defer
+  selepas vendor supaya plugin melekat pada instance jQuery terakhir, bukan instance
+  awal yang kemudiannya diganti oleh bundle vendor.
+-->
+<script src="<?= base_url('assets/vendor/select2/js/select2.full.min.js') ?>?v=<?= h($version) ?>" defer></script>
 
 <!-- MODAL: Tukar Kumpulan -->
 <div class="modal fade" id="userGroupModal" tabindex="-1" aria-hidden="true" aria-labelledby="userGroupTitle">
@@ -5069,7 +5345,7 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
             await fireSwal({
               icon: 'info',
               title: '<?= h(__('userList_error_title')) ?>',
-              text: 'Anda tidak boleh memadam akaun yang sedang anda gunakan sekarang.',
+              text: '<?= h(__('userList_ajax_delete_self_denied')) ?>',
               confirmButtonText: '<?= h(__('userList_btn_ok')) ?>',
               confirmButtonColor: '#0d6efd'
             });
@@ -6037,6 +6313,33 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
               }
             }
 
+            function bindSelect2SearchField(searchPlaceholder) {
+              $sel.off('select2:open.userListSearch').on('select2:open.userListSearch', function() {
+                window.requestAnimationFrame(function() {
+                  const searchField = addUserModalEl.querySelector(
+                    '.select2-container--open .select2-search--dropdown .select2-search__field'
+                  );
+                  if (!searchField) return;
+                  searchField.setAttribute('placeholder', searchPlaceholder);
+                  searchField.setAttribute('aria-label', searchPlaceholder);
+                  searchField.focus();
+                });
+              });
+            }
+
+            function syncSelect2Placeholder(selectionPlaceholder) {
+              // jQuery menyimpan nilai data-* pertama dalam cache. Apabila modal
+              // bertukar staf -> pelajar, buang cache lama dan selaraskan teks
+              // selection yang telah dirender oleh Select2.
+              $sel.removeData('placeholder');
+              $sel.attr('data-placeholder', selectionPlaceholder);
+              const placeholderEl = $sel.next('.select2-container')
+                .find('.select2-selection__placeholder');
+              if (placeholderEl.length) {
+                placeholderEl.text(selectionPlaceholder).attr('title', selectionPlaceholder);
+              }
+            }
+
             if (currentAddScope === 'student') {
               auStafSelect.innerHTML = '<option value=""></option>';
               $sel.select2({
@@ -6070,7 +6373,9 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
                   }
                 }
               });
+              bindSelect2SearchField(placeholderText);
               $sel.val(null).trigger('change');
+              syncSelect2Placeholder(placeholderText);
               return;
             }
 
@@ -6129,9 +6434,12 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
               width: '100%',
               allowClear: true,
               placeholder: placeholderText,
+              minimumResultsForSearch: 0,
               dropdownParent: $(addUserModalEl)
             });
+            bindSelect2SearchField(placeholderText);
             $sel.val('').trigger('change');
+            syncSelect2Placeholder(placeholderText);
           });
 
           $(auStafSelect).on('select2:select', function(e) {
@@ -6257,7 +6565,19 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
             width: '100%',
             allowClear: true,
             placeholder: placeholderText,
+            minimumResultsForSearch: 0,
             dropdownParent: jQuery(addUserModalEl)
+          });
+          $sel.off('select2:open.userListSearch').on('select2:open.userListSearch', function() {
+            window.requestAnimationFrame(function() {
+              const searchField = addUserModalEl.querySelector(
+                '.select2-container--open .select2-search--dropdown .select2-search__field'
+              );
+              if (!searchField) return;
+              searchField.setAttribute('placeholder', placeholderText);
+              searchField.setAttribute('aria-label', placeholderText);
+              searchField.focus();
+            });
           });
           $sel.val('').trigger('change');
         }
@@ -6266,12 +6586,11 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
       }
     }
     
-    // Start initialization - wait for DOM ready
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initSelect2ForModal);
-    } else {
-      // DOM already ready, start immediately
+    // Tunggu semua skrip defer siap supaya Select2 menggunakan instance jQuery terakhir.
+    if (document.readyState === 'complete') {
       initSelect2ForModal();
+    } else {
+      window.addEventListener('load', initSelect2ForModal, { once: true });
     }
 
     document.addEventListener('click', async function(e) {
@@ -6437,8 +6756,8 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
           showAddModalTab('#au-info-tab');
         }
         showAuErr(currentAddScope === 'public'
-          ? 'Sila lengkapkan semua maklumat wajib dan pastikan emel serta kata laluan adalah sah.'
-          : 'Sila lengkapkan maklumat pengguna dan tetapan akses sebelum simpan.');
+          ? '<?= h(__('userList_validation_required_public')) ?>'
+          : '<?= h(__('userList_validation_required_access')) ?>');
         return; // Stop submission if validation fails
       }
       

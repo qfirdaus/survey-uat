@@ -66,6 +66,13 @@ function normalize_export_rows(string $tab, string $securitySubtab, array $rows)
 
         if ($tab === 'changes') {
             $fieldChanges = is_array($row['field_changes'] ?? null) ? $row['field_changes'] : [];
+            foreach ($fieldChanges as &$fieldChange) {
+                if (is_array($fieldChange) && !empty($fieldChange['is_sensitive'])) {
+                    $fieldChange['old_value'] = '[MASKED]';
+                    $fieldChange['new_value'] = '[MASKED]';
+                }
+            }
+            unset($fieldChange);
             $normalized[] = [
                 'change_set_id' => $row['id'] ?? '',
                 'event_id' => $row['event_id'] ?? '',
@@ -181,7 +188,11 @@ function stream_csv(array $rows, string $filename): never
             if (is_array($value)) {
                 $value = json_encode($value, JSON_UNESCAPED_UNICODE);
             }
-            $line[] = (string)$value;
+            $cell = (string)$value;
+            if (preg_match('/^[\x00-\x20]*[=+\-@]/u', $cell)) {
+                $cell = "'" . $cell;
+            }
+            $line[] = $cell;
         }
         fputcsv($out, $line);
     }
@@ -205,19 +216,38 @@ $controller = new AuditCenterController();
 if (!$controller->isSuperAdmin()) {
     http_response_code(403);
     header('Content-Type: text/plain; charset=utf-8');
-    echo 'Forbidden';
+    echo ac('access_denied_text', 'Audit Center is available to Super Admin only.');
+    exit;
+}
+
+if (function_exists('checkRateLimit') && !checkRateLimit('audit_center_export', 10, 60)) {
+    http_response_code(429);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo ac('export_rate_limited', 'Too many export requests. Please wait.');
     exit;
 }
 
 $tab = strtolower(trim((string)($_GET['tab'] ?? 'events')));
 $securitySubtab = strtolower(trim((string)($_GET['security_subtab'] ?? 'events')));
 $format = strtolower(trim((string)($_GET['format'] ?? 'csv')));
+if (!in_array($format, ['csv', 'json'], true)) {
+    $format = 'csv';
+}
 $search = trim((string)($_GET['q'] ?? ''));
 $filters = $controller->normalizeFilters($_GET);
 $exportLimit = max(100, min(2000, (int)($_GET['export_limit'] ?? 2000)));
 
 $export = $controller->getExportData($tab, $securitySubtab, $search, $filters, $exportLimit);
 $rows = normalize_export_rows($export['tab'], $export['security_subtab'], $export['rows']);
+
+if (function_exists('audit_event')) {
+    audit_event([
+        'event_type' => 'AUDIT_EXPORT', 'severity' => 'INFO', 'outcome' => 'SUCCESS',
+        'target_type' => 'audit_export', 'target_id' => $export['tab'],
+        'target_label' => strtoupper($format) . ' audit export', 'message' => 'Audit data exported',
+        'meta' => ['tab' => $export['tab'], 'security_subtab' => $export['security_subtab'], 'format' => $format, 'row_count' => count($rows)],
+    ]);
+}
 
 $slug = $export['tab'];
 if ($export['tab'] === 'security') {

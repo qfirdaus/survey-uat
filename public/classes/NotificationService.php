@@ -118,7 +118,9 @@ final class NotificationService
     {
         $lang = $this->normalizeLang((string)($options['lang'] ?? 'ms'));
         $limit = max(1, min(100, (int)($options['limit'] ?? 10)));
+        $offset = max(0, min(100000, (int)($options['offset'] ?? 0)));
         $filter = strtolower((string)($options['filter'] ?? 'all'));
+        $search = mb_substr(trim((string)($options['search'] ?? '')), 0, 100);
 
         $filterSql = '';
         if ($filter === 'unread') {
@@ -130,6 +132,9 @@ final class NotificationService
         } elseif ($filter === 'overdue') {
             $filterSql = " AND n.f_requiresAction = 1 AND COALESCE(s.f_actionStatus, 'pending') = 'pending' AND n.f_dueAt IS NOT NULL AND n.f_dueAt < NOW()";
         }
+        $searchSql = $search !== ''
+            ? " AND (n.f_title_ms LIKE :search_title_ms OR n.f_title_en LIKE :search_title_en OR n.f_body_ms LIKE :search_body_ms OR n.f_body_en LIKE :search_body_en)"
+            : '';
 
         $sql = "
             SELECT DISTINCT
@@ -169,8 +174,9 @@ final class NotificationService
              AND s.f_loginID = :login_id
             WHERE {$this->visibleWhereSql()}
               {$filterSql}
+              {$searchSql}
             ORDER BY COALESCE(s.f_isRead, 0) ASC, n.f_insertdt DESC, n.f_notificationID DESC
-            LIMIT :limit
+            LIMIT :limit OFFSET :offset
         ";
 
         $stmt = $this->pdo->prepare($sql);
@@ -178,6 +184,14 @@ final class NotificationService
         $stmt->bindValue(':lang_body', $lang);
         $stmt->bindValue(':lang_action_label', $lang);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        if ($search !== '') {
+            $like = '%' . $search . '%';
+            $stmt->bindValue(':search_title_ms', $like);
+            $stmt->bindValue(':search_title_en', $like);
+            $stmt->bindValue(':search_body_ms', $like);
+            $stmt->bindValue(':search_body_en', $like);
+        }
         $this->bindActor($stmt, $actor);
         $stmt->execute();
 
@@ -190,6 +204,67 @@ final class NotificationService
         }
 
         return $items;
+    }
+
+    /** @param array<string,mixed> $actor @param array<string,mixed> $options */
+    public function countNotifications(array $actor, array $options = []): int
+    {
+        $filter = strtolower((string)($options['filter'] ?? 'all'));
+        $search = mb_substr(trim((string)($options['search'] ?? '')), 0, 100);
+        $filterSql = match ($filter) {
+            'unread' => ' AND COALESCE(s.f_isRead, 0) = 0',
+            'read' => ' AND COALESCE(s.f_isRead, 0) = 1',
+            'action_required' => " AND n.f_requiresAction = 1 AND COALESCE(s.f_actionStatus, 'pending') = 'pending'",
+            'overdue' => " AND n.f_requiresAction = 1 AND COALESCE(s.f_actionStatus, 'pending') = 'pending' AND n.f_dueAt IS NOT NULL AND n.f_dueAt < NOW()",
+            default => '',
+        };
+        $searchSql = $search !== ''
+            ? " AND (n.f_title_ms LIKE :search_title_ms OR n.f_title_en LIKE :search_title_en OR n.f_body_ms LIKE :search_body_ms OR n.f_body_en LIKE :search_body_en)"
+            : '';
+        $stmt = $this->pdo->prepare("SELECT COUNT(DISTINCT n.f_notificationID)
+            FROM tbl_notification n
+            JOIN tbl_notification_audience a ON a.f_notificationID = n.f_notificationID
+            LEFT JOIN tbl_notification_user_state s ON s.f_notificationID = n.f_notificationID AND s.f_loginID = :login_id
+            WHERE {$this->visibleWhereSql()} {$filterSql} {$searchSql}");
+        if ($search !== '') {
+            $like = '%' . $search . '%';
+            foreach ([':search_title_ms', ':search_title_en', ':search_body_ms', ':search_body_en'] as $param) {
+                $stmt->bindValue($param, $like);
+            }
+        }
+        $this->bindActor($stmt, $actor);
+        $stmt->execute();
+        return (int)$stmt->fetchColumn();
+    }
+
+    /** @param array<string,mixed> $actor @return array{total:int,unread:int,action_required:int,overdue:int} */
+    public function getNotificationSummary(array $actor): array
+    {
+        $stmt = $this->pdo->prepare("SELECT
+              COUNT(*) AS total,
+              COALESCE(SUM(x.is_read = 0), 0) AS unread,
+              COALESCE(SUM(x.requires_action = 1 AND x.action_status = 'pending'), 0) AS action_required,
+              COALESCE(SUM(x.requires_action = 1 AND x.action_status = 'pending' AND x.due_at IS NOT NULL AND x.due_at < NOW()), 0) AS overdue
+            FROM (
+              SELECT DISTINCT n.f_notificationID,
+                COALESCE(s.f_isRead, 0) AS is_read,
+                n.f_requiresAction AS requires_action,
+                COALESCE(s.f_actionStatus, CASE WHEN n.f_requiresAction = 1 THEN 'pending' ELSE 'none' END) AS action_status,
+                n.f_dueAt AS due_at
+              FROM tbl_notification n
+              JOIN tbl_notification_audience a ON a.f_notificationID = n.f_notificationID
+              LEFT JOIN tbl_notification_user_state s ON s.f_notificationID = n.f_notificationID AND s.f_loginID = :login_id
+              WHERE {$this->visibleWhereSql()}
+            ) x");
+        $this->bindActor($stmt, $actor);
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        return [
+            'total' => (int)($row['total'] ?? 0),
+            'unread' => (int)($row['unread'] ?? 0),
+            'action_required' => (int)($row['action_required'] ?? 0),
+            'overdue' => (int)($row['overdue'] ?? 0),
+        ];
     }
 
     /**
@@ -225,20 +300,25 @@ final class NotificationService
      */
     public function markAllAsRead(array $actor, int $limit = 100): int
     {
-        $items = $this->listNotifications($actor, [
-            'lang' => 'ms',
-            'limit' => max(1, min(500, $limit)),
-            'filter' => 'unread',
-        ]);
-
-        $updated = 0;
-        foreach ($items as $item) {
-            if ($this->markAsRead((int)$item['id'], $actor)) {
-                $updated++;
-            }
+        $unreadBefore = $this->countUnread($actor);
+        if ($unreadBefore === 0) {
+            return 0;
         }
 
-        return $updated;
+        $stmt = $this->pdo->prepare("INSERT INTO tbl_notification_user_state
+              (f_notificationID, f_loginID, f_categoryUser, f_isRead, f_readAt, f_actionStatus, f_insertdt, f_updatedt)
+            SELECT DISTINCT n.f_notificationID, :state_login_id, :state_category, 1, NOW(),
+              CASE WHEN n.f_requiresAction = 1 THEN 'pending' ELSE 'none' END, NOW(), NOW()
+            FROM tbl_notification n
+            JOIN tbl_notification_audience a ON a.f_notificationID = n.f_notificationID
+            LEFT JOIN tbl_notification_user_state s ON s.f_notificationID = n.f_notificationID AND s.f_loginID = :login_id
+            WHERE {$this->visibleWhereSql()} AND COALESCE(s.f_isRead, 0) = 0
+            ON DUPLICATE KEY UPDATE f_isRead = 1, f_readAt = COALESCE(f_readAt, NOW()), f_updatedt = NOW()");
+        $stmt->bindValue(':state_login_id', (string)$actor['login_id']);
+        $stmt->bindValue(':state_category', $this->normalizeCategoryForState((string)($actor['category_user'] ?? '')));
+        $this->bindActor($stmt, $actor);
+        $stmt->execute();
+        return $unreadBefore;
     }
 
     /**
@@ -883,10 +963,11 @@ final class NotificationService
         if (preg_match('/^(https?:)?\/\//i', $url)) {
             return '';
         }
-        if (str_starts_with($url, 'javascript:') || str_starts_with($url, 'data:')) {
+        if (preg_match('/^(?:javascript|data):/i', $url) || str_contains($url, '..') || str_contains($url, '\\') || preg_match('/[\x00-\x1F\x7F]/', $url)) {
             return '';
         }
-        return ltrim($url, '/');
+        $url = ltrim($url, '/');
+        return preg_match('/^[A-Za-z0-9_.\/-]+(?:\?[A-Za-z0-9_=&%+.,:@\/-]*)?(?:#[A-Za-z0-9_.-]*)?$/', $url) ? $url : '';
     }
 
     private function normalizeLang(string $lang): string

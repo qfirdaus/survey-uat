@@ -124,6 +124,59 @@ final class NotificationAdminService
         return $rows;
     }
 
+    /** @param array<string,mixed> $options @return array{total:int,filtered:int,items:array<int,array<string,mixed>>} */
+    public function getAdminList(array $options = []): array
+    {
+        $limit = max(5, min(100, (int)($options['limit'] ?? 10)));
+        $offset = max(0, min(100000, (int)($options['offset'] ?? 0)));
+        $rawSearch = trim((string)($options['search'] ?? ''));
+        $search = function_exists('mb_substr') ? mb_substr($rawSearch, 0, 100) : substr($rawSearch, 0, 100);
+        $type = strtolower(trim((string)($options['type'] ?? '')));
+        $priority = strtolower(trim((string)($options['priority'] ?? '')));
+        $status = strtolower(trim((string)($options['status'] ?? 'all')));
+        $where = [];
+        if ($search !== '') {
+            $where[] = '(n.f_title_ms LIKE :search_title OR n.f_title_en LIKE :search_title_en OR n.f_eventCode LIKE :search_event OR n.f_moduleCode LIKE :search_module)';
+        }
+        if (in_array($type, ['announcement', 'reminder', 'event', 'workflow'], true)) $where[] = 'n.f_type = :type';
+        if (in_array($priority, ['low', 'normal', 'high', 'urgent'], true)) $where[] = 'n.f_priority = :priority';
+        if ($status === 'active') $where[] = 'n.f_status = 1';
+        if ($status === 'inactive') $where[] = 'n.f_status = 0';
+        $whereSql = $where === [] ? '' : 'WHERE ' . implode(' AND ', $where);
+
+        $fromSql = "FROM tbl_notification n LEFT JOIN tbl_notification_audience a ON a.f_notificationID = n.f_notificationID {$whereSql}";
+        $countStmt = $this->pdo->prepare("SELECT COUNT(DISTINCT n.f_notificationID) {$fromSql}");
+        $this->bindAdminListFilters($countStmt, $search, $type, $priority);
+        $countStmt->execute();
+        $filtered = (int)$countStmt->fetchColumn();
+        $total = (int)$this->pdo->query('SELECT COUNT(*) FROM tbl_notification')->fetchColumn();
+
+        $stmt = $this->pdo->prepare("SELECT n.f_notificationID,n.f_eventCode,n.f_moduleCode,n.f_type,n.f_category,n.f_severity,n.f_priority,n.f_title_ms,n.f_title_en,n.f_requiresAction,n.f_dueAt,n.f_dedupeKey,n.f_isBroadcast,n.f_status,n.f_insertBy,n.f_insertdt,
+              COUNT(a.f_audienceID) AS audience_count,
+              GROUP_CONCAT(CONCAT(a.f_targetType, ':', COALESCE(a.f_targetValue, '')) ORDER BY a.f_audienceID SEPARATOR '|') AS audience_summary_raw
+            {$fromSql}
+            GROUP BY n.f_notificationID,n.f_eventCode,n.f_moduleCode,n.f_type,n.f_category,n.f_severity,n.f_priority,n.f_title_ms,n.f_title_en,n.f_requiresAction,n.f_dueAt,n.f_dedupeKey,n.f_isBroadcast,n.f_status,n.f_insertBy,n.f_insertdt
+            ORDER BY n.f_insertdt DESC,n.f_notificationID DESC LIMIT :limit OFFSET :offset");
+        $this->bindAdminListFilters($stmt, $search, $type, $priority);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        foreach ($rows as &$row) $row['audience_summary'] = $this->formatAudienceSummary((string)($row['audience_summary_raw'] ?? ''), (int)($row['audience_count'] ?? 0));
+        unset($row);
+        return ['total' => $total, 'filtered' => $filtered, 'items' => $rows];
+    }
+
+    private function bindAdminListFilters(PDOStatement $stmt, string $search, string $type, string $priority): void
+    {
+        if ($search !== '') {
+            $like = '%' . $search . '%';
+            foreach ([':search_title', ':search_title_en', ':search_event', ':search_module'] as $parameter) $stmt->bindValue($parameter, $like);
+        }
+        if (in_array($type, ['announcement', 'reminder', 'event', 'workflow'], true)) $stmt->bindValue(':type', $type);
+        if (in_array($priority, ['low', 'normal', 'high', 'urgent'], true)) $stmt->bindValue(':priority', $priority);
+    }
+
     /**
      * @return array<string,int>
      */
@@ -178,7 +231,16 @@ final class NotificationAdminService
     {
         $titleMs = trim((string)($input['title_ms'] ?? ''));
         if ($titleMs === '') {
-            throw new InvalidArgumentException('Title is required.');
+            throw new InvalidArgumentException((string)(__('notification_admin_validation_title') ?: 'Title is required.'));
+        }
+        $textLength = static fn(string $value): int => function_exists('mb_strlen') ? mb_strlen($value) : strlen($value);
+        if ($textLength($titleMs) > 255) {
+            throw new InvalidArgumentException((string)(__('notification_admin_validation_title_length') ?: 'Title must not exceed 255 characters.'));
+        }
+        foreach (['body_ms', 'body_en'] as $bodyField) {
+            if ($textLength((string)($input[$bodyField] ?? '')) > 10000) {
+                throw new InvalidArgumentException((string)(__('notification_admin_validation_body_length') ?: 'Notification content must not exceed 10,000 characters.'));
+            }
         }
 
         $eventCode = trim((string)($input['event_code'] ?? ''));
@@ -188,7 +250,31 @@ final class NotificationAdminService
 
         $audience = $this->buildAudience($input);
         if ($audience === []) {
-            throw new InvalidArgumentException('Audience is required.');
+            throw new InvalidArgumentException((string)(__('notification_admin_validation_audience') ?: 'Audience is required.'));
+        }
+
+        $startsAt = trim((string)($input['starts_at'] ?? ''));
+        $expiresAt = trim((string)($input['expires_at'] ?? ''));
+        $dueAt = trim((string)($input['due_at'] ?? ''));
+        $startsTs = $startsAt !== '' ? strtotime($startsAt) : false;
+        $expiresTs = $expiresAt !== '' ? strtotime($expiresAt) : false;
+        $dueTs = $dueAt !== '' ? strtotime($dueAt) : false;
+        if (($startsAt !== '' && $startsTs === false) || ($expiresAt !== '' && $expiresTs === false) || ($dueAt !== '' && $dueTs === false)) {
+            throw new InvalidArgumentException((string)(__('notification_admin_validation_datetime') ?: 'One or more date values are invalid.'));
+        }
+        if ($startsTs !== false && $expiresTs !== false && $startsTs >= $expiresTs) {
+            throw new InvalidArgumentException((string)(__('notification_admin_validation_schedule') ?: 'Expiry must be later than the start date.'));
+        }
+        if ($dueTs !== false && empty($input['requires_action'])) {
+            throw new InvalidArgumentException((string)(__('notification_admin_validation_due_action') ?: 'Enable user action when a due date is supplied.'));
+        }
+        if ($dueTs !== false && $expiresTs !== false && $dueTs > $expiresTs) {
+            throw new InvalidArgumentException((string)(__('notification_admin_validation_due_expiry') ?: 'Due date cannot be later than expiry.'));
+        }
+        $actionUrl = trim((string)($input['action_url'] ?? ''));
+        if ($actionUrl !== '' && (preg_match('/^(?:(?:https?:)?\/\/|javascript:|data:)/i', $actionUrl)
+            || str_contains($actionUrl, '..') || str_contains($actionUrl, '\\') || preg_match('/[\x00-\x1F\x7F]/', $actionUrl))) {
+            throw new InvalidArgumentException((string)(__('notification_admin_validation_action_url') ?: 'Action URL must be a safe internal application path.'));
         }
 
         return [
@@ -257,19 +343,28 @@ final class NotificationAdminService
                 $values[] = $part;
             }
         }
-        return array_values(array_unique($values));
+        $values = array_values(array_unique($values));
+        if (count($values) > 500) {
+            throw new InvalidArgumentException((string)(__('notification_admin_validation_audience_limit') ?: 'Audience is limited to 500 values per publication.'));
+        }
+        foreach ($values as $item) {
+            if ((function_exists('mb_strlen') ? mb_strlen($item) : strlen($item)) > 150) {
+                throw new InvalidArgumentException((string)(__('notification_admin_validation_audience_value') ?: 'An audience value is too long.'));
+            }
+        }
+        return $values;
     }
 
     private function formatAudienceSummary(string $raw, int $count): string
     {
         $raw = trim($raw);
         if ($raw === '') {
-            return 'No audience';
+            return (string)(__('notification_admin_no_audience') ?: 'No audience');
         }
 
         $items = array_values(array_filter(explode('|', $raw), static fn($item) => trim((string)$item) !== ''));
         if ($items === []) {
-            return 'No audience';
+            return (string)(__('notification_admin_no_audience') ?: 'No audience');
         }
 
         $labels = [];
@@ -279,7 +374,7 @@ final class NotificationAdminService
             $value = trim($value);
 
             $labels[] = match ($type) {
-                'ALL' => 'All users',
+                'ALL' => (string)(__('notification_admin_audience_all_users') ?: 'All users'),
                 'LOGIN_ID' => 'Login ID: ' . $value,
                 'RESOLVED_LOGIN_ID' => 'Resolved user: ' . $value,
                 'GROUP_ID' => 'Group ID: ' . $value,
@@ -297,11 +392,11 @@ final class NotificationAdminService
         $remaining = count($labels) - count($visible);
 
         if ($remaining > 0) {
-            $summary .= ' +' . $remaining . ' more';
+            $summary .= ' +' . $remaining . ' ' . (string)(__('notification_admin_more') ?: 'more');
         }
 
         if ($count > count($labels)) {
-            $summary .= ' (' . $count . ' rules)';
+            $summary .= ' (' . $count . ' ' . (string)(__('notification_admin_rules') ?: 'rules') . ')';
         }
 
         return $summary;

@@ -49,9 +49,7 @@ if (!in_array($tab, $allowedTabs, true)) {
 
 $search = trim((string)($_GET['q'] ?? ''));
 $limit = (int)($_GET['limit'] ?? 10);
-if ($limit <= 0) {
-    $limit = 10;
-}
+$limit = max(5, min(100, $limit > 0 ? $limit : 10));
 $filters = $controller->normalizeFilters($_GET);
 $hasAdvancedFilters = false;
 foreach ($filters as $filterValue) {
@@ -83,6 +81,7 @@ $tabMeta = [
     $NEED_SELECT2 = false;
     include __DIR__ . '/../includes/head.php';
   ?>
+  <meta name="referrer" content="no-referrer">
   <link href="<?= base_url('assets/css/pages/audit-center.css') ?>?v=<?= h($version) ?>" rel="stylesheet">
 </head>
 <body data-topbar-color="<?= h($_SESSION['theme.topbar'] ?? 'light') ?>" data-menu-color="<?= h($_SESSION['theme.menu'] ?? $_SESSION['theme.sidebar'] ?? 'dark') ?>" data-layout="vertical" data-sidebar-size="default" class="loading">
@@ -213,17 +212,34 @@ $tabMeta = [
     metaLoadingText: <?= json_encode(ac('meta_loading_text', 'Sila tunggu sebentar sementara metadata audit dimuatkan.'), JSON_UNESCAPED_UNICODE) ?>,
     metaRawRecord: <?= json_encode(ac('meta_section_raw_record', 'Raw Record'), JSON_UNESCAPED_UNICODE) ?>,
     metaEmpty: <?= json_encode(ac('meta_empty', 'Tiada metadata tambahan direkodkan untuk item ini.'), JSON_UNESCAPED_UNICODE) ?>,
+    metaSection: <?= json_encode(ac('meta_section_fallback', 'Section'), JSON_UNESCAPED_UNICODE) ?>,
+    metaCopy: <?= json_encode(ac('meta_copy_button', 'Copy JSON'), JSON_UNESCAPED_UNICODE) ?>,
+    metaCopied: <?= json_encode(ac('meta_copy_success', 'JSON copied'), JSON_UNESCAPED_UNICODE) ?>,
   };
   let lastSuccessfulPanelHtml = '';
   let loading = false;
   let searchTimer = null;
   let auditCenterLoaderToken = null;
+  let panelAbortController = null;
+  let panelRequestSequence = 0;
 
   function showAuditCenterLoader(message) {
-    auditCenterLoaderToken = message || i18n.loadingPanel;
+    if (auditCenterLoaderToken) return;
+    const loaderMessage = message || i18n.loadingPanel;
+    if (window.AppLoader && typeof window.AppLoader.show === 'function') {
+      auditCenterLoaderToken = window.AppLoader.show(loaderMessage, { timeout: 60000 });
+    } else if (window.IQSLoader && typeof window.IQSLoader.show === 'function') {
+      auditCenterLoaderToken = window.IQSLoader.show(loaderMessage, { timeout: 60000 });
+    }
   }
 
   function hideAuditCenterLoader() {
+    if (!auditCenterLoaderToken) return;
+    if (window.AppLoader && typeof window.AppLoader.hide === 'function') {
+      window.AppLoader.hide(auditCenterLoaderToken);
+    } else if (window.IQSLoader && typeof window.IQSLoader.hide === 'function') {
+      window.IQSLoader.hide(auditCenterLoaderToken);
+    }
     auditCenterLoaderToken = null;
   }
 
@@ -233,11 +249,7 @@ $tabMeta = [
     }
     if (panelEl) {
       panelEl.classList.toggle('audit-center-panel__body--loading', flag);
-    }
-    if (flag && mode !== 'search' && mode !== 'initial') {
-      showAuditCenterLoader(i18n.loadingPanel);
-    } else if (!flag) {
-      hideAuditCenterLoader();
+      panelEl.setAttribute('aria-busy', flag ? 'true' : 'false');
     }
   }
 
@@ -312,19 +324,20 @@ $tabMeta = [
     if (subtitleEl) subtitleEl.textContent = data.subtitle || '';
 
     const tabs = [];
-    tabs.push({
-      key: 'raw-record',
-      label: i18n.metaRawRecord,
-      content: '<pre class="audit-center-meta-pre">' + escapeHtml(prettyJson(data.record || {})) + '</pre>'
-    });
 
     const sections = Array.isArray(data.sections) ? data.sections : [];
     sections.forEach(function (section, index) {
       tabs.push({
         key: 'section-' + (index + 1),
-        label: section.label || ('Section ' + (index + 1)),
+        label: section.label || (i18n.metaSection + ' ' + (index + 1)),
         content: '<pre class="audit-center-meta-pre">' + escapeHtml(prettyJson(section.data)) + '</pre>'
       });
+    });
+
+    tabs.push({
+      key: 'raw-record',
+      label: i18n.metaRawRecord,
+      content: '<pre class="audit-center-meta-pre">' + escapeHtml(prettyJson(data.record || {})) + '</pre>'
     });
 
     if (tabs.length === 1 && sections.length === 0) {
@@ -346,7 +359,7 @@ $tabMeta = [
       );
       paneParts.push(
         '<div class="tab-pane fade' + (isActive ? ' show active' : '') + '" id="' + escapeHtml(paneId) + '" role="tabpanel" aria-labelledby="' + escapeHtml(tabId) + '">' +
-        '<section class="audit-center-meta-section">' + tab.content + '</section>' +
+        '<section class="audit-center-meta-section"><div class="audit-center-meta-section__toolbar"><span>' + escapeHtml(tab.label) + '</span><button type="button" class="btn btn-sm btn-outline-secondary" data-audit-copy-json><i class="ri-file-copy-line me-1"></i>' + escapeHtml(i18n.metaCopy) + '</button></div>' + tab.content + '</section>' +
         '</div>'
       );
     });
@@ -399,7 +412,9 @@ $tabMeta = [
   }
 
   async function loadPanel(pushHistory = true, mode = 'default') {
-    if (loading) return;
+    if (panelAbortController) panelAbortController.abort();
+    panelAbortController = new AbortController();
+    const requestSequence = ++panelRequestSequence;
     loading = true;
     setLoading(true, mode);
     try {
@@ -407,9 +422,11 @@ $tabMeta = [
         credentials: 'same-origin',
         noLoader: true,
         headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-No-Loader': '1' },
-        cache: 'no-store'
+        cache: 'no-store',
+        signal: panelAbortController.signal
       });
       const data = await response.json();
+      if (requestSequence !== panelRequestSequence) return;
       if (await handleTerminatedSession(data)) {
         return;
       }
@@ -424,6 +441,7 @@ $tabMeta = [
       updateNav();
       syncHistory(pushHistory);
     } catch (error) {
+      if (error && error.name === 'AbortError') return;
       if (lastSuccessfulPanelHtml) {
         panelEl.innerHTML = lastSuccessfulPanelHtml;
         const tableWrap = panelEl.querySelector('.audit-center-table-wrap');
@@ -434,8 +452,11 @@ $tabMeta = [
         panelEl.innerHTML = '<div class="audit-center-empty"><i class="ri-error-warning-line"></i><div>' + i18n.loadFailed + '</div></div>';
       }
     } finally {
-      loading = false;
-      setLoading(false, mode);
+      if (requestSequence === panelRequestSequence) {
+        loading = false;
+        panelAbortController = null;
+        setLoading(false, mode);
+      }
     }
   }
 
@@ -618,6 +639,7 @@ $tabMeta = [
         throw new Error((data && data.message) || i18n.actionFailed);
       }
 
+      hideAuditCenterLoader();
       if (window.Swal && typeof window.Swal.fire === 'function') {
         await window.Swal.fire({
           icon: 'success',
@@ -628,6 +650,7 @@ $tabMeta = [
       }
       await loadPanel(false, 'action');
     } catch (error) {
+      hideAuditCenterLoader();
       if (window.Swal && typeof window.Swal.fire === 'function') {
         await window.Swal.fire({
           icon: 'error',
@@ -717,6 +740,15 @@ $tabMeta = [
     return false;
   });
 
+  $(document).on('click', '[data-audit-copy-json]', async function (event) {
+    event.preventDefault();
+    const pre = event.currentTarget.closest('.audit-center-meta-section')?.querySelector('.audit-center-meta-pre');
+    if (!pre || !navigator.clipboard) return false;
+    await navigator.clipboard.writeText(pre.textContent || '');
+    if (window.Swal) window.Swal.fire({ toast: true, position: 'top-end', timer: 1300, showConfirmButton: false, icon: 'success', title: i18n.metaCopied });
+    return false;
+  });
+
   $(document).on('submit', '#audit-center-filter-form', function (event) {
     event.preventDefault();
     event.stopPropagation();
@@ -755,7 +787,7 @@ $tabMeta = [
           <h5 class="modal-title" id="audit-center-meta-title"><?= h(ac('meta_modal_title', 'Audit Metadata Viewer')) ?></h5>
           <div class="audit-center-meta-modal__subtitle" id="audit-center-meta-subtitle"></div>
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= h(ac('meta_close_button', 'Close')) ?>"></button>
       </div>
       <div class="modal-body" id="audit-center-meta-body"></div>
       <div class="modal-footer">

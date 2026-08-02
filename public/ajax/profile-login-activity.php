@@ -25,10 +25,10 @@ if (!function_exists('h')) {
 function safeDateTime(?string $s): ?DateTime { if (empty($s)) return null; try { return new DateTime($s); } catch (Throwable $e) { return null; } }
 function formatDuration(?int $seconds): string {
   if ($seconds === null) return '—';
-  if ($seconds < 60) return $seconds . 's';
-  if ($seconds < 3600) return floor($seconds/60) . 'm';
-  if ($seconds < 86400) return floor($seconds/3600) . 'j ' . floor(($seconds%3600)/60) . 'm';
-  return floor($seconds/86400) . 'h ' . floor(($seconds%86400)/3600) . 'j';
+  if ($seconds < 60) return $seconds . (string)__('profile_duration_seconds_short');
+  if ($seconds < 3600) return floor($seconds/60) . (string)__('profile_duration_minutes_short');
+  if ($seconds < 86400) return floor($seconds/3600) . (string)__('profile_duration_hours_short') . ' ' . floor(($seconds%3600)/60) . (string)__('profile_duration_minutes_short');
+  return floor($seconds/86400) . (string)__('profile_duration_days_short') . ' ' . floor(($seconds%86400)/3600) . (string)__('profile_duration_hours_short');
 }
 
 $currentSessionId = session_id() ?: '';
@@ -41,12 +41,14 @@ foreach ($rows as $r) {
   $ua = $r['user_agent'] ?? '';
 
   // Basic device parsing (keep simple — same icons used in profile page)
-  $icon = 'ri-device-line'; $deviceLabel = 'Unknown';
-  if (stripos($ua, 'iphone') !== false || stripos($ua, 'ipod') !== false) { $icon = 'ri-smartphone-line'; $deviceLabel = 'iPhone'; }
-  elseif (stripos($ua, 'ipad') !== false) { $icon = 'ri-tablet-line'; $deviceLabel = 'iPad'; }
-  elseif (stripos($ua, 'android') !== false) { $icon = 'ri-smartphone-line'; $deviceLabel = 'Android'; }
-  elseif (stripos($ua, 'windows') !== false) { $icon = 'ri-computer-line'; $deviceLabel = 'Windows'; }
-  elseif (stripos($ua, 'mac') !== false) { $icon = 'ri-macbook-line'; $deviceLabel = 'macOS'; }
+  $icon = 'ri-device-line'; $deviceLabel = (string)__('profile_device_unknown');
+  if (stripos($ua, 'iphone') !== false || stripos($ua, 'ipod') !== false) { $icon = 'ri-smartphone-line'; $deviceLabel = (string)__('profile_device_iphone'); }
+  elseif (stripos($ua, 'ipad') !== false) { $icon = 'ri-tablet-line'; $deviceLabel = (string)__('profile_device_ipad'); }
+  elseif (stripos($ua, 'android') !== false) { $icon = 'ri-smartphone-line'; $deviceLabel = (string)__('profile_device_android'); }
+  elseif (stripos($ua, 'windows') !== false) { $icon = 'ri-computer-line'; $deviceLabel = (string)__('profile_device_windows'); }
+  elseif (stripos($ua, 'mac') !== false) { $icon = 'ri-macbook-line'; $deviceLabel = (string)__('profile_device_macos'); }
+  elseif (stripos($ua, 'cros') !== false) { $icon = 'ri-computer-line'; $deviceLabel = (string)__('profile_device_chromeos'); }
+  elseif (stripos($ua, 'linux') !== false) { $icon = 'ri-ubuntu-line'; $deviceLabel = (string)__('profile_device_linux'); }
 
   $durationText = formatDuration(isset($r['duration_seconds']) ? (int)$r['duration_seconds'] : null);
   $isActive = !empty($r['is_active']);

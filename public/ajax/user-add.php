@@ -21,6 +21,10 @@ try {
     require_once __DIR__ . '/_helpers.php';
     logAjaxUnexpectedOutput('user-add:init.php', $initOutput);
 
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+        jsonErrorResponse((string)__('userList_ajax_method_not_allowed'), 405);
+    }
+
     if (empty($_SESSION['f_stafID'])) {
         jsonErrorResponse((string)(__('unauthorized_access') ?: 'Sila log masuk terlebih dahulu.'), 401);
     }
@@ -30,11 +34,14 @@ try {
 
     $pdo = Database::getInstance('mysql')->getConnection();
     ensureAjaxGroupManagePermission($pdo);
+    if (!userListCanAddUsers($pdo)) {
+        jsonErrorResponse((string)__('userList_err_no_permission'), 403);
+    }
     $userSchema = new User($pdo);
 
     // Rate limiting: max 20 requests per 60 seconds
     if (!checkRateLimit('user_add', 20, 60)) {
-        jsonErrorResponse('Terlalu banyak permintaan. Sila cuba lagi selepas beberapa saat.', 429);
+        jsonErrorResponse((string)__('userList_ajax_rate_limited'), 429);
     }
 
     $readPayload = static function (): array {
@@ -42,7 +49,7 @@ try {
         $data = json_decode($rawInput, true);
 
         if (!is_array($data)) {
-            jsonErrorResponse('Data tidak sah.', 400);
+            jsonErrorResponse((string)__('userList_ajax_invalid_data'), 400);
         }
 
         if (!isValidCsrfToken((string)($data['csrf_token'] ?? ''))) {
@@ -56,11 +63,11 @@ try {
         $flag = isset($data['flag']) ? (int)$data['flag'] : 1;
 
         if ($scope !== 'staff' && $scope !== 'staf') {
-            jsonErrorResponse('Flow tambah pengguna ini khusus untuk staf sahaja.', 400);
+            jsonErrorResponse((string)__('userList_ajax_staff_scope_only'), 400);
         }
 
         if ($nopekerja === '') {
-            jsonErrorResponse('No. pekerja tidak boleh kosong.', 400);
+            jsonErrorResponse((string)__('userList_ajax_employee_no_required'), 400);
         }
 
         if (!in_array($flag, [0, 1], true)) {
@@ -79,7 +86,7 @@ try {
 
     $resolveGroup = static function (PDO $pdo, int $groupID): array {
         if ($groupID <= 0) {
-            jsonErrorResponse('Kumpulan pengguna tidak sah atau tidak wujud dalam sistem.', 400);
+            jsonErrorResponse((string)__('userList_ajax_invalid_group'), 400);
         }
 
         $groupCheckSql = "SELECT f_groupID, f_groupKod, f_categoryUser FROM tbl_m_group WHERE f_groupID = :groupID LIMIT 1";
@@ -88,12 +95,12 @@ try {
         $groupRow = $groupCheckStmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$groupRow) {
-            jsonErrorResponse('Kumpulan pengguna tidak sah atau tidak wujud dalam sistem.', 400);
+            jsonErrorResponse((string)__('userList_ajax_invalid_group'), 400);
         }
 
         $groupCategory = strtoupper(trim((string)($groupRow['f_categoryUser'] ?? '')));
         if ($groupCategory !== 'STAF') {
-            jsonErrorResponse('Kumpulan yang dipilih tidak sah untuk akses staf.', 400);
+            jsonErrorResponse((string)__('userList_ajax_invalid_staff_group'), 400);
         }
 
         return [
@@ -110,7 +117,7 @@ try {
             ':login_identifier' => $nopekerja,
         ]);
         if ($checkStmt->fetch()) {
-            jsonErrorResponse('Pengguna dengan no. pekerja ini sudah wujud dalam sistem.', 409);
+            jsonErrorResponse((string)__('userList_ajax_employee_exists'), 409);
         }
     };
 
@@ -144,7 +151,7 @@ try {
         error_log('[user-add] Sybase query result: ' . ($sybaseUser ? 'found' : 'not found') . ' for nopekerja: ' . $nopekerja);
 
         if (!$sybaseUser) {
-            jsonErrorResponse('Staf tidak dijumpai dalam sistem Sybase atau tidak aktif.', 404);
+            jsonErrorResponse((string)__('userList_ajax_staff_source_not_found'), 404);
         }
 
         return $sybaseUser;
@@ -358,7 +365,7 @@ try {
     $clearAddCaches();
     
     jsonSuccessResponse([
-        'message' => 'Pengguna berjaya ditambah.',
+        'message' => (string)__('userList_success_add'),
         'userID' => $newUserId
     ]);
 
@@ -367,11 +374,11 @@ try {
     
     // Check for duplicate entry
     if ($e->getCode() == 23000 || strpos($e->getMessage(), 'Duplicate') !== false) {
-        jsonErrorResponse('Pengguna dengan no. pekerja ini sudah wujud dalam sistem.', 409);
+        jsonErrorResponse((string)__('userList_ajax_employee_exists'), 409);
     } else {
-        jsonErrorResponse('Ralat database: ' . $e->getMessage(), 500);
+        jsonErrorResponse((string)__('userList_ajax_database_error'), 500);
     }
 } catch (Throwable $e) {
     error_log('[user-add] Error: ' . $e->getMessage());
-    jsonErrorResponse('Ralat sistem semasa menambah pengguna.', 500);
+    jsonErrorResponse((string)__('userList_ajax_add_system_error'), 500);
 }

@@ -29,6 +29,7 @@ require_once __DIR__ . '/../setting/constants/prestasi_constants.php';
 require_once __DIR__ . '/../setting/helper/config_helper.php';
 require_once __DIR__ . '/../includes/functions-db.php';
 require_once __DIR__ . '/../includes/sso-config.php';
+require_once __DIR__ . '/../ajax/_helpers.php';
 
 class TetapanSistemController {
   public string $lang;
@@ -88,6 +89,8 @@ class TetapanSistemController {
       return; // Hanya proses POST
     }
 
+    $this->enforceRequestRateLimit();
+
     if ($this->isAjaxRequest()) {
       $this->handleAjaxRequest();
       return;
@@ -111,6 +114,40 @@ class TetapanSistemController {
     } elseif ($formType === 'ai_chatbot_settings') {
       $this->handleAiChatbotUpdate();
     }
+  }
+
+  /** Enforce halaman konfigurasi sebagai Super Admin untuk GET dan POST. */
+  public function authorizePageAccess(): void {
+    $this->checkAuthorization();
+  }
+
+  private function enforceRequestRateLimit(): void {
+    $formType = trim((string)($_POST['form_type'] ?? 'unknown'));
+    $limits = [
+      'db_additional_test' => [8, 60],
+      'db_additional_inspect' => [12, 60],
+      'db_additional_schema_preview' => [10, 60],
+      'db_additional_object_preview' => [20, 60],
+      'db_additional_list' => [40, 60],
+    ];
+    [$maxAttempts, $windowSeconds] = $limits[$formType] ?? [20, 60];
+    if (checkRateLimit('system_settings_' . preg_replace('/[^a-z0-9_]+/i', '_', $formType), $maxAttempts, $windowSeconds)) {
+      return;
+    }
+
+    $title = $this->tr('config_rate_limit_title', 'Terlalu Banyak Permintaan');
+    $message = $this->tr('config_rate_limit_text', 'Terlalu banyak permintaan. Sila cuba lagi sebentar.');
+    if ($this->isAjaxRequest()) {
+      $this->sendJsonResponse([
+        'success' => false,
+        'title' => $title,
+        'message' => $message,
+        'errors' => [$message],
+      ], 429);
+    }
+    set_alert(['title' => $title, 'text' => $message, 'icon' => 'warning']);
+    header('Location: tetapan-sistem.php');
+    exit;
   }
 
   private function isAjaxRequest(): bool {
@@ -176,9 +213,9 @@ class TetapanSistemController {
       if (!$response) {
         $this->sendJsonResponse([
           'success' => false,
-          'title' => 'Ralat Permintaan',
-          'message' => 'Permintaan tetapan sistem tidak sah.',
-          'errors' => ['Permintaan tetapan sistem tidak sah.'],
+          'title' => $this->tr('config_invalid_request_title', 'Ralat Permintaan'),
+          'message' => $this->tr('config_invalid_request_text', 'Permintaan tetapan sistem tidak sah.'),
+          'errors' => [$this->tr('config_invalid_request_text', 'Permintaan tetapan sistem tidak sah.')],
         ], 400);
       }
 
@@ -210,8 +247,8 @@ class TetapanSistemController {
       $json = json_encode([
         'success' => false,
         'title' => $this->tr('config_general_system_error_title', 'Ralat Sistem'),
-        'message' => 'Respons JSON gagal dijana.',
-        'errors' => [json_last_error_msg()],
+        'message' => $this->tr('config_json_response_error', 'Respons sistem tidak dapat dijana.'),
+        'errors' => [$this->tr('config_json_response_error', 'Respons sistem tidak dapat dijana.')],
       ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
     }
 
@@ -806,14 +843,14 @@ class TetapanSistemController {
       if ($this->isAjaxRequest()) {
         $this->sendJsonResponse([
           'success' => false,
-          'title' => 'Ralat Keselamatan',
-          'message' => 'CSRF token tidak sah. Sila muat semula halaman dan cuba lagi.',
-          'errors' => ['CSRF token tidak sah. Sila muat semula halaman dan cuba lagi.'],
+          'title' => $this->tr('config_security_error_title', 'Ralat Keselamatan'),
+          'message' => $this->tr('config_csrf_invalid_text', 'CSRF token tidak sah. Sila muat semula halaman dan cuba lagi.'),
+          'errors' => [$this->tr('config_csrf_invalid_text', 'CSRF token tidak sah. Sila muat semula halaman dan cuba lagi.')],
         ], 419);
       }
       set_alert([
-        'title' => 'Ralat Keselamatan',
-        'text' => 'CSRF token tidak sah. Sila muat semula halaman dan cuba lagi.',
+        'title' => $this->tr('config_security_error_title', 'Ralat Keselamatan'),
+        'text' => $this->tr('config_csrf_invalid_text', 'CSRF token tidak sah. Sila muat semula halaman dan cuba lagi.'),
         'icon' => 'error'
       ]);
       header('Location: tetapan-sistem.php');
@@ -828,12 +865,12 @@ class TetapanSistemController {
       if ($this->isAjaxRequest()) {
         $this->sendJsonResponse([
           'success' => false,
-          'title' => 'Akses Ditolak',
-          'message' => 'Sila log masuk terlebih dahulu.',
-          'errors' => ['Sila log masuk terlebih dahulu.'],
+          'title' => $this->tr('config_access_denied_title', 'Akses Ditolak'),
+          'message' => $this->tr('config_login_required_text', 'Sila log masuk terlebih dahulu.'),
+          'errors' => [$this->tr('config_login_required_text', 'Sila log masuk terlebih dahulu.')],
         ], 401);
       }
-      set_alert(['title'=>'Akses Ditolak','text'=>'Sila log masuk terlebih dahulu.','icon'=>'error']);
+      set_alert(['title'=>$this->tr('config_access_denied_title', 'Akses Ditolak'),'text'=>$this->tr('config_login_required_text', 'Sila log masuk terlebih dahulu.'),'icon'=>'error']);
       header('Location: ../index.php');
       exit;
     }
@@ -843,14 +880,14 @@ class TetapanSistemController {
       if ($this->isAjaxRequest()) {
         $this->sendJsonResponse([
           'success' => false,
-          'title' => 'Akses Ditolak',
-          'message' => 'Hanya Super Admin dibenarkan mengakses halaman Konfigurasi Sistem.',
-          'errors' => ['Hanya Super Admin dibenarkan mengakses halaman Konfigurasi Sistem.'],
+          'title' => $this->tr('config_access_denied_title', 'Akses Ditolak'),
+          'message' => $this->tr('config_super_admin_only_text', 'Hanya Super Admin dibenarkan mengakses halaman Konfigurasi Sistem.'),
+          'errors' => [$this->tr('config_super_admin_only_text', 'Hanya Super Admin dibenarkan mengakses halaman Konfigurasi Sistem.')],
         ], 403);
       }
       set_alert([
-        'title' => 'Akses Ditolak',
-        'text' => 'Hanya Super Admin dibenarkan mengakses halaman Konfigurasi Sistem.',
+        'title' => $this->tr('config_access_denied_title', 'Akses Ditolak'),
+        'text' => $this->tr('config_super_admin_only_text', 'Hanya Super Admin dibenarkan mengakses halaman Konfigurasi Sistem.'),
         'icon' => 'error'
       ]);
       header('Location: dashboard.php');

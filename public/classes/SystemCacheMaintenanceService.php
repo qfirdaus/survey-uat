@@ -23,7 +23,11 @@ final class SystemCacheMaintenanceService
     private array $preservedFiles = [
         '.gitkeep' => true,
         '.htaccess' => true,
+        '.system-cache-maintenance.lock' => true,
     ];
+
+    /** @var resource|null */
+    private $operationLock = null;
 
     public function __construct(?string $projectRoot = null)
     {
@@ -76,6 +80,16 @@ final class SystemCacheMaintenanceService
 
     public function clear(array $selectedIds = [], bool $clearAll = false): array
     {
+        $this->acquireOperationLock();
+        try {
+            return $this->performClear($selectedIds, $clearAll);
+        } finally {
+            $this->releaseOperationLock();
+        }
+    }
+
+    private function performClear(array $selectedIds, bool $clearAll): array
+    {
         $locations = $this->discover();
         $selectedLookup = array_fill_keys(array_map('strval', $selectedIds), true);
         $targets = [];
@@ -85,6 +99,10 @@ final class SystemCacheMaintenanceService
             if ($clearAll || isset($selectedLookup[$id])) {
                 $targets[] = $location;
             }
+        }
+
+        if (!$clearAll && $targets === []) {
+            throw new InvalidArgumentException('No valid cache locations were selected.');
         }
 
         $filesRemoved = 0;
@@ -107,6 +125,7 @@ final class SystemCacheMaintenanceService
         }
 
         return [
+            'targets_matched' => count($targets),
             'locations_cleared' => $clearedLocations,
             'files_removed' => $filesRemoved,
             'freed_bytes' => $freedBytes,
@@ -170,10 +189,11 @@ final class SystemCacheMaintenanceService
     {
         $absolutePath = $this->normalizePath($absolutePath);
         if (!$this->isInsideProject($absolutePath) || !is_dir($absolutePath)) {
+            error_log('[SystemCacheMaintenanceService] Invalid cache location: ' . $absolutePath);
             return [
                 'files_removed' => 0,
                 'freed_bytes' => 0,
-                'errors' => [$absolutePath],
+                'errors' => [$this->safeRelativePath($absolutePath)],
             ];
         }
 
@@ -188,7 +208,8 @@ final class SystemCacheMaintenanceService
 
             $path = $this->normalizePath($file->getPathname());
             if (!$this->isInsideProject($path)) {
-                $errors[] = $path;
+                error_log('[SystemCacheMaintenanceService] Rejected cache path outside project: ' . $path);
+                $errors[] = $this->safeRelativePath($path);
                 continue;
             }
 
@@ -197,7 +218,8 @@ final class SystemCacheMaintenanceService
                 $filesRemoved++;
                 $freedBytes += $size;
             } else {
-                $errors[] = $path;
+                error_log('[SystemCacheMaintenanceService] Unable to remove cache file: ' . $path);
+                $errors[] = $this->safeRelativePath($path);
             }
         }
 
@@ -229,6 +251,44 @@ final class SystemCacheMaintenanceService
     {
         $path = $this->normalizePath($path);
         return $path === $this->projectRoot || str_starts_with($path, $this->projectRoot . '/');
+    }
+
+    private function safeRelativePath(string $path): string
+    {
+        $normalized = $this->normalizePath($path);
+        if ($this->isInsideProject($normalized)) {
+            return ltrim(substr($normalized, strlen($this->projectRoot)), '/');
+        }
+        return basename($normalized);
+    }
+
+    private function acquireOperationLock(): void
+    {
+        $lockPath = $this->projectRoot . '/public/cache/.system-cache-maintenance.lock';
+        $lockDirectory = dirname($lockPath);
+        if (!is_dir($lockDirectory) || !$this->isInsideProject($lockDirectory)) {
+            throw new RuntimeException('Cache maintenance lock directory is unavailable.');
+        }
+
+        $handle = fopen($lockPath, 'c+b');
+        if ($handle === false || !flock($handle, LOCK_EX | LOCK_NB)) {
+            if (is_resource($handle)) {
+                fclose($handle);
+            }
+            throw new RuntimeException('Cache maintenance is already running.');
+        }
+        $this->operationLock = $handle;
+    }
+
+    private function releaseOperationLock(): void
+    {
+        if (!is_resource($this->operationLock)) {
+            $this->operationLock = null;
+            return;
+        }
+        flock($this->operationLock, LOCK_UN);
+        fclose($this->operationLock);
+        $this->operationLock = null;
     }
 
     private function shouldPreserveFile(SplFileInfo $file): bool

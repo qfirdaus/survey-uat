@@ -3,184 +3,52 @@
  * IQS FRAMEWORK CORE FILE
  *
  * READ ONLY for downstream project programmers.
- * Do not modify this file directly in template or cloned projects.
- * Custom changes must be implemented in project-specific files
- * or approved extension points.
  */
-// pages/access-matrix.php — Access Matrix view
 declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/init.php';
 require_login();
-
 require_once __DIR__ . '/../controllers/AccessController.php';
-$controller = new AccessController();
-
-$lang    = $controller->lang ?? 'ms';
-$profile = $controller->profile ?? [];
-$matrix  = $controller->getMatrix();
-$roles   = $matrix['roles'] ?? [];
-$modules = $matrix['modules'] ?? [];
-$rows    = []; // legacy compatibility
-$version = (string)($_ENV['APP_ASSET_VER'] ?? date('ymdHis'));
-$rolesCount = count($roles ?? []);
-$dynamicRoleWidthPct = $rolesCount > 0 ? (65 / $rolesCount) : 0.0;
-$dynamicRoleWidthStr = number_format($dynamicRoleWidthPct, 4, '.', '');
-$PAGE_TITLE = (string)(__('access_title') ?? 'Access Matrix');
 
 if (!function_exists('h')) {
-    function h($v){ return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
+    function h(mixed $value): string
+    {
+        return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+    }
+}
+if (!function_exists('am')) {
+    function am(string $suffix, string $fallback): string
+    {
+        $key = 'access_matrix_' . $suffix;
+        $value = __($key);
+        return is_string($value) && $value !== '' && $value !== $key ? $value : $fallback;
+    }
 }
 
-// CSRF
-if (empty($_SESSION['csrf_token'])) { $_SESSION['csrf_token'] = bin2hex(random_bytes(16)); }
-$csrf = $_SESSION['csrf_token'];
+$loadError = false;
+$matrix = ['roles' => [], 'modules' => [], 'totals' => []];
+try {
+    $controller = new AccessController();
+    $lang = $controller->lang;
+    $matrix = $controller->getMatrix();
+} catch (Throwable $exception) {
+    $lang = in_array((string)($_SESSION['lang'] ?? 'ms'), ['ms', 'en'], true) ? (string)$_SESSION['lang'] : 'ms';
+    $loadError = true;
+    error_log('[access-matrix.php] Load error: ' . $exception->getMessage());
+}
+
+$roles = $matrix['roles'] ?? [];
+$modules = $matrix['modules'] ?? [];
+$totals = array_merge(['roles' => 0, 'modules' => 0, 'menus' => 0, 'permissions' => 0], $matrix['totals'] ?? []);
+$assetVersion = (string)($_ENV['APP_ASSET_VER'] ?? '1');
+$PAGE_TITLE = am('title', 'Access Matrix');
 ?>
 <!DOCTYPE html>
 <html lang="<?= h($lang) ?>" data-bs-theme="<?= h($_SESSION['theme.layout'] ?? 'light') ?>">
 <head>
-    <?php include __DIR__ . '/../includes/head.php'; ?>
-  <meta name="csrf-token" content="<?= h($csrf) ?>">
-  <link href="<?= base_url('assets/css/datatables-standard.css') ?>?v=<?= h($version) ?>" rel="stylesheet">
-  <style>
-    /* Adopt group table visual style (kumpulan-pengguna.php) for #userDT */
-    #userDT {
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: none;
-      border: 1px solid rgba(148, 163, 184, 0.14);
-      background: rgba(255, 255, 255, 0.96);
-      table-layout: fixed;
-    }
-    #userDT thead {
-      background: transparent;
-      color: inherit;
-    }
-    #userDT thead th {
-      font-weight: 700;
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      padding: 0.72rem 0.78rem;
-      border: 0;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.16);
-      color: #334155;
-      background: linear-gradient(180deg, rgba(248, 250, 252, 0.98) 0%, rgba(241, 245, 249, 0.95) 100%);
-    }
-    /* Module header row */
-    #userDT tr.module-row td { background-color: #e6f2ff !important; font-weight:700; color:var(--bs-body-color) !important; padding: .68rem .72rem; }
-    /* Remove builtin striping to keep flat look */
-    #userDT tbody tr,
-    #userDT tbody tr:nth-of-type(odd),
-    #userDT tbody tr:nth-of-type(even) { background-color: transparent !important; }
-    #userDT tbody tr { transition: background-color 0.18s ease, box-shadow 0.18s ease; }
-    #userDT tbody tr:hover { background: rgba(241, 245, 249, 0.88) !important; transform: none; box-shadow: inset 0 0 0 999px rgba(241, 245, 249, 0.3); }
-    #userDT tbody td { padding: 0.62rem 0.78rem; border-color: rgba(226, 232, 240, 0.9); vertical-align: middle; font-size: 0.88rem; line-height: 1.28; }
-    html[data-bs-theme="dark"] #userDT thead { background: transparent; }
-    html[data-bs-theme="dark"] #userDT thead th { background: linear-gradient(180deg, rgba(30, 41, 59, 0.96) 0%, rgba(15, 23, 42, 0.94) 100%); color: #dbe4f0; border-bottom-color: rgba(148, 163, 184, 0.18); }
-    html[data-bs-theme="dark"] #userDT tbody tr:hover { background: rgba(30, 41, 59, 0.76) !important; box-shadow: inset 0 0 0 999px rgba(30, 41, 59, 0.18); }
-
-    /* Preserve existing small utilities */
-    .truncate-1line { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
-    .access-badge { font-size:0.78rem; padding:.25rem .45rem; border-radius:.35rem; }
-    .access-badge.yes { background: rgba(var(--bs-success-rgb, 25,135,84),0.12); color:var(--bs-success); border:1px solid rgba(var(--bs-success-rgb,25,135,84),0.15); }
-    .access-badge.no  { background: rgba(var(--bs-danger-rgb,220,53,69),0.06); color:var(--bs-danger); border:1px solid rgba(var(--bs-danger-rgb,220,53,69),0.08); }
-    .matrix-table .action-gap { display:flex; gap:0.35rem; }
-
-    /* Column sizing tweaks matching kumpulan-pengguna layout */
-    .col-nama { text-align:left; }
-    .col-path{ text-align:center; }
-    .col-akses{ text-align:center; }
-    .col-path .truncate-1line { white-space:nowrap; font-size:0.95rem; }
-    .group-col { white-space:normal; }
-
-    /* DataTables wrapper niceties when table gets enhanced */
-    #userDT_wrapper .dataTables_length { display: flex; align-items: center; white-space: nowrap; }
-    #userDT_wrapper .dataTables_filter { text-align: right; margin-left: auto; }
-
-    /* Match senarai-pengguna table shell */
-    .content-page .card {
-      border-radius: 8px;
-      border: 1px solid rgba(148, 163, 184, 0.14);
-      box-shadow: 0 16px 38px rgba(15, 23, 42, 0.07);
-      overflow: hidden;
-      backdrop-filter: blur(10px);
-    }
-    .content-page .card > .card-body {
-      padding: 1.15rem 1.15rem 1rem;
-    }
-    #userDT {
-      width: 100%;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: none;
-      border: 1px solid rgba(148, 163, 184, 0.14);
-      background: rgba(255, 255, 255, 0.96);
-    }
-    #userDT thead {
-      background: transparent;
-      color: inherit;
-    }
-    #userDT thead th {
-      padding: 0.72rem 0.78rem;
-      border: 0;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.16);
-      background: linear-gradient(180deg, rgba(248, 250, 252, 0.98) 0%, rgba(241, 245, 249, 0.95) 100%);
-      color: #334155;
-      font-size: 0.8rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-    #userDT tbody td {
-      padding: 0.62rem 0.78rem;
-      border-color: rgba(226, 232, 240, 0.9);
-      font-size: 0.88rem;
-      line-height: 1.28;
-      vertical-align: middle;
-    }
-    #userDT tbody tr {
-      transition: background-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
-    }
-    #userDT tbody tr:hover {
-      background: rgba(241, 245, 249, 0.88) !important;
-      transform: none;
-      box-shadow: inset 0 0 0 999px rgba(241, 245, 249, 0.3);
-    }
-    #userDT tr.module-row td {
-      background: linear-gradient(180deg, rgba(226, 232, 240, 0.72) 0%, rgba(241, 245, 249, 0.9) 100%) !important;
-      color: #1e293b !important;
-      border-top: 1px solid rgba(148, 163, 184, 0.14);
-      border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-      font-size: 0.82rem;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      padding: 0.68rem 0.72rem;
-    }
-    html[data-bs-theme="dark"] #userDT {
-      background: rgba(15, 23, 42, 0.92);
-      border-color: rgba(148, 163, 184, 0.22);
-    }
-    html[data-bs-theme="dark"] #userDT thead th {
-      background: linear-gradient(180deg, rgba(30, 41, 59, 0.96) 0%, rgba(15, 23, 42, 0.94) 100%);
-      color: #dbe4f0;
-      border-bottom-color: rgba(148, 163, 184, 0.18);
-    }
-    html[data-bs-theme="dark"] #userDT tbody td {
-      border-color: rgba(51, 65, 85, 0.95);
-    }
-    html[data-bs-theme="dark"] #userDT tbody tr:hover {
-      background: rgba(30, 41, 59, 0.76) !important;
-      box-shadow: inset 0 0 0 999px rgba(30, 41, 59, 0.18);
-    }
-    html[data-bs-theme="dark"] #userDT tr.module-row td {
-      background: linear-gradient(180deg, rgba(30, 41, 59, 0.92) 0%, rgba(15, 23, 42, 0.94) 100%) !important;
-      color: #e2e8f0 !important;
-      border-top-color: rgba(148, 163, 184, 0.18);
-      border-bottom-color: rgba(148, 163, 184, 0.18);
-    }
-  </style>
+  <?php include __DIR__ . '/../includes/head.php'; ?>
+  <meta name="referrer" content="no-referrer">
+  <link href="<?= base_url('assets/css/pages/access-matrix.css') ?>?v=<?= h($assetVersion) ?>" rel="stylesheet">
 </head>
 <body
   data-topbar-color="<?= h($_SESSION['theme.topbar'] ?? 'light') ?>"
@@ -195,103 +63,207 @@ $csrf = $_SESSION['csrf_token'];
 
   <div class="content-page">
     <div class="content">
-      <div class="container-fluid">
-
+      <div class="container-fluid access-matrix-page">
         <div class="row mb-3">
           <div class="col-12">
             <div class="page-title-box d-flex justify-content-between align-items-center flex-wrap">
-              <h4 class="page-title"><i class="ri-shield-keyhole-line me-1"></i> <?= __('access_title') ?? 'Access Matrix' ?></h4>
+              <h4 class="page-title"><i class="ri-shield-keyhole-line me-1"></i> <?= h(am('title', 'Access Matrix')) ?></h4>
               <div class="page-title-right">
                 <ol class="breadcrumb m-0">
-                  <li class="breadcrumb-item"><a href="dashboard.php"><i class="ri-home-4-line align-middle me-1"></i> <?= __('breadcrumb_home') ?? 'Home' ?></a></li>
-                  <li class="breadcrumb-item active"><?= __('access_title') ?? 'Access Matrix' ?></li>
+                  <li class="breadcrumb-item"><a href="<?= h(base_path('pages/dashboard.php')) ?>"><?= h(am('breadcrumb_home', 'Dashboard')) ?></a></li>
+                  <li class="breadcrumb-item active"><?= h(am('title', 'Access Matrix')) ?></li>
                 </ol>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="row">
-          <div class="col-12">
-            <div class="card">
-              <div class="card-body">
-                <p class="text-muted mb-3"><?= __('access_intro') ?? 'Read-only access matrix for system menus.' ?></p>
-
-                <div class="table-responsive dt-standard position-relative">
-                  <table id="userDT" class="table table-hover table-striped table-sm table-bordered w-100 matrix-table align-middle">
-                    <colgroup>
-                      <col style="width:5%">
-                      <col style="width:15%">
-                      <col style="width:15%">
-                      <?php foreach ($roles as $r): ?>
-                        <col style="width:<?= h($dynamicRoleWidthStr) ?>%">
-                      <?php endforeach; ?>
-                    </colgroup>
-                    <thead>
-                      <tr>
-                        <th class="col-bil text-center"><?= __('access_col_no') ?? '#' ?></th>
-                        <th class="col-nama"><?= __('access_menu') ?? 'Menu' ?></th>
-                        <th class="col-path text-center" style="white-space:nowrap"><?= __('access_path') ?? 'Path' ?></th>
-                        <?php foreach ($roles as $r): ?>
-                          <th class="text-center group-col" title="<?= h($r['nama'] ?? $r['kod'] ?? '') ?>"><?= h($r['nama'] ?: $r['kod'] ?: __('access_user_level')) ?></th>
-                        <?php endforeach; ?>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <?php if (!empty($modules)): ?>
-                        <?php $rowNo = 0; ?>
-                        <?php foreach ($modules as $mod): ?>
-                          <?php // Module header row - full-width, not part of sorting visual ?>
-                          <tr class="module-row" data-module-id="<?= h((string)($mod['id'] ?? '')) ?>">
-                            <td colspan="<?= 3 + max(0, $rolesCount) ?>"><?= h( (__('access_modul') ? __('access_modul') . ': ' : '') . ($mod['nama'] ?? 'Module') ) ?></td>
-                          </tr>
-
-                          <?php foreach (($mod['menus'] ?? []) as $m): ?>
-                            <?php $rowNo++; ?>
-                            <tr>
-                              <td class="col-bil text-center"><?= $rowNo ?></td>
-                              <td class="col-nama">
-                                <div class="fw-semibold truncate-1line"><?= h($m['nama'] ?? '') ?></div>
-                              </td>
-                              <td class="col-path">
-                                <div class="text-muted small truncate-1line" style="font-size:0.95rem; white-space:nowrap"><?= h($m['path'] ?? '') ?></div>
-                              </td>
-                              <?php // Dynamic group columns ?>
-                              <?php foreach ($roles as $r): ?>
-                                <?php $rid = (int)($r['id'] ?? 0); $has = ($rid ? !empty($m['perms'][$rid]) : false); ?>
-                                <td class="text-center">
-                                  <?php if ($has): ?>
-                                    <span class="access-badge yes"><i class="ri-check-line"></i> <?= h(__('access_ada') ?? 'Has Access') ?></span>
-                                  <?php else: ?>
-                                    <span class="access-badge no"><i class="ri-close-line"></i> <?= h(__('access_tiada') ?? 'No Access') ?></span>
-                                  <?php endif; ?>
-                                </td>
-                              <?php endforeach; ?>
-                            </tr>
-                          <?php endforeach; ?>
-                        <?php endforeach; ?>
-                      <?php else: ?>
-                        <tr><td colspan="<?= 3 + max(0, $rolesCount) ?>" class="text-center text-muted"><?= __('access_no') ?? 'Tiada rekod' ?></td></tr>
-                      <?php endif; ?>
-                    </tbody>
-                  </table>
-                </div>
-
-              </div>
-            </div>
+        <section class="access-matrix-hero">
+          <div>
+            <span class="access-matrix-eyebrow"><i class="ri-lock-2-line"></i> <?= h(am('eyebrow', 'Super Admin Access Review')) ?></span>
+            <h1><?= h(am('hero_title', 'Understand access across every system menu')) ?></h1>
+            <p><?= h(am('hero_text', 'Review the complete menu catalogue and compare group permissions from one controlled workspace.')) ?></p>
           </div>
-        </div>
+          <div class="access-matrix-hero__notice">
+            <i class="ri-eye-line"></i>
+            <div><strong><?= h(am('readonly_title', 'Read-only view')) ?></strong><span><?= h(am('readonly_text', 'Access changes are managed from User Groups.')) ?></span></div>
+          </div>
+        </section>
 
-      </div><!-- /.container-fluid -->
-    </div><!-- /.content -->
+        <section class="access-matrix-stats" aria-label="<?= h(am('summary_label', 'Access summary')) ?>">
+          <?php
+          $cards = [
+              ['icon' => 'ri-team-line', 'label' => am('kpi_groups', 'User groups'), 'value' => $totals['roles']],
+              ['icon' => 'ri-layout-grid-line', 'label' => am('kpi_modules', 'Modules'), 'value' => $totals['modules']],
+              ['icon' => 'ri-menu-search-line', 'label' => am('kpi_menus', 'System menus'), 'value' => $totals['menus']],
+              ['icon' => 'ri-key-2-line', 'label' => am('kpi_permissions', 'Access mappings'), 'value' => $totals['permissions']],
+          ];
+          foreach ($cards as $card): ?>
+            <article class="access-matrix-stat">
+              <span class="access-matrix-stat__icon"><i class="<?= h($card['icon']) ?>"></i></span>
+              <div><span><?= h($card['label']) ?></span><strong><?= h(number_format((int)$card['value'])) ?></strong></div>
+            </article>
+          <?php endforeach; ?>
+        </section>
+
+        <section class="access-matrix-card">
+          <header class="access-matrix-card__header">
+            <div>
+              <span class="access-matrix-eyebrow"><?= h(am('workspace_eyebrow', 'Permission Explorer')) ?></span>
+              <h2><?= h(am('workspace_title', 'System Access Matrix')) ?></h2>
+              <p><?= h(am('workspace_text', 'Search and filter locally without reloading the page.')) ?></p>
+            </div>
+            <div class="access-matrix-legend" aria-label="<?= h(am('legend', 'Legend')) ?>">
+              <span><i class="ri-checkbox-circle-fill is-allowed"></i> <?= h(am('has_access', 'Has access')) ?></span>
+              <span><i class="ri-close-circle-line is-denied"></i> <?= h(am('no_access', 'No access')) ?></span>
+            </div>
+          </header>
+
+          <div class="access-matrix-filters" id="access-matrix-filters">
+            <label class="access-matrix-field access-matrix-field--search">
+              <span><?= h(am('search_label', 'Search menu or path')) ?></span>
+              <span class="access-matrix-input"><i class="ri-search-line"></i><input type="search" id="matrix-search" placeholder="<?= h(am('search_placeholder', 'Type a menu name or path...')) ?>" autocomplete="off"></span>
+            </label>
+            <label class="access-matrix-field">
+              <span><?= h(am('module_filter', 'Module')) ?></span>
+              <select id="matrix-module" class="form-select">
+                <option value=""><?= h(am('all_modules', 'All modules')) ?></option>
+                <?php foreach ($modules as $module): ?><option value="<?= h((string)$module['id']) ?>"><?= h($module['nama']) ?></option><?php endforeach; ?>
+              </select>
+            </label>
+            <label class="access-matrix-field">
+              <span><?= h(am('group_filter', 'User group')) ?></span>
+              <select id="matrix-role" class="form-select">
+                <option value=""><?= h(am('all_groups', 'All groups')) ?></option>
+                <?php foreach ($roles as $role): ?><option value="<?= h((string)$role['id']) ?>"><?= h($role['nama']) ?></option><?php endforeach; ?>
+              </select>
+            </label>
+            <label class="access-matrix-field">
+              <span><?= h(am('status_filter', 'Access status')) ?></span>
+              <select id="matrix-status" class="form-select">
+                <option value="all"><?= h(am('all_statuses', 'All statuses')) ?></option>
+                <option value="allowed"><?= h(am('has_access', 'Has access')) ?></option>
+                <option value="denied"><?= h(am('no_access', 'No access')) ?></option>
+              </select>
+            </label>
+            <button type="button" class="btn access-matrix-reset" id="matrix-reset"><i class="ri-refresh-line"></i> <?= h(am('reset', 'Reset')) ?></button>
+          </div>
+
+          <div class="access-matrix-results" aria-live="polite">
+            <span id="matrix-result-count"><?= h(sprintf(am('result_count', '%d menus displayed'), (int)$totals['menus'])) ?></span>
+            <span><?= h(am('scroll_hint', 'Scroll horizontally to compare groups')) ?> <i class="ri-arrow-right-line"></i></span>
+          </div>
+
+          <?php if ($loadError): ?>
+            <div class="access-matrix-empty"><i class="ri-error-warning-line"></i><h3><?= h(am('error_title', 'Unable to load access matrix')) ?></h3><p><?= h(am('error_text', 'Please refresh the page or try again later.')) ?></p></div>
+          <?php elseif (!$modules || !$roles): ?>
+            <div class="access-matrix-empty"><i class="ri-inbox-2-line"></i><h3><?= h(am('empty_title', 'No access data available')) ?></h3><p><?= h(am('empty_text', 'No modules, menus or user groups are currently available.')) ?></p></div>
+          <?php else: ?>
+            <div class="access-matrix-table-wrap" tabindex="0" aria-label="<?= h(am('table_label', 'System access matrix table')) ?>">
+              <table class="access-matrix-table" id="access-matrix-table">
+                <thead><tr>
+                  <th class="matrix-menu-col"><?= h(am('menu_column', 'Menu')) ?></th>
+                  <th class="matrix-path-col"><?= h(am('path_column', 'Path')) ?></th>
+                  <?php foreach ($roles as $role): ?>
+                    <th class="matrix-role-col" data-role-column="<?= h((string)$role['id']) ?>" title="<?= h($role['nama']) ?>"><span><?= h($role['nama']) ?></span><small><?= h($role['kod']) ?></small></th>
+                  <?php endforeach; ?>
+                </tr></thead>
+                <tbody>
+                <?php foreach ($modules as $module): ?>
+                  <tr class="matrix-module-row" data-module-heading="<?= h((string)$module['id']) ?>"><td colspan="<?= 2 + count($roles) ?>"><i class="ri-layout-grid-line"></i><span><?= h($module['nama']) ?></span><small><?= h(sprintf(am('module_menu_count', '%d menus'), count($module['menus']))) ?></small></td></tr>
+                  <?php foreach ($module['menus'] as $menu):
+                    $anyAllowed = in_array(true, $menu['perms'], true); ?>
+                    <tr class="matrix-menu-row" data-module="<?= h((string)$module['id']) ?>" data-search="<?= h(strtolower($menu['nama'] . ' ' . $menu['path'])) ?>" data-any-allowed="<?= $anyAllowed ? '1' : '0' ?>">
+                      <td class="matrix-menu-col"><strong><?= h($menu['nama']) ?></strong></td>
+                      <td class="matrix-path-col"><code><?= h($menu['path'] !== '' ? $menu['path'] : '—') ?></code></td>
+                      <?php foreach ($roles as $role): $allowed = !empty($menu['perms'][(int)$role['id']]); ?>
+                        <td class="matrix-role-col" data-role-column="<?= h((string)$role['id']) ?>" data-access="<?= $allowed ? 'allowed' : 'denied' ?>">
+                          <span class="matrix-access <?= $allowed ? 'is-allowed' : 'is-denied' ?>" title="<?= h($allowed ? am('has_access', 'Has access') : am('no_access', 'No access')) ?>">
+                            <i class="<?= $allowed ? 'ri-checkbox-circle-fill' : 'ri-close-circle-line' ?>"></i><span class="visually-hidden"><?= h($allowed ? am('has_access', 'Has access') : am('no_access', 'No access')) ?></span>
+                          </span>
+                        </td>
+                      <?php endforeach; ?>
+                    </tr>
+                  <?php endforeach; ?>
+                <?php endforeach; ?>
+                </tbody>
+              </table>
+            </div>
+            <div class="access-matrix-empty access-matrix-empty--filtered d-none" id="matrix-filter-empty"><i class="ri-filter-off-line"></i><h3><?= h(am('filter_empty_title', 'No matching menus')) ?></h3><p><?= h(am('filter_empty_text', 'Adjust or reset the current filters.')) ?></p></div>
+          <?php endif; ?>
+        </section>
+      </div>
+    </div>
     <?php include __DIR__ . '/../includes/footer.php'; ?>
-  </div><!-- /.content-page -->
-</div><!-- /.wrapper -->
+  </div>
+</div>
 
 <?php include __DIR__ . '/../includes/script.php'; ?>
-<!-- Plain table view: no DataTables initialization. Table retains same markup and heading as kumpulan-pengguna.php -->
 <script>
-  // No DataTables init for plain table layout.
+(function () {
+  'use strict';
+  const table = document.getElementById('access-matrix-table');
+  if (!table) return;
+  const search = document.getElementById('matrix-search');
+  const moduleFilter = document.getElementById('matrix-module');
+  const roleFilter = document.getElementById('matrix-role');
+  const statusFilter = document.getElementById('matrix-status');
+  const reset = document.getElementById('matrix-reset');
+  const resultCount = document.getElementById('matrix-result-count');
+  const empty = document.getElementById('matrix-filter-empty');
+  const resultTemplate = <?= json_encode(am('result_count', '%d menus displayed'), JSON_UNESCAPED_UNICODE) ?>;
+
+  function applyFilters() {
+    const term = (search.value || '').trim().toLocaleLowerCase();
+    const moduleId = moduleFilter.value;
+    const roleId = roleFilter.value;
+    const status = statusFilter.value;
+    let visibleCount = 0;
+    const visibleModules = new Set();
+
+    table.querySelectorAll('.matrix-role-col').forEach(function (column) {
+      column.hidden = roleId !== '' && column.dataset.roleColumn !== roleId;
+    });
+
+    table.querySelectorAll('.matrix-menu-row').forEach(function (row) {
+      let statusMatch = true;
+      if (status !== 'all') {
+        if (roleId) {
+          const cell = row.querySelector('[data-role-column="' + roleId + '"]');
+          statusMatch = !!cell && cell.dataset.access === status;
+        } else {
+          const anyAllowed = row.dataset.anyAllowed === '1';
+          statusMatch = status === 'allowed' ? anyAllowed : !anyAllowed;
+        }
+      }
+      const visible = (!term || row.dataset.search.includes(term)) && (!moduleId || row.dataset.module === moduleId) && statusMatch;
+      row.hidden = !visible;
+      if (visible) {
+        visibleCount++;
+        visibleModules.add(row.dataset.module);
+      }
+    });
+
+    table.querySelectorAll('.matrix-module-row').forEach(function (row) {
+      row.hidden = !visibleModules.has(row.dataset.moduleHeading);
+    });
+    resultCount.textContent = resultTemplate.replace('%d', String(visibleCount));
+    empty.classList.toggle('d-none', visibleCount !== 0);
+    table.parentElement.classList.toggle('d-none', visibleCount === 0);
+  }
+
+  [search, moduleFilter, roleFilter, statusFilter].forEach(function (control) {
+    control.addEventListener(control === search ? 'input' : 'change', applyFilters);
+  });
+  reset.addEventListener('click', function () {
+    search.value = '';
+    moduleFilter.value = '';
+    roleFilter.value = '';
+    statusFilter.value = 'all';
+    applyFilters();
+    search.focus();
+  });
+})();
 </script>
 </body>
 </html>

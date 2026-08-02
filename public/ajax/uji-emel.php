@@ -41,6 +41,15 @@ tetapan_uji_emel_debug('entry');
 require_login();
 tetapan_uji_emel_debug('after_require_login');
 
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+    http_response_code(405);
+    echo json_encode([
+        'success' => false,
+        'message' => (string)__('config_method_not_allowed'),
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 // ================= Authorization Check =================
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../classes/User.php';
@@ -56,9 +65,10 @@ if ($userGroupId !== PRESTASI_ROLE_ID_ADM_SA) {
     tetapan_uji_emel_debug('authorization_denied', [
         'group_id' => $userGroupId,
     ]);
+    http_response_code(403);
     echo json_encode([
         'success' => false,
-        'message' => 'Akses ditolak. Hanya Super Admin dibenarkan.'
+        'message' => (string)__('config_super_admin_only_text')
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -72,9 +82,10 @@ if (empty($csrfHeader) || empty($sessionToken) || !hash_equals($sessionToken, $c
         'has_header' => $csrfHeader !== '',
         'has_session_token' => $sessionToken !== '',
     ]);
+    http_response_code(419);
     echo json_encode([
         'success' => false,
-        'message' => 'CSRF token tidak sah. Sila muat semula halaman dan cuba lagi.'
+        'message' => (string)__('config_csrf_invalid_text')
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -83,9 +94,10 @@ if (empty($csrfHeader) || empty($sessionToken) || !hash_equals($sessionToken, $c
 require_once __DIR__ . '/_helpers.php';
 if (!checkRateLimit('test_email', 5, 60)) {
     tetapan_uji_emel_debug('rate_limited');
+    http_response_code(429);
     echo json_encode([
         'success' => false,
-        'message' => 'Terlalu banyak percubaan. Sila cuba lagi selepas 1 minit.'
+        'message' => (string)__('config_rate_limit_text')
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -113,6 +125,15 @@ $encryption = $_POST['mail_encryption'] ?? '';
 $fromAddr   = $_POST['mail_from_address'] ?? '';
 $fromName   = $_POST['mail_from_name'] ?? '';
 $to         = $_POST['uji_email'] ?? $username;
+
+if (!filter_var((string)$to, FILTER_VALIDATE_EMAIL)) {
+    http_response_code(422);
+    echo json_encode([
+        'success' => false,
+        'message' => (string)__('config_js_valid_email_full'),
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 
 // Jika password kosong, ambil dari existing settings
 if ($password === '') {
@@ -194,10 +215,10 @@ try {
     
     // If translation not found, use default
     if ($successMsg === $successKey) {
-        $successMsg = "Emel ujian berjaya dihantar ke <strong>{$to}</strong>.";
+        $successMsg = 'Emel ujian berjaya dihantar ke <strong>' . htmlspecialchars((string)$to, ENT_QUOTES, 'UTF-8') . '</strong>.';
     } else {
         // Replace placeholder
-        $successMsg = str_replace(':email', "<strong>{$to}</strong>", $successMsg);
+        $successMsg = str_replace(':email', '<strong>' . htmlspecialchars((string)$to, ENT_QUOTES, 'UTF-8') . '</strong>', $successMsg);
     }
     
     echo json_encode([
@@ -232,8 +253,8 @@ try {
         $errorTemplate = "❌ Gagal hantar emel: :error";
     }
     
-    $errorMsg = str_replace(':error', htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'), $errorTemplate);
-    
+    $errorMsg = str_replace(':error', (string)__('config_js_emel_uji_error_safe'), $errorTemplate);
+    http_response_code(502);
     echo json_encode([
         'success' => false,
         'message' => $errorMsg

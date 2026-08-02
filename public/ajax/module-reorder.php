@@ -156,5 +156,6 @@ try {
     $pdo->rollBack();
   }
   http_response_code(500);
-  echo json_encode(['error' => true, 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+  error_log('[module-reorder] ' . $e->getMessage());
+  echo json_encode(['error' => true, 'message' => (string)__('userGroup_err_server')], JSON_UNESCAPED_UNICODE);
 }

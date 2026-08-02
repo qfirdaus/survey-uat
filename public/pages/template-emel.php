@@ -23,7 +23,11 @@ $bootstrapError = null;
 try {
     $controller = new EmailTemplateController();
 } catch (Throwable $e) {
-    $bootstrapError = $e->getMessage();
+    error_log('[template-emel] Bootstrap failure: ' . $e->getMessage());
+    $bootstrapError = (string)__('emailTemplate_error_bootstrap');
+    if ($bootstrapError === 'emailTemplate_error_bootstrap' || $bootstrapError === '') {
+        $bootstrapError = 'Unable to load email template management at this time.';
+    }
 }
 
 if (!function_exists('h')) {
@@ -42,7 +46,7 @@ if (!function_exists('t')) {
 }
 
 $lang = (string)($_SESSION['lang'] ?? 'ms');
-$version = date('ymdHis');
+$version = (string)($_ENV['APP_ASSET_VER'] ?? filemtime(__FILE__) ?: '1');
 $PAGE_TITLE = t('emailTemplate_page_title', 'Template Emel');
 $records = $controller->records ?? [];
 $csrf = $controller->csrf ?? (string)($_SESSION['csrf_token'] ?? '');
@@ -143,8 +147,10 @@ foreach ($generalPlaceholders as $placeholder) {
 <head>
     <?php include __DIR__ . '/../includes/head.php'; ?>
     <meta name="csrf-token" content="<?= h($csrf) ?>">
+    <meta name="referrer" content="same-origin">
     <link href="<?= h(base_url('assets/css/datatables-standard.css')) ?>?v=<?= h($version) ?>" rel="stylesheet">
     <link href="<?= h(base_url('assets/css/pages/template-emel.css')) ?>?v=<?= h($version) ?>" rel="stylesheet">
+    <link href="<?= h(base_url('assets/css/pages/template-emel-refresh.css')) ?>?v=<?= h($version) ?>" rel="stylesheet">
     <script src="<?= h(base_url('assets/js/helpers/datatables-standard.js')) ?>?v=<?= h($version) ?>"></script>
 </head>
 <body data-topbar-color="<?= h($_SESSION['theme.topbar'] ?? 'light') ?>"
@@ -180,6 +186,7 @@ foreach ($generalPlaceholders as $placeholder) {
                             <p class="text-muted mb-0"><?= h(t('emailTemplate_hero_subtitle', 'Gunakan seed template sebagai titik mula, kemudian laras placeholder dan kandungan ikut flow sistem anda.')) ?></p>
                         </div>
                         <div class="et-hero-actions">
+                            <div class="et-hero-governance"><i class="ri-shield-check-line"></i><div><strong><?= h(t('emailTemplate_governance_title', 'Controlled email content')) ?></strong><span><?= h(t('emailTemplate_governance_text', 'Preview placeholders and verify recipients before sending.')) ?></span></div></div>
                             <?php if ($seedTemplates !== []): ?>
                                 <form method="post" action="" class="d-inline-block" data-template-action-form="seed_templates">
                                     <input type="hidden" name="csrf_token" value="<?= h($csrf) ?>">
@@ -196,7 +203,7 @@ foreach ($generalPlaceholders as $placeholder) {
                     </div>
                 </div>
 
-                <div class="row g-2 mb-2">
+                <div class="row g-3 et-summary-grid">
                     <div class="col-12 col-md-6 col-xl-3">
                         <div class="card et-summary-card et-summary-total h-100">
                             <div class="card-body">
@@ -231,7 +238,7 @@ foreach ($generalPlaceholders as $placeholder) {
                     </div>
                 </div>
 
-                <div class="row g-2">
+                <div class="row g-0 et-content-grid">
                     <div class="col-12">
                         <div class="card et-shell-card">
                             <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
@@ -443,6 +450,7 @@ foreach ($generalPlaceholders as $placeholder) {
                 <div>
                     <h5 class="modal-title" data-modal-title><?= h(t('emailTemplate_modal_create_title', 'Tambah Template Emel')) ?></h5>
                     <p class="mb-0 text-white-50 small"><?= h(t('emailTemplate_modal_subtitle', 'Sediakan maklumat utama template, kandungan emel, dan placeholder umum yang diperlukan.')) ?></p>
+                    <span class="et-unsaved-indicator" id="emailTemplateUnsaved"><i class="ri-edit-circle-line"></i><?= h(t('emailTemplate_unsaved_indicator', 'Unsaved changes')) ?></span>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="<?= h(t('emailTemplate_modal_close_aria', 'Tutup')) ?>"></button>
             </div>
@@ -478,7 +486,7 @@ foreach ($generalPlaceholders as $placeholder) {
                                     <div class="col-md-4"><label class="form-label"><?= h(t('emailTemplate_field_status', 'Status')) ?> <span class="text-danger">*</span></label><select name="status" class="form-select <?= isset($fieldErrors['status']) ? 'is-invalid' : '' ?>" data-field="status" required><?php foreach ($statusOptions as $optionValue => $optionLabel): ?><option value="<?= h($optionValue) ?>" <?= strtoupper((string)($form['status'] ?? 'DRAFT')) === (string)$optionValue ? 'selected' : '' ?>><?= h($optionLabel) ?></option><?php endforeach; ?></select><?php if (isset($fieldErrors['status'])): ?><div class="invalid-feedback"><?= h((string)$fieldErrors['status']) ?></div><?php endif; ?></div>
                                     <div class="col-12"><label class="form-label"><?= h(t('emailTemplate_field_description', 'Penerangan Ringkas')) ?></label><input type="text" name="description" class="form-control" value="<?= h((string)($form['description'] ?? '')) ?>" data-field="description" placeholder="<?= h(t('emailTemplate_field_description_placeholder', 'Ringkaskan tujuan template ini')) ?>"></div>
                                     <div class="col-12"><label class="form-label"><?= h(t('emailTemplate_field_subject', 'Subjek Emel')) ?> <span class="text-danger">*</span></label><input type="text" name="subject_template" class="form-control <?= isset($fieldErrors['subject_template']) ? 'is-invalid' : '' ?>" value="<?= h((string)($form['subject_template'] ?? '')) ?>" data-field="subject_template" data-placeholder-target required><?php if (isset($fieldErrors['subject_template'])): ?><div class="invalid-feedback"><?= h((string)$fieldErrors['subject_template']) ?></div><?php endif; ?></div>
-                                    <div class="col-12"><label class="form-label"><?= h(t('emailTemplate_field_body_html', 'Kandungan HTML')) ?> <span class="text-danger">*</span></label><textarea name="body_html" rows="11" class="form-control et-code-field <?= isset($fieldErrors['body_html']) ? 'is-invalid' : '' ?>" data-field="body_html" data-placeholder-target required><?= h((string)($form['body_html'] ?? '')) ?></textarea><?php if (isset($fieldErrors['body_html'])): ?><div class="invalid-feedback"><?= h((string)$fieldErrors['body_html']) ?></div><?php endif; ?><div class="form-text"><?= h(t('emailTemplate_hint_body_html', 'Gunakan HTML biasa di sini. Semak hasil akhir melalui tab Preview & Test.')) ?></div></div>
+                                    <div class="col-12"><label class="form-label"><?= h(t('emailTemplate_field_body_html', 'Kandungan HTML')) ?> <span class="text-danger">*</span></label><textarea name="body_html" rows="11" class="form-control et-code-field <?= isset($fieldErrors['body_html']) ? 'is-invalid' : '' ?>" data-field="body_html" data-placeholder-target required><?= h((string)($form['body_html'] ?? '')) ?></textarea><?php if (isset($fieldErrors['body_html'])): ?><div class="invalid-feedback"><?= h((string)$fieldErrors['body_html']) ?></div><?php endif; ?><div class="form-text"><?= h(t('emailTemplate_hint_body_html', 'Gunakan HTML biasa di sini. Semak hasil akhir melalui tab Preview & Test.')) ?></div><div class="form-text text-warning-emphasis"><i class="ri-shield-check-line me-1"></i><?= h(t('emailTemplate_external_resource_warning', 'External images or links may contact third-party servers when recipients open the email.')) ?></div></div>
                                     <div class="col-12"><label class="form-label"><?= h(t('emailTemplate_field_body_text', 'Kandungan Text')) ?></label><textarea name="body_text" rows="6" class="form-control et-code-field" data-field="body_text" data-placeholder-target><?= h((string)($form['body_text'] ?? '')) ?></textarea></div>
                                     <div class="col-12"><label class="form-label"><?= h(t('emailTemplate_field_notes', 'Nota Dalaman')) ?></label><textarea name="notes" rows="3" class="form-control" data-field="notes"><?= h((string)($form['notes'] ?? '')) ?></textarea></div>
                                     <div class="col-12"><div class="form-check form-switch et-default-switch"><input class="form-check-input" type="checkbox" role="switch" name="is_default" value="1" id="emailTemplateIsDefault" data-field="is_default" <?= !empty($form['is_default']) ? 'checked' : '' ?>><label class="form-check-label" for="emailTemplateIsDefault"><?= h(t('emailTemplate_field_is_default', 'Tetapkan sebagai template default untuk role dan kategori ini')) ?></label></div></div>
@@ -688,6 +696,15 @@ window.EmailTemplatePageData = <?= json_encode([
     ],
     'previewUrl' => base_url('ajax/email-template-preview.php'),
     'testSendUrl' => base_url('ajax/email-template-test-send.php'),
+    'unsavedConfirmTitle' => t('emailTemplate_unsaved_confirm_title', 'Discard unsaved changes?'),
+    'unsavedConfirmText' => t('emailTemplate_unsaved_confirm_text', 'Changes made in this template have not been saved.'),
+    'unsavedConfirmDiscard' => t('emailTemplate_unsaved_confirm_discard', 'Discard changes'),
+    'testSendConfirmTitle' => t('emailTemplate_test_confirm_title', 'Send test email?'),
+    'testSendConfirmText' => t('emailTemplate_test_confirm_text', 'Confirm the recipient and subject before sending.'),
+    'testSendConfirmButton' => t('emailTemplate_test_confirm_button', 'Send test email'),
+    'testSendRecipientLabel' => t('emailTemplate_test_recipient_label', 'Recipient'),
+    'testSendSubjectLabel' => t('emailTemplate_test_subject_label', 'Subject'),
+    'commonCancel' => t('common_cancel', 'Cancel'),
     'previewFailedTitle' => t('emailTemplate_preview_failed_title', 'Preview Gagal'),
     'testSendSuccessTitle' => t('emailTemplate_test_send_success_title', 'Emel Ujian Berjaya'),
     'testSendFailedTitle' => t('emailTemplate_test_send_failed_title', 'Emel Ujian Gagal'),

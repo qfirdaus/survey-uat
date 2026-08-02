@@ -738,7 +738,7 @@ class AuditCenterController
         if (!$this->tableExists('audit_event')) {
             return 0;
         }
-        return (int)$this->pdoMysql->query("SELECT COUNT(*) FROM audit_event WHERE DATE(occurred_at) = CURRENT_DATE()")->fetchColumn();
+        return (int)$this->pdoMysql->query("SELECT COUNT(*) FROM audit_event WHERE occurred_at >= CURRENT_DATE() AND occurred_at < CURRENT_DATE() + INTERVAL 1 DAY")->fetchColumn();
     }
 
     private function countTodaySecurityEvents(): int
@@ -750,7 +750,8 @@ class AuditCenterController
         $stmt = $this->pdoMysql->prepare(
             "SELECT COUNT(*)
              FROM audit_event
-             WHERE DATE(occurred_at) = CURRENT_DATE()
+             WHERE occurred_at >= CURRENT_DATE()
+               AND occurred_at < CURRENT_DATE() + INTERVAL 1 DAY
                AND (severity = :severity OR event_type = :eventType)"
         );
         $stmt->execute([

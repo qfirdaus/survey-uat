@@ -60,7 +60,7 @@ try {
         http_response_code(429);
         echo json_encode([
             'error' => true,
-            'message' => 'Terlalu banyak permintaan. Sila cuba lagi selepas beberapa saat.',
+            'message' => (string)__('userList_ajax_rate_limited'),
             'results' => [],
         ], JSON_UNESCAPED_UNICODE);
         exit;

@@ -48,6 +48,14 @@ foreach ($rows as $event) {
 
     $eventTypeIcon = 'ri-file-list-3-line';
     $eventTypeText = $event['event_type'] ?? '';
+    $eventTypeLabels = [
+        'CREATE' => (string)__('profile_audit_event_create'),
+        'UPDATE' => (string)__('profile_audit_event_update'),
+        'DELETE' => (string)__('profile_audit_event_delete'),
+        'LOGIN' => (string)__('profile_audit_event_login'),
+        'LOGOUT' => (string)__('profile_audit_event_logout'),
+        'VIEW' => (string)__('profile_audit_event_view'),
+    ];
     if ($eventTypeText === 'CREATE') $eventTypeIcon = 'ri-add-circle-line';
     elseif ($eventTypeText === 'UPDATE') $eventTypeIcon = 'ri-edit-box-line';
     elseif ($eventTypeText === 'DELETE') $eventTypeIcon = 'ri-delete-bin-line';
@@ -58,20 +66,32 @@ foreach ($rows as $event) {
     $activityDesc = $event['message'] ?? '';
     if (empty($activityDesc)) {
         $targetLabel = $event['target_label'] ?? $event['target_type'] ?? '';
-        if ($targetLabel) $activityDesc = $eventTypeText . ' - ' . $targetLabel;
-        else $activityDesc = $eventTypeText;
+        $translatedEventType = $eventTypeLabels[$eventTypeText] ?? $eventTypeText;
+        if ($targetLabel) $activityDesc = $translatedEventType . ' - ' . $targetLabel;
+        else $activityDesc = $translatedEventType;
     }
 
     $outcome = $event['outcome'] ?? '—';
     $outcomeClass = 'bg-secondary'; $outcomeIcon = 'ri-question-line';
     if ($outcome === 'SUCCESS') { $outcomeClass = 'bg-success'; $outcomeIcon = 'ri-checkbox-circle-line'; }
     elseif ($outcome === 'FAIL' || $outcome === 'FAILURE') { $outcomeClass = 'bg-danger'; $outcomeIcon = 'ri-close-circle-line'; }
+    $outcomeLabel = match ($outcome) {
+        'SUCCESS' => (string)__('profile_audit_outcome_success'),
+        'FAIL', 'FAILURE' => (string)__('profile_audit_outcome_failure'),
+        default => (string)__('profile_audit_outcome_unknown'),
+    };
 
     $severity = $event['severity'] ?? '';
     $severityClass = 'bg-secondary';
     if ($severity === 'SECURITY') $severityClass = 'bg-danger';
     elseif ($severity === 'WARN' || $severity === 'WARNING') $severityClass = 'bg-warning';
     elseif ($severity === 'INFO') $severityClass = 'bg-info';
+    $severityLabel = match ($severity) {
+        'SECURITY' => (string)__('profile_audit_severity_security'),
+        'WARN', 'WARNING' => (string)__('profile_audit_severity_warning'),
+        'INFO' => (string)__('profile_audit_severity_info'),
+        default => (string)__('profile_audit_severity_unknown'),
+    };
 
     $hasMetadata = !empty($event['meta']) && is_array($event['meta']);
     $hasChangeSets = !empty($event['change_sets']) && is_array($event['change_sets']) && count($event['change_sets']) > 0;
@@ -146,8 +166,8 @@ foreach ($rows as $event) {
         'occurred_at' => $occurredText,
         'ip' => '<code class="text-primary">' . h($ip) . '</code>',
         'activity' => '<i class="' . h($eventTypeIcon) . ' me-1"></i>' . h($activityDesc),
-        'outcome' => '<span class="badge ' . h($outcomeClass) . '"><i class="' . h($outcomeIcon) . ' me-1"></i>' . h($outcome) . '</span>',
-        'severity' => '<span class="badge ' . h($severityClass) . '">' . h($severity) . '</span>',
+        'outcome' => '<span class="badge ' . h($outcomeClass) . '"><i class="' . h($outcomeIcon) . ' me-1"></i>' . h($outcomeLabel) . '</span>',
+        'severity' => '<span class="badge ' . h($severityClass) . '">' . h($severityLabel) . '</span>',
         'actions' => $actions
     ];
 }

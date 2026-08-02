@@ -50,7 +50,7 @@ try {
         http_response_code(429);
         echo json_encode([
             'error' => true,
-            'message' => 'Terlalu banyak permintaan. Sila cuba lagi selepas beberapa saat.',
+            'message' => (string)__('userList_ajax_rate_limited'),
             'html' => ''
         ], JSON_UNESCAPED_UNICODE);
         exit;
@@ -272,7 +272,7 @@ try {
 
     $payload = json_encode([
         'error' => true,
-        'message' => 'Ralat sistem semasa memuat senarai staf.',
+        'message' => (string)__('userList_ajax_load_staff_error'),
         'html' => ''
     ], JSON_UNESCAPED_UNICODE);
     $payload = preg_replace('/^\x{FEFF}/u', '', $payload);

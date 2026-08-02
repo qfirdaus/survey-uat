@@ -177,8 +177,8 @@ const GroupPermissions = {
       '<table class="table table-striped table-bordered align-middle w-100" id="groupPermsDT">' +
       '<thead class="table-light"><tr>' +
       '<th class="col-check">#</th>' +
-      '<th class="col-modul">Modul</th>' +
-      '<th class="col-menu text-center">Menu</th>' +
+      '<th class="col-modul">' + GroupUtils.esc(this.T.userGroup_col_module_access || this.T.label_module || '') + '</th>' +
+      '<th class="col-menu text-center">' + GroupUtils.esc(this.T.userGroup_col_menu_access || this.T.label_menu || '') + '</th>' +
       '</tr></thead><tbody></tbody>' +
       '</table>';
 

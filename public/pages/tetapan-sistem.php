@@ -35,6 +35,7 @@ $PAGE_TITLE = (string)(__('config_system') ?? 'Konfigurasi Sistem');
 require_once __DIR__ . '/../controllers/TetapanSistemController.php';
 require_once __DIR__ . '/../classes/SystemConfigConstants.php';
 $controller = new TetapanSistemController();
+$controller->authorizePageAccess();
 $controller->handleRequest(); // Handle POST requests
 
 $lang     = $controller->lang;
@@ -198,7 +199,13 @@ $normaliseTranslationMapForJs = static function (array $map): array {
 foreach ($translationLangCodes as $translationLangCode) {
   $bundleMap = function_exists('lang_lines') ? lang_lines((string)$translationLangCode) : [];
   if (is_array($bundleMap) && $bundleMap !== []) {
-    $translationBundlesJs[$translationLangCode] = $normaliseTranslationMapForJs($bundleMap);
+    // Runtime JS halaman ini hanya menggunakan namespace config_*.
+    $configBundle = array_filter(
+      $bundleMap,
+      static fn($key): bool => str_starts_with((string)$key, 'config_'),
+      ARRAY_FILTER_USE_KEY
+    );
+    $translationBundlesJs[$translationLangCode] = $normaliseTranslationMapForJs($configBundle);
   }
 }
 
@@ -253,7 +260,7 @@ if (isset($translationBundlesJs[$lang])) {
   </script>
 </head>
 
-<body id="body-layout"
+<body id="body-layout" class="system-settings-page"
       data-topbar-color="<?= htmlspecialchars($_SESSION['theme.topbar'] ?? 'light', ENT_QUOTES, 'UTF-8') ?>"
       data-menu-color="<?= htmlspecialchars($_SESSION['theme.menu']   ?? 'light', ENT_QUOTES, 'UTF-8') ?>"
       data-layout="vertical"
@@ -271,8 +278,12 @@ if (isset($translationBundlesJs[$lang])) {
           <div class="row mb-3">
             <div class="col-12">
               <div class="page-title-box d-flex justify-content-between align-items-center flex-wrap">
-                <h4 class="page-title"><i class="ri-settings-3-line me-1"></i> <?= __('config_system') ?? 'Konfigurasi Sistem' ?></h4>
+                <div class="system-settings-title-main">
+                  <h4 class="page-title"><i class="ri-settings-3-line"></i> <?= h(__('config_system')) ?></h4>
+                  <p class="system-settings-subtitle"><?= h(__('config_page_intro')) ?></p>
+                </div>
                 <div class="page-title-right">
+                  <span class="system-version-badge"><i class="ri-git-branch-line"></i><?= h(app_current_version_label()) ?></span>
                   <ol class="breadcrumb m-0">
                     <li class="breadcrumb-item"><a href="dashboard.php"><i class="ri-home-4-line align-middle me-1"></i> <?= __('breadcrumb_home') ?? 'Home' ?></a></li>
                     <li class="breadcrumb-item active">
@@ -284,9 +295,15 @@ if (isset($translationBundlesJs[$lang])) {
             </div>
           </div>
 
+          <section class="system-settings-workspace">
+          <div class="system-settings-notice">
+            <i class="ri-information-line"></i>
+            <span><?= h(__('config_page_global_notice')) ?></span>
+          </div>
+
           <!-- Tab Navigasi -->
-          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <ul class="nav nav-tabs flex-grow-1" role="tablist">
+          <div class="system-settings-tabs-wrap">
+            <ul class="nav nav-tabs" id="systemSettingsTabs" role="tablist">
               <li class="nav-item">
                 <a class="nav-link <?= (($_GET['tab'] ?? '') === 'general' || !isset($_GET['tab'])) ? 'active' : '' ?>" data-bs-toggle="tab" href="#general-tab" role="tab" aria-selected="<?= (($_GET['tab'] ?? '') === 'general' || !isset($_GET['tab'])) ? 'true' : 'false' ?>">
                   <i class="ri-settings-3-line me-1"></i> <?= __('config_tab_general') ?? 'Umum' ?>
@@ -323,13 +340,10 @@ if (isset($translationBundlesJs[$lang])) {
                 </a>
               </li>
             </ul>
-            <div class="ms-auto">
-              <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle fw-semibold"><?= h(app_current_version_label()) ?></span>
-            </div>
           </div>
 
           <!-- Kandungan Tab -->
-          <div class="tab-content pt-3">
+          <div class="tab-content system-settings-tab-content">
 
             <?php include __DIR__ . '/partials/tetapan-sistem/tab-general.php'; ?>
 
@@ -346,6 +360,7 @@ if (isset($translationBundlesJs[$lang])) {
             <?php include __DIR__ . '/partials/tetapan-sistem/tab-ai-chatbot.php'; ?>
 
           </div><!-- /tab-content -->
+          </section>
         </div>
       </div>
 
@@ -1030,8 +1045,15 @@ if (isset($translationBundlesJs[$lang])) {
     };
   </script>
   <script>
+    window.__tetapanUseExternalAdditionalModule = true;
     (function () {
       'use strict';
+
+      // Additional Connections diurus oleh assets/js/pages/tetapan-sistem.js.
+      // Kekalkan blok legacy ini sebagai fallback deployment lama sahaja.
+      if (window.__tetapanUseExternalAdditionalModule) {
+        return;
+      }
 
       var cfg = window.tetapanSistemConfig || {};
       var baseUrl = typeof cfg.baseUrl === 'string' ? cfg.baseUrl : '';

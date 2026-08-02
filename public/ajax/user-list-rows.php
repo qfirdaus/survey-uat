@@ -201,5 +201,5 @@ try {
     
 } catch (Throwable $e) {
     error_log("[user-list-rows] Fatal: " . $e->getMessage() . "\n" . $e->getTraceAsString());
-    jsonErrorResponse('Ralat server. Sila hubungi pentadbir sistem.', 500);
+    jsonErrorResponse((string)__('userList_ajax_system_error'), 500);
 }

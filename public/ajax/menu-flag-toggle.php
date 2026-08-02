@@ -16,6 +16,12 @@ require_login();
 require_once __DIR__ . '/_helpers.php';
 header('Content-Type: application/json; charset=UTF-8');
 
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+  http_response_code(405);
+  echo json_encode(['error' => true, 'message' => (string)__('userGroup_method_not_allowed')], JSON_UNESCAPED_UNICODE);
+  exit;
+}
+
 // CSRF simple
 $csrfHeader = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
 if (!isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrfHeader)) {
@@ -127,5 +133,6 @@ try {
   echo json_encode(['ok' => true, 'menuID' => $menuID, 'flag' => $flag], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
   http_response_code(500);
-  echo json_encode(['error' => true, 'message' => __('userGroup_server_error_prefix') . ' ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+  error_log('[menu-flag-toggle] ' . $e->getMessage());
+  echo json_encode(['error' => true, 'message' => (string)__('userGroup_err_server')], JSON_UNESCAPED_UNICODE);
 }

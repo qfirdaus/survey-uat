@@ -79,8 +79,8 @@ class ProfileController
         $sessionToken = (string)($_SESSION['csrf_token'] ?? '');
         if ($csrfToken === '' || $sessionToken === '' || !hash_equals($sessionToken, $csrfToken)) {
             set_alert([
-                'title' => 'Ralat Keselamatan',
-                'text' => 'CSRF token tidak sah. Sila muat semula halaman dan cuba lagi.',
+                'title' => 'profile_alert_security_title',
+                'text' => 'profile_alert_security_text',
                 'icon' => 'error',
                 'confirm' => true,
             ]);
@@ -91,8 +91,8 @@ class ProfileController
         $stafID = trim((string)($_SESSION['f_stafID'] ?? ''));
         if ($stafID === '') {
             set_alert([
-                'title' => 'Akses Ditolak',
-                'text' => 'Sesi pengguna tidak sah. Sila log masuk semula.',
+                'title' => 'profile_alert_access_title',
+                'text' => 'profile_alert_access_text',
                 'icon' => 'error',
                 'confirm' => true,
             ]);
@@ -104,8 +104,8 @@ class ProfileController
         $activeLanguages = $this->getActiveLanguages();
         if ($lang === '' || !in_array($lang, $activeLanguages, true)) {
             set_alert([
-                'title' => 'Ralat Validasi',
-                'text' => 'Sila pilih bahasa yang aktif dan sah.',
+                'title' => 'profile_alert_validation_title',
+                'text' => 'profile_alert_validation_text',
                 'icon' => 'error',
                 'confirm' => true,
             ]);
@@ -117,8 +117,8 @@ class ProfileController
             $updated = $this->userModel->updateLanguagePreference($stafID, $lang);
             if (!$updated) {
                 set_alert([
-                    'title' => 'Ralat Menyimpan',
-                    'text' => 'Tiada perubahan disimpan atau kemas kini gagal diproses.',
+                    'title' => 'profile_alert_save_title',
+                    'text' => 'profile_alert_save_text',
                     'icon' => 'error',
                     'confirm' => true,
                 ]);
@@ -139,8 +139,8 @@ class ProfileController
         } catch (\Throwable $e) {
             error_log('[ProfileController] Failed to update language preference: ' . $e->getMessage());
             set_alert([
-                'title' => 'Ralat Sistem',
-                'text' => 'Ralat berlaku semasa menyimpan pilihan bahasa anda.',
+                'title' => 'profile_alert_system_title',
+                'text' => 'profile_alert_system_text',
                 'icon' => 'error',
                 'confirm' => true,
             ]);

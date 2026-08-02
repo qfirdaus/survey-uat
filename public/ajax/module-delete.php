@@ -166,5 +166,6 @@ try {
         $pdo->rollBack();
     }
     http_response_code(500);
-    echo json_encode(['error' => true, 'message' => __('userGroup_err_server') . ': ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    error_log('[module-delete] ' . $e->getMessage());
+    echo json_encode(['error' => true, 'message' => (string)__('userGroup_err_server')], JSON_UNESCAPED_UNICODE);
 }

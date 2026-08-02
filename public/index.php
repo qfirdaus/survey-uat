@@ -305,7 +305,7 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
 
   <style>
     :root {
-      --facility-bg: linear-gradient(180deg, #edf2f8 0%, #e3ebf5 100%);
+      --facility-bg: linear-gradient(180deg, #f4f7fb 0%, #e9eff6 100%);
       --facility-card: #ffffff;
       --facility-card-soft: #f6f9fc;
       --facility-card-ink: #0f1e33;
@@ -320,8 +320,8 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
       --facility-accent-rgb: <?= htmlspecialchars($activeThemeStyle['accentRgb'], ENT_QUOTES, 'UTF-8') ?>;
       --facility-navy: #0c1b32;
       --facility-navy-soft: #12355f;
-      --facility-shadow: 0 28px 70px rgba(15, 23, 42, 0.12);
-      --facility-soft-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+      --facility-shadow: 0 24px 60px rgba(15, 23, 42, 0.11);
+      --facility-soft-shadow: 0 14px 30px rgba(15, 23, 42, 0.07);
       --facility-header-start: <?= htmlspecialchars($activeThemeStyle['start'], ENT_QUOTES, 'UTF-8') ?>;
       --facility-header-end: <?= htmlspecialchars($activeThemeStyle['end'], ENT_QUOTES, 'UTF-8') ?>;
     }
@@ -348,11 +348,13 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
       content: "";
       position: absolute;
       inset: 0 0 auto 0;
-      height: 320px;
-      background: linear-gradient(135deg, var(--facility-header-start), var(--facility-header-end));
+      height: 300px;
+      background:
+        linear-gradient(115deg, rgba(8, 18, 34, 0.18), transparent 52%),
+        linear-gradient(135deg, var(--facility-header-start), var(--facility-header-end));
       z-index: 0;
-      border-bottom-left-radius: 36px;
-      border-bottom-right-radius: 36px;
+      border-bottom-left-radius: 18px;
+      border-bottom-right-radius: 18px;
     }
 
     .facility-workspace {
@@ -427,7 +429,7 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
       gap: 8px;
       min-height: 44px;
       padding: 0 16px;
-      border-radius: 999px;
+      border-radius: 10px;
       border: 1px solid rgba(255,255,255,0.14);
       background: rgba(255,255,255,0.08);
       color: #ffffff;
@@ -455,7 +457,7 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
 
     .facility-overview-panel,
     .facility-auth-panel {
-      border-radius: 30px;
+      border-radius: 18px;
       background: var(--facility-card);
       box-shadow: var(--facility-shadow);
       border: 1px solid rgba(255,255,255,0.78);
@@ -466,20 +468,20 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
       position: relative;
       display: flex;
       flex-direction: column;
-      padding: 28px;
-      gap: 22px;
+      padding: 20px;
+      gap: 18px;
       align-self: stretch;
     }
 
     .facility-overview-panel::before {
       content: "";
       position: absolute;
-      top: 28px;
-      left: 28px;
-      right: 28px;
+      top: 20px;
+      left: 20px;
+      right: 20px;
       height: 380px;
-      background: linear-gradient(135deg, #183760, #2b4f7f 58%, #426e9b);
-      border-radius: 28px;
+      background: linear-gradient(135deg, var(--facility-primary-strong), var(--facility-primary) 60%, var(--facility-accent));
+      border-radius: 14px;
       pointer-events: none;
     }
 
@@ -487,16 +489,16 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
       position: relative;
       z-index: 1;
       min-height: 380px;
-      border-radius: 28px 28px 0 0;
+      border-radius: 14px;
       overflow: hidden;
-      background: linear-gradient(135deg, #183760, #2b4f7f 58%, #426e9b);
+      background: linear-gradient(135deg, var(--facility-primary-strong), var(--facility-primary) 60%, var(--facility-accent));
       border: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .facility-visual-panel-inner {
       position: absolute;
       inset: 0;
-      border-radius: 28px 28px 0 0;
+      border-radius: 14px;
       overflow: hidden;
       background: transparent;
     }
@@ -505,21 +507,19 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
     .facility-showcase-media::after {
       position: absolute;
       inset: 0;
-      border-radius: 28px 28px 0 0;
+      border-radius: 14px;
     }
 
     .facility-showcase-media {
-      border-radius: 28px 28px 0 0;
+      border-radius: 14px;
       overflow: hidden;
-      transform: translateZ(0);
-      backface-visibility: hidden;
     }
 
     .facility-showcase-media::after {
       content: "";
       background:
-        linear-gradient(90deg, rgba(12,27,50,0.82) 0%, rgba(12,27,50,0.38) 48%, rgba(12,27,50,0.72) 100%),
-        linear-gradient(180deg, rgba(var(--facility-primary-rgb), 0.12), rgba(var(--facility-accent-rgb), 0.26));
+        linear-gradient(90deg, rgba(12,27,50,0.8), rgba(12,27,50,0.42)),
+        linear-gradient(180deg, rgba(var(--facility-primary-rgb), 0.2), rgba(var(--facility-accent-rgb), 0.34));
       z-index: 2;
       pointer-events: none;
     }
@@ -530,9 +530,7 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      border-radius: 28px 28px 0 0;
-      transform: translateZ(0);
-      backface-visibility: hidden;
+      border-radius: 14px;
       will-change: opacity;
     }
 
@@ -540,7 +538,7 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
       position: relative;
       z-index: 2;
       min-height: 380px;
-      border-radius: 28px 28px 0 0;
+      border-radius: 14px;
       overflow: hidden;
       padding: 30px 30px 114px;
       display: flex;
@@ -563,7 +561,7 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
       align-items: center;
       gap: 8px;
       padding: 11px 14px;
-      border-radius: 999px;
+      border-radius: 8px;
       background: rgba(255,255,255,0.12);
       border: 1px solid rgba(255,255,255,0.16);
       backdrop-filter: blur(14px);
@@ -613,25 +611,10 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
 
     .facility-info-card {
       padding: 20px;
-      border-radius: 24px;
-      background: var(--facility-card-soft);
+      border-radius: 12px;
+      background: linear-gradient(145deg, rgba(var(--facility-primary-rgb), 0.055), rgba(var(--facility-accent-rgb), 0.025) 65%, #ffffff);
       border: 1px solid var(--facility-line);
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
-    }
-
-    .facility-info-grid .facility-info-card:first-child {
-      border-top-left-radius: 0;
-      border-top-right-radius: 0;
-    }
-
-    .facility-info-grid .facility-info-card:nth-child(2) {
-      border-top-left-radius: 0;
-      border-top-right-radius: 0;
-    }
-
-    .facility-info-grid .facility-info-card:last-child {
-      border-top-left-radius: 0;
-      border-top-right-radius: 0;
     }
 
     .facility-info-card .facility-card-label {
@@ -671,14 +654,15 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
     }
 
     .facility-auth-panel {
-      padding: 28px;
+      padding: 20px;
       display: flex;
       flex-direction: column;
       gap: 22px;
       align-self: start;
       height: fit-content;
       background:
-        linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98));
+        linear-gradient(180deg, rgba(255,255,255,0.99), rgba(var(--facility-primary-rgb), 0.035));
+      position: relative;
     }
 
     .facility-auth-panel--compact {
@@ -687,9 +671,9 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
     }
 
     .facility-auth-card {
-      padding: 26px;
-      border-radius: 26px;
-      background: #ffffff;
+      padding: 24px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.92);
       border: 1px solid rgba(226, 232, 240, 0.92);
       display: flex;
       flex-direction: column;
@@ -706,12 +690,12 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
     .facility-panel-logo {
       width: 68px;
       height: 68px;
-      border-radius: 22px;
+      border-radius: 12px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, rgba(var(--facility-primary-rgb), 0.12), rgba(var(--facility-accent-rgb), 0.12));
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.8);
+      background: linear-gradient(135deg, rgba(var(--facility-primary-rgb), 0.16), rgba(var(--facility-accent-rgb), 0.1));
+      border: 1px solid rgba(var(--facility-primary-rgb), 0.12);
       flex: 0 0 auto;
     }
 
@@ -784,9 +768,9 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
 
     .facility-field-control input {
       width: 100%;
-      border-radius: 18px;
+      border-radius: 10px;
       border: 1px solid rgba(148, 163, 184, 0.2);
-      background: #f8fafc;
+      background: rgba(var(--facility-primary-rgb), 0.035);
       padding: 15px 16px 15px 46px;
       font-size: 14px;
       color: #0f172a;
@@ -821,7 +805,7 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
 
     .facility-submit-btn {
       border: 0;
-      border-radius: 18px;
+      border-radius: 10px;
       background: linear-gradient(135deg, var(--facility-primary-strong), var(--facility-primary) 58%, var(--facility-accent));
       color: #ffffff;
       font-size: 13px;
@@ -859,10 +843,10 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
       align-items: center;
       justify-content: space-between;
       gap: 14px;
-      border-radius: 20px;
+      border-radius: 10px;
       padding: 15px 16px;
-      background: linear-gradient(135deg, rgba(240,249,255,1), rgba(239,246,255,1));
-      border: 1px solid rgba(19, 181, 200, 0.18);
+      background: linear-gradient(135deg, rgba(var(--facility-primary-rgb), 0.08), rgba(var(--facility-accent-rgb), 0.07));
+      border: 1px solid rgba(var(--facility-primary-rgb), 0.16);
       color: #0f172a;
       box-shadow: 0 12px 26px rgba(15, 23, 42, 0.07);
       transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
@@ -883,7 +867,7 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
     .facility-oneid-badge {
       width: 42px;
       height: 42px;
-      border-radius: 14px;
+      border-radius: 9px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -915,8 +899,8 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
 
     .facility-support-panel {
       padding: 20px 22px;
-      border-radius: 24px;
-      background: var(--facility-card-soft);
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(var(--facility-primary-rgb), 0.07), rgba(var(--facility-accent-rgb), 0.035));
       border: 1px solid var(--facility-line);
       display: flex;
       flex-direction: column;
@@ -951,7 +935,7 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
       gap: 8px;
       min-height: 42px;
       padding: 0 14px;
-      border-radius: 999px;
+      border-radius: 9px;
       background: #ffffff;
       border: 1px solid rgba(148, 163, 184, 0.22);
       color: var(--facility-card-ink);
@@ -1053,7 +1037,7 @@ if ($organizationWebsite !== '' && $organizationWebsite !== '#') {
       .facility-overview-sidecard,
       .facility-info-card,
       .facility-support-panel {
-        border-radius: 22px;
+        border-radius: 12px;
       }
 
       .facility-info-grid,

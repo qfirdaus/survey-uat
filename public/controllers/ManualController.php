@@ -39,15 +39,7 @@ class ManualController
         try {
             $stmt = $this->db->query("SHOW TABLES LIKE 'tbl_m_usermanual'");
             if (!$stmt->fetchColumn()) {
-                $this->db->exec(
-                    "CREATE TABLE tbl_m_usermanual (
-                        f_id INT AUTO_INCREMENT PRIMARY KEY,
-                        f_groupID INT NOT NULL UNIQUE,
-                        f_file_path VARCHAR(255) NOT NULL,
-                        f_updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                        f_updated_by VARCHAR(50) NULL
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
-                );
+                throw new RuntimeException((string)__('manual_table_unavailable'));
             }
             $this->manualTableReady = true;
         } catch (Throwable $e) {
@@ -63,9 +55,39 @@ class ManualController
         return (bool)$stmt->fetchColumn();
     }
 
-    private function resolveManualPath(string $relativePath): string
+    public function resolveManualFilePath(string $relativePath): ?string
     {
-        return __DIR__ . '/../' . ltrim(str_replace(['..\\', '../'], '', $relativePath), '/\\');
+        $relativePath = str_replace('\\', '/', trim($relativePath));
+        if ($relativePath === '' || str_contains($relativePath, '..')) {
+            return null;
+        }
+
+        $candidates = [];
+        if (str_starts_with($relativePath, 'storage/manuals/')) {
+            $candidates[] = dirname(__DIR__, 2) . '/' . $relativePath;
+        } elseif (str_starts_with($relativePath, 'uploads/manuals/')) {
+            $candidates[] = __DIR__ . '/../' . $relativePath;
+        } else {
+            return null;
+        }
+
+        foreach ($candidates as $candidate) {
+            $resolved = realpath($candidate);
+            $base = str_starts_with($relativePath, 'storage/')
+                ? realpath(dirname(__DIR__, 2) . '/storage/manuals')
+                : realpath(__DIR__ . '/../uploads/manuals');
+            if ($resolved !== false && $base !== false
+                && str_starts_with($resolved, rtrim($base, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR)
+                && is_file($resolved)) {
+                return $resolved;
+            }
+        }
+        return null;
+    }
+
+    public function manualFileExists(string $relativePath): bool
+    {
+        return $this->resolveManualFilePath($relativePath) !== null;
     }
 
     private function logManualAudit(string $eventType, string $action, int $groupId, string $outcome = 'SUCCESS', array $meta = [], array $changes = []): void
@@ -81,7 +103,7 @@ class ManualController
 
             $eventId = audit_event([
                 'event_type' => $eventType,
-                'severity' => $eventType === 'DELETE' ? 'WARN' : 'INFO',
+                'severity' => str_contains($eventType, 'DELETE') || $outcome === 'FAILURE' ? 'WARN' : 'INFO',
                 'outcome' => $outcome,
                 'target_type' => 'user_manual',
                 'target_id' => (string)$groupId,
@@ -284,27 +306,34 @@ class ManualController
             return ['success' => false, 'message' => (string)__('manual_upload_invalid_pdf')];
         }
 
+        if ((int)$file['size'] <= 0) {
+            return ['success' => false, 'message' => (string)__('manual_upload_invalid_pdf')];
+        }
+
         if ($file['size'] > $this->manualMaxBytes) {
             return ['success' => false, 'message' => sprintf((string)__('manual_upload_max_size'), (int)app_config('upload.manual_max_mb', 10))];
         }
 
-        // Upload directory is inside the app/ folder (mapped into Docker)
-        $uploadDir = __DIR__ . '/../uploads/manuals/';
+        // Store new manuals outside the public web root. Legacy public paths remain readable
+        // only through the guarded manual-view endpoint.
+        $uploadDir = dirname(__DIR__, 2) . '/storage/manuals/';
         if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
+            if (!mkdir($uploadDir, 0750, true) && !is_dir($uploadDir)) {
+                return ['success' => false, 'message' => (string)__('manual_upload_store_failed')];
+            }
         }
 
         // Generate safe filename
-        $newFilename = 'manual_role_' . $groupId . '_' . time() . '.pdf';
+        $newFilename = 'manual_role_' . $groupId . '_' . bin2hex(random_bytes(12)) . '.pdf';
         $destPath = $uploadDir . $newFilename;
 
         if (move_uploaded_file($file['tmp_name'], $destPath)) {
-            $relativePath = 'uploads/manuals/' . $newFilename;
+            $relativePath = 'storage/manuals/' . $newFilename;
 
             $oldManual = $this->getManualByGroupId($groupId);
             $oldPath = null;
             if ($oldManual && !empty($oldManual['f_file_path'])) {
-                $oldPath = $this->resolveManualPath((string)$oldManual['f_file_path']);
+                $oldPath = $this->resolveManualFilePath((string)$oldManual['f_file_path']);
             }
 
             $stmt = $this->db->prepare("SELECT f_id FROM tbl_m_usermanual WHERE f_groupID = :gid");
@@ -335,17 +364,21 @@ class ManualController
                     $this->db->rollBack();
                 }
                 if (file_exists($destPath)) {
-                    @unlink($destPath);
+                    if (!unlink($destPath)) {
+                        error_log('[ManualController] Unable to clean up failed upload: ' . basename($destPath));
+                    }
                 }
                 error_log('[ManualController] uploadManual DB failure: ' . $e->getMessage());
                 return ['success' => false, 'message' => (string)__('manual_record_update_failed')];
             }
 
             if ($oldPath && $oldPath !== $destPath && file_exists($oldPath)) {
-                @unlink($oldPath);
+                if (!unlink($oldPath)) {
+                    error_log('[ManualController] Unable to remove replaced manual: ' . basename($oldPath));
+                }
             }
 
-            $this->logManualAudit($exists ? 'UPDATE' : 'CREATE', 'Manual uploaded', $groupId, 'SUCCESS', [
+            $this->logManualAudit($exists ? 'MANUAL_REPLACE' : 'MANUAL_UPLOAD', 'Manual uploaded', $groupId, 'SUCCESS', [
                 'file_path' => $relativePath,
                 'old_file_path' => (string)($oldManual['f_file_path'] ?? ''),
                 'file_name' => $newFilename,
@@ -374,7 +407,7 @@ class ManualController
         $oldManual = $this->getManualByGroupId($groupId);
         if ($oldManual) {
             $oldPath = !empty($oldManual['f_file_path'])
-                ? $this->resolveManualPath((string)$oldManual['f_file_path'])
+                ? $this->resolveManualFilePath((string)$oldManual['f_file_path'])
                 : null;
 
             try {
@@ -391,10 +424,15 @@ class ManualController
             }
 
             if ($oldPath && file_exists($oldPath)) {
-                @unlink($oldPath);
+                if (!unlink($oldPath)) {
+                    error_log('[ManualController] Unable to remove deleted manual: ' . basename($oldPath));
+                    $this->logManualAudit('MANUAL_FILE_CLEANUP_FAILED', 'Manual file cleanup failed', $groupId, 'FAILURE', [
+                        'file_name' => basename($oldPath),
+                    ]);
+                }
             }
 
-            $this->logManualAudit('DELETE', 'Manual deleted', $groupId, 'SUCCESS', [
+            $this->logManualAudit('MANUAL_DELETE', 'Manual deleted', $groupId, 'SUCCESS', [
                 'file_path' => (string)($oldManual['f_file_path'] ?? ''),
             ], [
                 'f_file_path' => ['old' => (string)($oldManual['f_file_path'] ?? ''), 'new' => null],

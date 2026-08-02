@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.9.0`
+- Current version: `1.9.1`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -19,6 +19,14 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Runtime model: native WSL; Docker, Docker Compose, and container-specific Apache assets are no longer maintained in this repository
 - Main database: MySQL `8.x`
 - External database support: Sybase through ODBC/DBLIB, plus additional PDO connections configured from the system UI
+
+## Version 1.9.1 Administration Experience
+
+- Core administration pages now share a professional visual standard for page headers, themed KPI cards, panel spacing, DataTables, compact action controls, tabs, modals, empty states, and responsive layouts.
+- In-page operations use local button, panel, or table loading states instead of blocking the whole workspace with a global loader.
+- Staff and student access assignment retains remote Select2 search, correct type-specific placeholders, and protected AJAX lookup flows.
+- Profile, user/group governance, System Settings, template generation, cache maintenance, audit, access matrix, manuals, notifications, and email-template workflows include expanded Malay and English translations.
+- Administrative AJAX endpoints apply consistent authentication, authorization, CSRF, validation, safe error responses, and audit handling appropriate to each operation.
 
 ## Actual System Features
 
@@ -43,6 +51,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Supports staff, student, and public user management flows.
 - Supports Super Admin `View As` impersonation from the user directory for controlled support workflows, with view-only and support-action modes.
 - AJAX operations exist for listing rows, adding staff users, adding student users, adding public users, editing users, deleting users, toggling status, resolving staff/student options, and managing extra roles.
+- Staff and student add-access modals provide remote Select2 lookup with type-specific search text and consistent professional tabs.
 - User logic is handled through `UserListController.php`, `User.php`, and related AJAX endpoints under `public/ajax/user-*.php`.
 
 ### Group, Module, Menu, and Sidebar Governance
@@ -50,6 +59,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Group management page at `public/pages/kumpulan-pengguna.php`.
 - Supports group CRUD, group styling, module access, menu access, module/menu ordering, and sidebar refresh without full page reload.
 - Uses standardized SweetAlert messaging, faster modal-open sequencing, and earlier success feedback for key group, module, and menu transactions.
+- Group, module, menu, subgroup, ordering, and access modals share the same compact tab and modal presentation standard.
 - Supports optional sidebar menu subgroups inside parent modules through `tbl_m_menu_subgroup` and `tbl_m_menu.f_subgroupID`.
 - Menu subgroups can be created, edited, ordered, assigned to menus, and protected from deletion while menus are still assigned.
 - Sidebar rendering remains backward-compatible: modules can still use direct menus without subgroups, while selected modules can group menus under subgroup headings.
@@ -63,6 +73,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Read-only access matrix page at `public/pages/access-matrix.php`.
 - Provides visibility of group, module, and menu access configuration.
 - Backed by `AccessController.php`.
+- Presents searchable access coverage with clearer summary cards, hierarchy context, filters, local states, and responsive table behavior.
 
 ### Audit Center
 
@@ -71,6 +82,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Core mutation flows for forms, module creation, notification templates, student sync, manual management, and system template generation record audit events with field-level change details where applicable.
 - AJAX endpoints include `audit-center-action.php`, `audit-center-export.php`, `audit-center-meta.php`, and `audit-center-panel.php`.
 - Audit services are supported by `AuditCenterController.php`, `AuditLogger.php`, and audit helper functions.
+- Tab changes refresh their own panel with a local spinner and stale-request protection instead of invoking the global page loader.
 
 ### Notification Framework
 
@@ -80,7 +92,8 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Topbar notification dropdown shows unread count, recent notification preview, read actions, and View All navigation.
 - Supports admin announcements, direct user notifications, role/group/audience notifications, event-based notifications, and workflow task notifications.
 - Notification publishing and workflow logic is handled by `NotificationPublisher.php`, `NotificationService.php`, `NotificationWorkflowService.php`, `NotificationAudienceResolver.php`, `NotificationAdminService.php`, and `NotificationTemplateService.php`.
-- AJAX endpoints include `notification-list.php`, `notification-read.php`, `notification-read-all.php`, `notification-action.php`, `notification-admin-publish.php`, and `notification-template-action.php`.
+- AJAX endpoints include `notification-list.php`, `notification-read.php`, `notification-read-all.php`, `notification-action.php`, `notification-admin-list.php`, `notification-admin-publish.php`, `notification-template-list.php`, and `notification-template-action.php`.
+- Notification list, publisher, and template workspaces use standardized KPI cards, tables, local loaders, professional modal tabs, preview states, and multilingual feedback.
 - Developer guidance is documented in `docs/notification-developer-standard-2026-05-04.md` and `docs/notification-developer-examples-2026-05-03.md`.
 
 ### Profile
@@ -88,6 +101,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Profile page at `public/pages/profile.php`.
 - Shows account profile, login activity, audit event history, audit metadata where authorized, and active session actions.
 - Profile identity labels adapt to the authenticated user category, including staff number/position/department for staff and matric number/programme/faculty for students.
+- Profile tabs and audit-trail details use a consistent professional layout, local loading feedback, and translated SweetAlert messages.
 - AJAX endpoints include `profile-login-activity.php`, `profile-audit-events.php`, `profile-audit-event-meta.php`, and `profile-kill-session.php`.
 
 ### System Settings
@@ -103,6 +117,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
   - AI Chatbot
 - Settings are handled by `TetapanSistemController.php`, `Config.php`, `SystemConfigConstants.php`, and page-specific JavaScript/CSS assets.
 - General > Limits includes the `View As Timeout (Minutes)` setting for the Super Admin impersonation workflow.
+- Settings sections use standardized navigation, cards, forms, validation feedback, and theme-aware responsive presentation.
 
 ### AI Chatbot Core
 
@@ -132,7 +147,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Discovers standard project cache locations dynamically from `app/cache`, `public/cache`, and `storage/cache` when those folders exist.
 - Displays cache location count, file count, total size, OPcache status, APCu status, and per-location last modified date.
 - Supports clearing selected cache locations or all discovered cache locations while preserving directory structure, `.gitkeep`, `.htaccess`, active sessions, and login tokens.
-- Cache clearing is handled through `public/ajax/system-cache-action.php`, uses CSRF validation and admin permission enforcement, resets OPcache/APCu where available, logs the operation through the central audit mechanism, and updates the page in place using the global loader.
+- Cache clearing is handled through `public/ajax/system-cache-action.php`, uses CSRF validation and admin permission enforcement, resets OPcache/APCu where available, logs the operation through the central audit mechanism, and updates KPI/table state in place with a local operation loader.
 
 ### Language Architecture
 
@@ -188,6 +203,7 @@ Operational references:
 - Email template management page exists at `public/pages/template-emel.php`.
 - Template operations are handled by `EmailTemplateController.php`, `Mailer.php`, `EmailTemplate*.php`, and AJAX endpoints under `public/ajax/email-*` and `public/ajax/email-template-*`.
 - Supported UI operations include listing, preview/testing, creating, updating, duplicating, archiving/restoring, deleting, and seeding templates where available.
+- The template workspace includes standardized KPI and panel spacing, professional modal tabs, unsaved-change protection, recipient/subject confirmation before test delivery, cancellable preview requests, sandboxed previews, and external-resource guidance.
 - SMTP delivery failures are classified through the framework external-service failure pattern documented in `docs/external-service-failure-handling-2026-06-23.md`.
 
 ### Template Generator
@@ -197,6 +213,7 @@ Operational references:
 - Used to generate or manage system page/template scaffolding from controlled template definitions.
 - Generated page, controller, and CSS files are marked as `PROJECT GENERATED FILE` so downstream programmers can distinguish customizable generated artifacts from protected core files.
 - Template generation records audit events and displays a governance checklist for language keys, access registration, and audit hooks before production use.
+- Generation results, template inventory, review actions, and destructive confirmations use local loading states and hardened output/path validation.
 
 ### Core File Protection
 
@@ -211,12 +228,13 @@ Operational references:
 - Developer guide page exists at `public/pages/developer-guide.php`.
 - Provides centralized, copyable sample code for core-safe module development, including page skeletons, AJAX/CSRF, database access, notifications, language keys, menu/access, audit, and email guidance.
 - Intended for programmers to consume framework APIs without modifying protected core files.
+- Uses categorized navigation, searchable guidance, copy feedback, consistent code panels, and responsive multilingual presentation.
 
 ### Manual Management
 
 - Manual management page exists at `public/pages/manage-manuals.php`.
-- Supports upload and management of user manuals by group.
-- Related AJAX endpoints include `manual-*` and `migrate-manuals.php`.
+- Supports upload, editing, visibility/group synchronization, viewing, status control, and deletion of user manuals by group.
+- Related AJAX endpoints include `manual-*`, `manual-delete.php`, and `migrate-manuals.php`.
 - Supported by `ManualController.php`.
 
 ### FAQ
@@ -240,6 +258,10 @@ Operational references:
 - `sync-updates.sh` distributes collected updates to the registered downstream project list, including `e-prestasi` and `upnm30`.
 - `sync-updates.sh` and `update-files.sh` support `.sync-update-ignore` so selected files can be excluded from `updates/` and project sync flows.
 - `sync-updates.sh` reports results directly in the terminal and no longer creates the unused `sync.log` or `conflict.log` files.
+- Its dry-run mode classifies simulated updates, new files, and conflicts in the per-project summary without creating directories, backups, files, or permission changes.
+- Collection now produces a release-bound SHA-256 manifest containing base and update hashes; a real sync is refused unless that exact manifest, project scope, and force mode have passed dry-run.
+- Preflight blocks unsafe paths, symlink targets, duplicate records, missing sources, modified packages, insufficient disk space, conflicts, and write errors before applying changes.
+- Real sync uses atomic temporary-file replacement, complete affected-file backups when requested, per-project rollback data, post-copy hash verification, stale-lock recovery, and explicit `APPLY` confirmation.
 - Core file protection docs and `tools/core-file-protection-audit.php` are included in framework update collection.
 - `public/lang/custom/*` remains protected from overwrite during update distribution.
 

@@ -16,6 +16,40 @@ This changelog follows a release-style summary based on major project milestones
 - Removed the retired Dockerfile, Compose service, Apache/PHP container configuration, Docker ignore rules, and development TLS key material.
 - Removed unused `sync.log` and `conflict.log` initialization and references from the update sync workflow.
 
+## [1.9.1] - 2026-08-02
+
+### Added
+- Added professional page-specific presentation assets for Access Matrix, Developer Guide, Manual Management, Notifications, Notification Admin, Notification Templates, System Cache, and Email Template management.
+- Added AJAX-backed notification administration and notification-template listing endpoints with local table refresh behavior.
+- Added controlled manual deletion, manual storage structure, group synchronization improvements, and safer manual viewing/upload handling.
+- Added email-template unsaved-change protection, test-recipient and subject confirmation, cancellable preview requests, sandbox/referrer safeguards, and external-resource guidance.
+- Added expanded Malay and English translation coverage for redesigned administration pages, modal actions, validation, loading, empty states, SweetAlert messages, audit details, and notification workflows.
+
+### Changed
+- Redesigned the login, Profile, User Management, User Group, System Settings, Template Generator, System Cache, Audit Center, Access Matrix, Developer Guide, Manual Management, Notifications, Notification Admin, Notification Templates, and Email Template experiences with consistent page headers, themed KPI cards, spacing, panels, tabs, modals, DataTables, and responsive states.
+- Changed staff and student add-access flows to retain remote Select2 search while using the correct type-specific labels and placeholders.
+- Changed Audit Center tab switching and supported administration transactions to use local button, panel, spinner, or table loading states instead of blocking global loaders.
+- Changed cache maintenance to present discovered locations, runtime-cache status, operation safeguards, consistent KPI/table spacing, and in-place refresh behavior.
+- Changed access, group, menu, module, manual, notification, profile, system-template, and system-setting operations to return more consistent AJAX responses and audit context.
+- Changed Template Generator file creation and generation result handling to provide clearer governance, validation, and audit information.
+- Changed Email Template asset versioning to use stable application/file metadata instead of generating a new cache key on every request.
+- Changed project release metadata to version `1.9.1`.
+
+### Fixed
+- Fixed staff and student Select2 searches failing to display lookup results after the User Management redesign.
+- Fixed the student selector displaying the staff placeholder.
+- Fixed inconsistent or overlapping card gaps, DataTable control spacing, modal text contrast, preview positioning, oversized radii, and inconsistent tab styling across redesigned pages.
+- Fixed System Cache operations remaining in a loading state and corrected table/KPI layout inconsistencies.
+- Fixed Audit Center tab changes invoking an unnecessary global loader.
+- Fixed untranslated or hard-coded labels and feedback messages across the affected multilingual administration workflows.
+- Fixed potentially stale email preview responses replacing newer results.
+- Fixed `sync-updates.sh` dry-run summaries always reporting zero and replaced timestamp-only conflict detection with release-bound three-way SHA-256 manifests, blocking preflight, dry-run approval, transactional replacement, rollback data, and post-copy verification.
+
+### Security
+- Standardized authentication, authorization, CSRF validation, request-method enforcement, input validation, and safe JSON failure handling across affected administrative AJAX endpoints.
+- Reduced technical error disclosure in Email Template management while retaining server-side diagnostic logging.
+- Hardened manual file handling, system-template path/output validation, cache target resolution, notification operations, profile session actions, and audit export/detail requests.
+
 ## [1.9.0] - 2026-08-01
 
 ### Added

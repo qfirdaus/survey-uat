@@ -21,7 +21,12 @@ final class FileGenerationService
     public function __construct(?TemplateResolverService $resolver = null, ?string $projectRoot = null)
     {
         $this->resolver = $resolver ?: new TemplateResolverService();
-        $this->projectRoot = rtrim($projectRoot ?: dirname(__DIR__, 1), '/\\');
+        $configuredRoot = rtrim($projectRoot ?: dirname(__DIR__, 1), '/\\');
+        $resolvedRoot = realpath($configuredRoot);
+        if ($resolvedRoot === false || !is_dir($resolvedRoot)) {
+            throw new RuntimeException('Invalid template generation root.');
+        }
+        $this->projectRoot = rtrim($resolvedRoot, '/\\');
     }
 
     /**
@@ -118,9 +123,18 @@ final class FileGenerationService
             'css'
         );
 
-        $this->writeFile($outputPaths['page'], $pageContent);
-        $this->writeFile($outputPaths['controller'], $controllerContent);
-        $this->writeFile($outputPaths['css'], $cssContent);
+        $createdFiles = [];
+        try {
+            $this->writeFile($outputPaths['page'], $pageContent);
+            $createdFiles[] = $outputPaths['page'];
+            $this->writeFile($outputPaths['controller'], $controllerContent);
+            $createdFiles[] = $outputPaths['controller'];
+            $this->writeFile($outputPaths['css'], $cssContent);
+            $createdFiles[] = $outputPaths['css'];
+        } catch (Throwable $e) {
+            $this->rollbackGeneratedFiles($createdFiles);
+            throw $e;
+        }
 
         return [
             'template' => $template['key'],
@@ -171,7 +185,7 @@ final class FileGenerationService
     {
         foreach ($files as $path) {
             $path = trim((string)$path);
-            if ($path !== '' && is_file($path)) {
+            if ($path !== '' && $this->isPathWithinProjectRoot($path) && is_file($path)) {
                 @unlink($path);
             }
         }
@@ -220,6 +234,14 @@ final class FileGenerationService
 
         if ($pageIcon === '') {
             $pageIcon = 'ri-file-list-line';
+        }
+
+        if (mb_strlen($pageName) > 80 || mb_strlen($pageTitleMs) > 160 || mb_strlen($pageTitleEn) > 160) {
+            throw new InvalidArgumentException('Template field exceeds the permitted length.');
+        }
+
+        if (!preg_match('/^ri-[a-z0-9-]+$/', $pageIcon) || mb_strlen($pageIcon) > 80) {
+            throw new InvalidArgumentException('Invalid page icon.');
         }
 
         if (!in_array($accessMode, [self::ACCESS_MODE_GROUP_MENU, self::ACCESS_MODE_SUPER_ADMIN_ONLY], true)) {
@@ -305,12 +327,37 @@ final class FileGenerationService
 
     private function writeFile(string $path, string $content): void
     {
+        $this->assertPathWithinProjectRoot($path);
         $dir = dirname($path);
-        if (!is_dir($dir) && !mkdir($dir, 0777, true) && !is_dir($dir)) {
+        if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
             throw new RuntimeException("Failed to create output directory: {$dir}");
         }
 
-        if (file_put_contents($path, $content) === false) {
+        $handle = @fopen($path, 'x+b');
+        if ($handle === false) {
+            throw new RuntimeException("Generated file already exists or cannot be created: {$path}");
+        }
+
+        $written = false;
+        try {
+            if (!flock($handle, LOCK_EX)) {
+                throw new RuntimeException("Failed to lock generated file: {$path}");
+            }
+            $written = $this->writeAll($handle, $content);
+            fflush($handle);
+            flock($handle, LOCK_UN);
+        } catch (Throwable $e) {
+            fclose($handle);
+            @unlink($path);
+            throw $e;
+        } finally {
+            if (is_resource($handle)) {
+                fclose($handle);
+            }
+        }
+
+        if (!$written) {
+            @unlink($path);
             throw new RuntimeException("Failed to write generated file: {$path}");
         }
     }
@@ -420,9 +467,10 @@ final class FileGenerationService
      */
     private function appendPhpArrayEntries(string $path, array $entries, array $normalized, string $langCode): void
     {
+        $this->assertPathWithinProjectRoot($path);
         if (!is_file($path)) {
             $dir = dirname($path);
-            if (!is_dir($dir) && !mkdir($dir, 0777, true) && !is_dir($dir)) {
+            if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
                 throw new RuntimeException("Failed to create language directory: {$dir}");
             }
             if (file_put_contents($path, "<?php\n\nreturn [\n];\n") === false) {
@@ -430,10 +478,20 @@ final class FileGenerationService
             }
         }
 
-        $content = (string)file_get_contents($path);
-        if ($content === '') {
-            throw new RuntimeException("Language file is empty: {$path}");
+        $handle = fopen($path, 'c+b');
+        if ($handle === false || !flock($handle, LOCK_EX)) {
+            if (is_resource($handle)) {
+                fclose($handle);
+            }
+            throw new RuntimeException("Failed to lock language file: {$path}");
         }
+
+        try {
+            rewind($handle);
+            $content = stream_get_contents($handle);
+            if (!is_string($content) || $content === '') {
+                throw new RuntimeException("Language file is empty: {$path}");
+            }
 
         $closingPos = strrpos($content, '];');
         if ($closingPos === false) {
@@ -453,8 +511,14 @@ final class FileGenerationService
 
         $newContent = substr($content, 0, $closingPos) . $commentHeader . $entryLines . $commentFooter . substr($content, $closingPos);
 
-        if (file_put_contents($path, $newContent) === false) {
-            throw new RuntimeException("Failed to update language file: {$path}");
+            rewind($handle);
+            if (!ftruncate($handle, 0) || !$this->writeAll($handle, $newContent)) {
+                throw new RuntimeException("Failed to update language file: {$path}");
+            }
+            fflush($handle);
+        } finally {
+            flock($handle, LOCK_UN);
+            fclose($handle);
         }
     }
 
@@ -475,7 +539,58 @@ final class FileGenerationService
             return;
         }
 
-        file_put_contents($path, $updated);
+        $this->atomicReplaceExistingFile($path, $updated);
+    }
+
+    private function isPathWithinProjectRoot(string $path): bool
+    {
+        $normalized = str_replace('\\', '/', $path);
+        $root = str_replace('\\', '/', $this->projectRoot) . '/';
+        return str_starts_with($normalized, $root) && !str_contains($normalized, '/../');
+    }
+
+    private function assertPathWithinProjectRoot(string $path): void
+    {
+        if (!$this->isPathWithinProjectRoot($path)) {
+            throw new RuntimeException('Template output path is outside the permitted project root.');
+        }
+    }
+
+    private function atomicReplaceExistingFile(string $path, string $content): void
+    {
+        $this->assertPathWithinProjectRoot($path);
+        $handle = fopen($path, 'c+b');
+        if ($handle === false || !flock($handle, LOCK_EX)) {
+            if (is_resource($handle)) {
+                fclose($handle);
+            }
+            throw new RuntimeException("Failed to lock file: {$path}");
+        }
+        try {
+            rewind($handle);
+            if (!ftruncate($handle, 0) || !$this->writeAll($handle, $content)) {
+                throw new RuntimeException("Failed to update file: {$path}");
+            }
+            fflush($handle);
+        } finally {
+            flock($handle, LOCK_UN);
+            fclose($handle);
+        }
+    }
+
+    /** @param resource $handle */
+    private function writeAll($handle, string $content): bool
+    {
+        $length = strlen($content);
+        $offset = 0;
+        while ($offset < $length) {
+            $written = fwrite($handle, substr($content, $offset));
+            if ($written === false || $written === 0) {
+                return false;
+            }
+            $offset += $written;
+        }
+        return true;
     }
 
     /**

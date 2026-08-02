@@ -26,6 +26,10 @@ try {
         jsonErrorResponse((string)(__('userGroup_csrf_invalid') ?: 'CSRF token tidak sah.'), 403);
     }
 
+    if (!checkRateLimit('notification_action', 30, 60)) {
+        jsonErrorResponse((string)(__('notification_rate_limited') ?: 'Terlalu banyak permintaan. Sila cuba sebentar lagi.'), 429);
+    }
+
     $raw = file_get_contents('php://input');
     $data = json_decode((string)$raw, true);
     if (!is_array($data)) {

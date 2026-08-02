@@ -28,6 +28,9 @@ try {
 
     $pdo = Database::getInstance('mysql')->getConnection();
     ensureAjaxGroupManagePermission($pdo, (string)(__('notification_admin_forbidden') ?: 'You do not have permission to publish notifications.'));
+    if (!checkRateLimit('notification_admin_publish', 10, 60)) {
+        jsonErrorResponse((string)(__('notification_rate_limited') ?: 'Too many requests. Please try again shortly.'), 429);
+    }
 
     $raw = file_get_contents('php://input');
     $data = json_decode((string)$raw, true);
@@ -41,7 +44,6 @@ try {
     jsonSuccessResponse([
         'message' => (string)(__('notification_admin_publish_success') ?: 'Notification published successfully.'),
         'notification_id' => $result['notification_id'],
-        'recent' => $service->getRecentNotifications(25),
         'summary' => $service->getSummary(),
     ]);
 } catch (InvalidArgumentException $e) {

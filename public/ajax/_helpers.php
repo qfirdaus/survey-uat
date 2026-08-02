@@ -449,7 +449,7 @@ function userListEnsureAssignableGroup(PDO $pdo, int|array $group): array {
         $groupRow = $group;
     } else {
         if ($group <= 0) {
-            jsonErrorResponse('Kumpulan pengguna tidak sah atau tidak wujud dalam sistem.', 400);
+            jsonErrorResponse((string)__('userList_ajax_invalid_group'), 400);
         }
 
         $stmt = $pdo->prepare('SELECT f_groupID, f_groupKod, f_groupName, f_categoryUser FROM tbl_m_group WHERE f_groupID = :groupID LIMIT 1');
@@ -458,11 +458,11 @@ function userListEnsureAssignableGroup(PDO $pdo, int|array $group): array {
     }
 
     if (!$groupRow) {
-        jsonErrorResponse('Kumpulan pengguna tidak sah atau tidak wujud dalam sistem.', 400);
+        jsonErrorResponse((string)__('userList_ajax_invalid_group'), 400);
     }
 
     if (!userListCanAssignGroup($pdo, $groupRow)) {
-        jsonErrorResponse('Anda tidak dibenarkan menetapkan pengguna kepada kumpulan ini.', 403);
+        jsonErrorResponse((string)__('userList_ajax_group_assign_denied'), 403);
     }
 
     return $groupRow;
@@ -493,7 +493,7 @@ function userListEnsureTargetUserEditable(PDO $pdo, int|array $user): array {
     }
 
     if (!userListCanEditTargetUser($pdo, $userRow)) {
-        jsonErrorResponse('Anda tidak dibenarkan mengemaskini pengguna ini.', 403);
+        jsonErrorResponse((string)__('userList_ajax_user_edit_denied'), 403);
     }
 
     return $userRow;

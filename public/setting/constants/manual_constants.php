@@ -54,3 +54,23 @@ if (!function_exists('manual_is_admin_role')) {
         return in_array($roleKod, manual_allowed_admin_roles(), true);
     }
 }
+
+if (!function_exists('manual_active_role_code')) {
+    function manual_active_role_code(PDO $pdo): string
+    {
+        $activeGroupId = (int)($_SESSION['group_active_id'] ?? 0);
+        if ($activeGroupId <= 0) {
+            return '';
+        }
+        $stmt = $pdo->prepare('SELECT f_groupKod FROM tbl_m_group WHERE f_groupID = :gid LIMIT 1');
+        $stmt->execute([':gid' => $activeGroupId]);
+        return trim((string)($stmt->fetchColumn() ?: ''));
+    }
+}
+
+if (!function_exists('manual_can_manage')) {
+    function manual_can_manage(PDO $pdo): bool
+    {
+        return manual_is_admin_role(manual_active_role_code($pdo));
+    }
+}

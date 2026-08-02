@@ -153,7 +153,7 @@ try {
     http_response_code(500);
     echo json_encode([
         'error' => true,
-        'message' => 'Ralat sistem semasa mencari staf.',
+        'message' => (string)__('userList_ajax_search_staff_error'),
         'results' => []
     ], JSON_UNESCAPED_UNICODE);
 }
