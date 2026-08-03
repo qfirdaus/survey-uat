@@ -2024,8 +2024,11 @@ class TetapanSistemController {
     }
 
     $targetEnvironment = strtolower(trim((string)($input['environment'] ?? 'production')));
-    $targetOsFamily = strtolower(trim((string)($input['os_family'] ?? (PHP_OS_FAMILY === 'Windows' ? 'windows' : 'linux'))));
-    $targetDriver = strtolower(trim((string)($input['driver'] ?? '')));
+    // Live actions must always resolve against the server runtime. Do not trust
+    // stale client-supplied OS/driver values, as they can select a Linux DBLIB
+    // row on Windows (or vice versa).
+    $targetOsFamily = PHP_OS_FAMILY === 'Windows' ? 'windows' : 'linux';
+    $targetDriver = '';
     $supportsProd = !empty($connection['f_supports_prod']);
     $supportsDev = !empty($connection['f_supports_dev']);
 

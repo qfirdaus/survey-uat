@@ -3988,9 +3988,7 @@
         }
 
         if (action === 'inspect') {
-          var inspectEnv = connection && Array.isArray(connection.env_rows) && connection.env_rows.length
-            ? (connection.env_rows.find(function (row) { return !!Number(row.f_is_active || 0); }) || connection.env_rows[0])
-            : null;
+          var inspectEnv = getPreferredAdditionalEnvRow(connection);
           postAdditionalConnectionAction('db_additional_inspect', {
             connection_code: code,
             environment: inspectEnv ? String(inspectEnv.f_environment || 'production') : 'production',
@@ -4010,9 +4008,7 @@
         }
 
         if (action === 'schema') {
-          var schemaEnv = connection && Array.isArray(connection.env_rows) && connection.env_rows.length
-            ? (connection.env_rows.find(function (row) { return !!Number(row.f_is_active || 0); }) || connection.env_rows[0])
-            : null;
+          var schemaEnv = getPreferredAdditionalEnvRow(connection);
           postAdditionalConnectionAction('db_additional_schema_preview', {
             connection_code: code,
             environment: schemaEnv ? String(schemaEnv.f_environment || 'production') : 'production',
@@ -4050,9 +4046,7 @@
         }
 
         if (action === 'test') {
-          var firstEnv = connection && Array.isArray(connection.env_rows) && connection.env_rows.length
-            ? (connection.env_rows.find(function (row) { return !!Number(row.f_is_active || 0); }) || connection.env_rows[0])
-            : null;
+          var firstEnv = getPreferredAdditionalEnvRow(connection);
           postAdditionalConnectionAction('db_additional_test', {
             connection_code: code,
             environment: firstEnv ? String(firstEnv.f_environment || 'production') : 'production',
