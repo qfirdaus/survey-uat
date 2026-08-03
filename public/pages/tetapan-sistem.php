@@ -40,7 +40,7 @@ $controller->handleRequest(); // Handle POST requests
 
 $lang     = $controller->lang;
 $profile  = $controller->profile;
-$version  = (string)($_ENV['APP_ASSET_VER'] ?? date('ymdHis'));
+$pageAssetVersion = (string)($_ENV['APP_ASSET_VER'] ?? date('ymdHis'));
 $viewData = $controller->getPageViewData((($_GET['tab'] ?? '') === 'lang'));
 
 $dbAktif = is_array($viewData['dbAktif'] ?? null) ? $viewData['dbAktif'] : [];
@@ -228,9 +228,9 @@ if (isset($translationBundlesJs[$lang])) {
   ?>
   <meta name="csrf-token" content="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
 
-  <link rel="stylesheet" href="<?= asset_url('css/datatables-standard.css') ?>?v=<?= urlencode($version) ?>">
-  <link rel="stylesheet" href="<?= base_url('assets/vendor/select2/css/select2.min.css') ?>?v=<?= urlencode($version) ?>">
-  <link rel="stylesheet" href="<?= asset_url('css/pages/tetapan-sistem.css') ?>?v=<?= urlencode($version) ?>">
+  <link rel="stylesheet" href="<?= asset_url('css/datatables-standard.css') ?>?v=<?= urlencode($pageAssetVersion) ?>">
+  <link rel="stylesheet" href="<?= base_url('assets/vendor/select2/css/select2.min.css') ?>?v=<?= urlencode($pageAssetVersion) ?>">
+  <link rel="stylesheet" href="<?= asset_url('css/pages/tetapan-sistem.css') ?>?v=<?= urlencode($pageAssetVersion) ?>">
 
   <!-- Translation map (senyap) -->
   <script>
@@ -2476,9 +2476,9 @@ if (isset($translationBundlesJs[$lang])) {
       });
     })();
   </script>
-  <script src="<?= asset_url('js/helpers/page-ui-helper.js') ?>?v=<?= urlencode($version) ?>"></script>
-  <script src="<?= asset_url('js/helpers/datatables-standard.js') ?>?v=<?= urlencode($version) ?>"></script>
-  <script src="<?= asset_url('js/pages/tetapan-sistem.js') ?>?v=<?= urlencode($version) ?>"></script>
+  <script src="<?= asset_url('js/helpers/page-ui-helper.js') ?>?v=<?= urlencode($pageAssetVersion) ?>"></script>
+  <script src="<?= asset_url('js/helpers/datatables-standard.js') ?>?v=<?= urlencode($pageAssetVersion) ?>"></script>
+  <script src="<?= asset_url('js/pages/tetapan-sistem.js') ?>?v=<?= urlencode($pageAssetVersion) ?>"></script>
   <script>
     (function () {
       'use strict';

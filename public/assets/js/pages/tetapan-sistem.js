@@ -701,8 +701,8 @@
       feedback.setAttribute('data-settings-save-feedback', '1');
       feedback.setAttribute('aria-live', 'polite');
       feedback.innerHTML = ''
-        + '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle" data-save-feedback-badge>Belum simpan</span>'
-        + '<span class="text-muted" data-save-feedback-text>Belum ada perubahan.</span>';
+        + '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle" data-save-feedback-badge>' + escapeHtml(__('config_js_save_feedback_idle_badge') || 'Not saved') + '</span>'
+        + '<span class="text-muted" data-save-feedback-text>' + escapeHtml(__('config_js_save_feedback_idle_text') || 'No new changes to save.') + '</span>';
 
       var buttonGroup = button && button.parentElement && button.parentElement !== actions && button.parentElement.classList.contains('d-flex')
         ? button.parentElement
@@ -729,32 +729,32 @@
       var text = host.querySelector('[data-save-feedback-text]');
       var badgeMap = {
         idle: {
-          badge: 'Belum simpan',
+          badge: __('config_js_save_feedback_idle_badge') || 'Not saved',
           className: 'badge bg-secondary-subtle text-secondary border border-secondary-subtle',
           textClass: 'text-muted'
         },
         dirty: {
-          badge: 'Perubahan',
+          badge: __('config_js_save_feedback_dirty_badge') || 'Changed',
           className: 'badge bg-warning-subtle text-warning border border-warning-subtle',
           textClass: 'text-warning-emphasis'
         },
         saving: {
-          badge: 'Menyimpan',
+          badge: __('config_js_save_feedback_saving_badge') || 'Saving',
           className: 'badge bg-primary-subtle text-primary border border-primary-subtle',
           textClass: 'text-primary-emphasis'
         },
         success: {
-          badge: 'Disimpan',
+          badge: __('config_js_save_feedback_success_badge') || 'Saved',
           className: 'badge bg-success-subtle text-success border border-success-subtle',
           textClass: 'text-success-emphasis'
         },
         warning: {
-          badge: 'Amaran',
+          badge: __('config_js_save_feedback_warning_badge') || 'Warning',
           className: 'badge bg-warning-subtle text-warning border border-warning-subtle',
           textClass: 'text-warning-emphasis'
         },
         error: {
-          badge: 'Ralat',
+          badge: __('config_js_save_feedback_error_badge') || 'Error',
           className: 'badge bg-danger-subtle text-danger border border-danger-subtle',
           textClass: 'text-danger-emphasis'
         }
@@ -785,21 +785,21 @@
 
       var dirty = state.snapshot !== serializeFormState(form);
       if (dirty) {
-        setSaveFeedbackState(form, button, 'dirty', 'Perubahan belum disimpan.');
+        setSaveFeedbackState(form, button, 'dirty', __('config_js_save_feedback_dirty_text') || 'Changes have not been saved.');
         return;
       }
 
       if (state.lastState === 'success') {
-        setSaveFeedbackState(form, button, 'success', 'Perubahan terkini sudah disimpan.');
+        setSaveFeedbackState(form, button, 'success', __('config_js_save_feedback_success_text') || 'The latest changes have been saved.');
         return;
       }
 
       if (state.lastState === 'warning') {
-        setSaveFeedbackState(form, button, 'warning', 'Tetapan disimpan tetapi ada amaran yang perlu disemak.');
+        setSaveFeedbackState(form, button, 'warning', __('config_js_save_feedback_warning_text') || 'Settings were saved, but there are warnings to review.');
         return;
       }
 
-      setSaveFeedbackState(form, button, 'idle', 'Belum ada perubahan baru untuk disimpan.');
+      setSaveFeedbackState(form, button, 'idle', __('config_js_save_feedback_idle_text') || 'No new changes to save.');
     };
 
     const refreshEmailRuntimeSummary = function (emailSettings) {
@@ -1282,8 +1282,8 @@
         dbAdditionalDiagnosticsSummary.textContent = [
           'Runtime ' + String(diagnostics.runtime_os || '-').toUpperCase(),
           'PDO ' + drivers,
-          String(diagnostics.enabled_count || 0) + ' enabled',
-          String(diagnostics.active_env_count || 0) + ' active env rows',
+          additionalLabel('config_tab_db_additional_diagnostics_enabled', '%s enabled').replace('%s', String(diagnostics.enabled_count || 0)),
+          additionalLabel('config_tab_db_additional_diagnostics_active_rows', '%s active environment rows').replace('%s', String(diagnostics.active_env_count || 0)),
           String((diagnostics.platform_coverage && diagnostics.platform_coverage.available_count) || 0)
             + '/' + String((diagnostics.platform_coverage && diagnostics.platform_coverage.required_count) || 0)
             + ' platform coverage'
@@ -1293,7 +1293,8 @@
       if (dbAdditionalDiagnosticsCount) {
         dbAdditionalDiagnosticsCount.classList.remove('bg-success', 'bg-warning', 'bg-danger');
         dbAdditionalDiagnosticsCount.classList.add('bg-' + tone);
-        dbAdditionalDiagnosticsCount.textContent = String(diagnostics.warning_count || 0) + ' warning(s)';
+        dbAdditionalDiagnosticsCount.textContent = additionalLabel('config_tab_db_additional_diagnostics_warning_count', '%s warning(s)')
+          .replace('%s', String(diagnostics.warning_count || 0));
       }
 
       if (dbAdditionalDiagnosticsWarnings) {
@@ -1303,7 +1304,8 @@
           return '<li><code>' + escapeHtml(warning.connection_code || '-') + '</code> — '
             + escapeHtml(warning.message || '') + '</li>';
         }).join('') + (warnings.length > 8
-          ? '<li>' + escapeHtml(String(warnings.length - 8)) + ' lagi warning tidak dipaparkan.</li>'
+          ? '<li>' + escapeHtml(additionalLabel('config_tab_db_additional_diagnostics_more_warnings', '%s more warning(s) are not shown.')
+              .replace('%s', String(warnings.length - 8))) + '</li>'
           : '');
       }
     };
@@ -2943,7 +2945,7 @@
 
           var warnings = payload && Array.isArray(payload.warnings) ? payload.warnings : [];
           if (warnings.length > 0) {
-            setSaveFeedbackState(form, button, 'warning', payload.message || 'Tetapan disimpan dengan amaran.');
+            setSaveFeedbackState(form, button, 'warning', payload.message || __('config_js_save_feedback_saved_with_warning') || 'Settings saved with a warning.');
             return;
           }
 

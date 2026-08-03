@@ -381,7 +381,7 @@
       display:flex;
       justify-content:flex-start;
       gap:.45rem;
-      flex-wrap:wrap;
+      flex-wrap:nowrap;
     }
     .db-additional-actions .btn.icon-btn{
       width:34px;
@@ -655,6 +655,29 @@
       border:1px solid rgba(59,130,246,.14);
       font-size:.74rem;
       font-weight:600;
+      white-space:nowrap;
+    }
+    .db-additional-registry-table{
+      min-width:1405px;
+      table-layout:fixed;
+    }
+    .db-settings-table .db-additional-registry-table tbody td{
+      vertical-align:top;
+    }
+    .db-additional-registry-table .db-additional-col-code{ width:180px; }
+    .db-additional-registry-table .db-additional-col-name{ width:180px; }
+    .db-additional-registry-table .db-additional-col-type{ width:90px; }
+    .db-additional-registry-table .db-additional-col-purpose{ width:130px; }
+    .db-additional-registry-table .db-additional-col-environment{ width:270px; }
+    .db-additional-registry-table .db-additional-col-status{ width:100px; }
+    .db-additional-registry-table .db-additional-col-last-test{ width:210px; }
+    .db-additional-registry-table .db-additional-col-actions{ width:245px; }
+    .db-additional-registry-table td:nth-child(5) .db-additional-meta{
+      align-items:flex-start;
+      margin-top:0;
+    }
+    .db-additional-registry-table .db-additional-test-result{
+      white-space:nowrap;
     }
     #db-additional-modal .modal-dialog{
       max-width:860px;
