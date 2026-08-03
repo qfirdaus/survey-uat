@@ -47,6 +47,29 @@ const GroupUtils = {
     const loaderKey = String(key || 'group');
     delete this._loaderTokens[loaderKey];
   },
+
+  setButtonBusy(button, busy, label = '') {
+    if (!button) return;
+    if (busy) {
+      if (button.dataset.busy === '1') return;
+      button.dataset.busy = '1';
+      button.dataset.busyOriginalHtml = button.innerHTML;
+      button.dataset.busyOriginalDisabled = button.disabled ? '1' : '0';
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
+      button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>'
+        + '<span>' + this.esc(label || this.t('saving', 'Saving...')) + '</span>';
+      return;
+    }
+
+    if (button.dataset.busy !== '1') return;
+    button.innerHTML = button.dataset.busyOriginalHtml || button.innerHTML;
+    button.disabled = button.dataset.busyOriginalDisabled === '1';
+    button.removeAttribute('aria-busy');
+    delete button.dataset.busy;
+    delete button.dataset.busyOriginalHtml;
+    delete button.dataset.busyOriginalDisabled;
+  },
   
   hasDataTable() {
     return !!(window.jQuery && jQuery.fn && jQuery.fn.DataTable);
@@ -158,7 +181,6 @@ document.addEventListener('show.bs.modal', function (e) {
 
 // Export untuk global access
 window.GroupUtils = GroupUtils;
-
 
 
 

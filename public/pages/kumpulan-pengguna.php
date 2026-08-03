@@ -317,9 +317,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') ==
     .group-color-cell { display: flex; justify-content: flex-end; }
     .group-color-bar {
       display: inline-block;
-      width: 40px;
-      height: 14px;
-      border-radius: 999px;
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
       border: 1px solid rgba(15, 23, 42, 0.22);
       box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
     }
@@ -1668,16 +1668,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') ==
       opacity: 0;
     }
 
-    /* Undo notification */
-    .undo-notification {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 9999;
-      min-width: 300px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-
     /* Controls & buttons: align with senarai-pengguna.php styles */
     .dt-bottom-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:nowrap; gap:.5rem; }
     #groupTable_wrapper .dt-bottom-row {
@@ -2212,9 +2202,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') ==
     }
     .user-group-page #groupTable .group-table-category-chip { border-radius: 7px; }
     .user-group-page #groupTable .group-color-bar {
-      width: 9px;
-      min-width: 9px;
-      height: 34px;
+      width: 22px;
+      min-width: 22px;
+      height: 22px;
       border-radius: 5px;
     }
     /* One visual standard for every group-management modal. */
@@ -2403,7 +2393,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') ==
                 <button type="button" id="btnAddModule" class="btn btn-light">
                   <i class="ri-stack-line me-1"></i><?= h(__('userGroup_btn_module_label')) ?>
                 </button>
-                <button type="button" id="btnAddGroup" class="btn btn-primary">
+                <button type="button" id="btnAddGroup" class="btn btn-light">
                   <i class="ri-group-line me-1"></i><?= h(__('userGroup_btn_group_label')) ?>
                 </button>
               </div>
@@ -2469,6 +2459,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') ==
 
                             <!-- Akses Kumpulan -->
                             <td class="text-start td-grp">
+                              <div class="group-access-actions d-inline-flex align-items-center gap-2">
                               <button
                                 type="button"
                                 class="btn btn-sm btn-outline-secondary icon-btn view-group-perms<?= $permDisabledClass ?>"
@@ -2482,7 +2473,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') ==
                               <?php if ($canManageGroups): ?>
                                 <button
                                   type="button"
-                                  class="btn btn-sm btn-outline-warning icon-btn btn-edit-group-meta ms-1<?= $permDisabledClass ?>"
+                                  class="btn btn-sm btn-outline-warning icon-btn btn-edit-group-meta<?= $permDisabledClass ?>"
                                   <?= $permDisabledAttr ?>
                                   data-group-id="<?= $groupID ?>"
                                   data-group-kod="<?= h($kod) ?>"
@@ -2497,7 +2488,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') ==
                                 <?php if ($canDeleteGroup): ?>
                                   <button
                                     type="button"
-                                    class="btn btn-sm btn-outline-danger icon-btn btn-delete-group ms-1<?= $permDisabledClass ?>"
+                                    class="btn btn-sm btn-outline-danger icon-btn btn-delete-group<?= $permDisabledClass ?>"
                                     <?= $permDisabledAttr ?>
                                     data-group-id="<?= $groupID ?>"
                                     data-group-kod="<?= h($kod) ?>"
@@ -2507,6 +2498,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') ==
                                   </button>
                                 <?php endif; ?>
                               <?php endif; ?>
+                              </div>
                             </td>
 
                             <!-- Akses Modul -->
@@ -3148,6 +3140,7 @@ window.hasDT = function() {
     status_on: <?= json_encode(__('userGroup_status_on')) ?>,
     status_off: <?= json_encode(__('userGroup_status_off')) ?>,
     loading: <?= json_encode(__('userGroup_loading')) ?>,
+    saving: <?= json_encode(__('globalLoader_saving')) ?>,
     error_network: <?= json_encode(__('userGroup_error_network')) ?>,
     error_unknown: <?= json_encode(__('userGroup_error_unknown')) ?>,
     error_reorder: <?= json_encode(__('userGroup_error_reorder')) ?>,
@@ -3189,8 +3182,6 @@ window.hasDT = function() {
     no_modules_found: <?= json_encode(__('userGroup_no_modules_found')) ?>,
     search_group_placeholder: <?= json_encode(__('userGroup_search_group_placeholder')) ?>,
     search_menu_placeholder: <?= json_encode(__('userGroup_search_menu_placeholder')) ?>,
-    undo_btn: <?= json_encode(__('userGroup_undo_btn')) ?>,
-    undo_message: <?= json_encode(__('userGroup_undo_message')) ?>,
     module_reorder_note: <?= json_encode(__('userGroup_module_reorder_note')) ?>,
     module_drag_label: <?= json_encode(__('userGroup_module_drag_label')) ?>,
     module_edit_label: <?= json_encode(__('modul_edit_label')) ?>,
@@ -3207,8 +3198,6 @@ window.hasDT = function() {
     success_title: <?= json_encode(__('config_js_berjaya')) ?>,
     btn_ok: <?= json_encode(__('config_js_btn_ok')) ?>,
     btn_cancel: <?= json_encode(__('config_js_btn_cancel')) ?>,
-    undo_title: <?= json_encode(__('userGroup_undo_title')) ?>,
-    undo_info: <?= json_encode(__('userGroup_undo_info')) ?>,
     dt_length_menu: <?= json_encode(__('userGroup_dt_length_menu')) ?>,
     dt_info: <?= json_encode(__('userGroup_dt_info')) ?>,
     dt_info_empty: <?= json_encode(__('userGroup_dt_info_empty')) ?>,
@@ -3505,7 +3494,11 @@ window.hasDT = function() {
           order: [[2, 'asc']],
           columnDefs: [
             { targets: [0], orderable: false },
-            { targets: [3, 4, 5, 6], orderable: false, searchable: false }
+            { targets: [3, 4, 5, 6, 7], orderable: false, searchable: false },
+            { targets: [4], className: 'text-end td-color' },
+            { targets: [5], className: 'text-start td-grp' },
+            { targets: [6], className: 'text-center td-mod' },
+            { targets: [7], className: 'text-center td-menu' }
           ],
           language: {
             search: "",
@@ -3529,7 +3522,11 @@ window.hasDT = function() {
           order: [[2, 'asc']],
           columnDefs: [
             { targets: [0], orderable: false },
-            { targets: [3, 4, 5, 6], orderable: false, searchable: false }
+            { targets: [3, 4, 5, 6, 7], orderable: false, searchable: false },
+            { targets: [4], className: 'text-end td-color' },
+            { targets: [5], className: 'text-start td-grp' },
+            { targets: [6], className: 'text-center td-mod' },
+            { targets: [7], className: 'text-center td-menu' }
           ],
           language: {
             search: "",
@@ -3613,6 +3610,10 @@ window.hasDT = function() {
           });
 
           $btnModule.off('click').on('click', function(){
+            if (typeof window.openModuleFormModal === 'function') {
+              window.openModuleFormModal({ mode: 'create' });
+              return;
+            }
             const modal = new bootstrap.Modal(document.getElementById('moduleCreateModal'));
             const modalEl = document.getElementById('moduleCreateModal');
             if (modalEl) {
@@ -3629,6 +3630,9 @@ window.hasDT = function() {
 
           // Existing Add Group handler
           $btn.off('click').on('click', function(){
+            if (typeof GroupUtils !== 'undefined' && typeof GroupUtils.setButtonBusy === 'function') {
+              GroupUtils.setButtonBusy(document.getElementById('groupCreateSaveBtn'), false);
+            }
             const modal = new bootstrap.Modal(document.getElementById('groupCreateModal'));
             const groupModalEl = document.getElementById('groupCreateModal');
             if (groupModalEl) {
@@ -3741,42 +3745,6 @@ window.hasDT = function() {
     }
     }, true);
 
-  // =========================================================
-  // 3. SweetAlert follow-up untuk Menu Delete
-  // =========================================================
-  if (typeof MenuAccess !== 'undefined') {
-    const originalDeleteMenu = MenuAccess.deleteMenu;
-    if (originalDeleteMenu) {
-      MenuAccess.deleteMenu = async function(menuID, tr) {
-        const menuData = {
-          id: menuID,
-          name: tr ? (tr.querySelector('td:nth-child(2) .fw-semibold')?.textContent || '') : '',
-        };
-
-        await originalDeleteMenu.call(this, menuID, tr);
-
-        const undoMsgTemplate = (typeof T !== 'undefined' && T.undo_message) ? T.undo_message : 'Menu "%s" has been deleted.';
-        const undoMsg = undoMsgTemplate.replace('%s', GroupUtils.esc(menuData.name));
-        const undoTitle = (typeof T !== 'undefined' && T.undo_title) ? T.undo_title : 'Cancel';
-        const undoInfo = (typeof T !== 'undefined' && T.undo_info) ? T.undo_info : 'Undo function requires server-side endpoint. Please contact admin.';
-
-        if (window.Swal && Swal.fire) {
-          await (window.GroupSwal ? GroupSwal.fire({
-            icon: 'info',
-            title: undoTitle,
-            text: `${undoMsg} ${undoInfo}`.trim(),
-            confirmButtonText: T.btn_ok
-          }) : Swal.fire({
-            icon: 'info',
-            title: undoTitle,
-            text: `${undoMsg} ${undoInfo}`.trim(),
-            confirmButtonText: T.btn_ok
-          }));
-        }
-      };
-    }
-  }
-
   // Initialize on DOM ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
@@ -3799,7 +3767,6 @@ document.addEventListener('DOMContentLoaded', function(){
   const moduleIdInput = document.getElementById('mc_moduleID');
   const modalTitleText = document.getElementById('moduleCreateTitle')?.querySelector('span');
   const panelTitleText = document.getElementById('moduleCreatePanelTitleText');
-  const saveBtnText = document.getElementById('moduleCreateSaveBtnText');
   const orderInput = document.getElementById('mc_order');
   const nameMsInput = document.getElementById('mc_modulNameMs');
   const nameEnInput = document.getElementById('mc_modulNameEn');
@@ -3845,13 +3812,15 @@ document.addEventListener('DOMContentLoaded', function(){
 
   const setModuleFormMode = (mode, data = {}) => {
     if (!form) return;
+    GroupUtils.setButtonBusy(saveBtn, false);
     const isEdit = mode === 'edit';
     form.dataset.mode = isEdit ? 'edit' : 'create';
     if (actionInput) actionInput.value = isEdit ? 'update_module' : 'add_module';
     if (moduleIdInput) moduleIdInput.value = isEdit ? String(data.moduleID || '') : '';
     if (modalTitleText) modalTitleText.textContent = isEdit ? <?= json_encode((string)__('modul_kemaskini_title')) ?> : <?= json_encode((string)__('modul_tambah_title')) ?>;
     if (panelTitleText) panelTitleText.textContent = isEdit ? <?= json_encode((string)__('modul_kemaskini_title')) ?> : <?= json_encode((string)__('modul_tambah_title')) ?>;
-    if (saveBtnText) saveBtnText.textContent = isEdit ? <?= json_encode((string)__('btn_update')) ?> : <?= json_encode((string)__('modul_simpan')) ?>;
+    const currentSaveBtnText = document.getElementById('moduleCreateSaveBtnText');
+    if (currentSaveBtnText) currentSaveBtnText.textContent = isEdit ? <?= json_encode((string)__('btn_update')) ?> : <?= json_encode((string)__('modul_simpan')) ?>;
     if (nameMsInput) nameMsInput.value = isEdit ? (data.modulNameMs || '') : '';
     if (nameEnInput) nameEnInput.value = isEdit ? (data.modulNameEn || '') : '';
     if (orderInput) orderInput.value = isEdit ? String(data.order || '') : defaultOrderValue;
@@ -3860,6 +3829,7 @@ document.addEventListener('DOMContentLoaded', function(){
   };
 
   window.openModuleFormModal = function(data = {}) {
+    GroupUtils.setButtonBusy(saveBtn, false);
     setModuleFormMode(data.mode || 'create', data);
     if (modalEl && window.bootstrap && bootstrap.Modal) {
       modalEl.classList.toggle('modal-add-accent', (data.mode || 'create') === 'create');
@@ -3870,6 +3840,15 @@ document.addEventListener('DOMContentLoaded', function(){
       bootstrap.Modal.getOrCreateInstance(modalEl).show();
     }
   };
+
+  if (modalEl) {
+    modalEl.addEventListener('show.bs.modal', () => {
+      GroupUtils.setButtonBusy(saveBtn, false);
+    });
+    modalEl.addEventListener('hidden.bs.modal', () => {
+      GroupUtils.setButtonBusy(saveBtn, false);
+    });
+  }
 
   if (iconInput) {
     iconInput.addEventListener('input', syncModuleIconSelection);
@@ -3908,7 +3887,7 @@ document.addEventListener('DOMContentLoaded', function(){
         payload.moduleID = moduleIdInput ? moduleIdInput.value : '';
       }
 
-      saveBtn.disabled = true;
+      GroupUtils.setButtonBusy(saveBtn, true, T.saving || 'Saving...');
 
       try {
         const endpoint = isEditMode ? 'module-update.php' : 'module-create.php';
@@ -3945,6 +3924,7 @@ document.addEventListener('DOMContentLoaded', function(){
           await MenuAccess.refreshVisibleGroupTableRows();
         }
         syncSidebarAfterModuleChange();
+        GroupUtils.setButtonBusy(saveBtn, false);
         setModuleFormMode('create');
         await successAlert;
       } catch (err) {
@@ -3955,7 +3935,7 @@ document.addEventListener('DOMContentLoaded', function(){
           confirmButtonText: <?= json_encode((string)__('config_js_btn_ok')) ?>
         });
       } finally {
-        saveBtn.disabled = false;
+        GroupUtils.setButtonBusy(saveBtn, false);
       }
     });
   }

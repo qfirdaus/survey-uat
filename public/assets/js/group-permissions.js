@@ -439,7 +439,13 @@ const GroupPermissions = {
           return;
         }
 
-        if (window.MenuAccess && typeof window.MenuAccess.refreshGroupTableRow === 'function') {
+        if (window.MenuAccess && typeof window.MenuAccess.upsertGroupTableRow === 'function' && j.group) {
+          window.MenuAccess.upsertGroupTableRow(Object.assign({}, j.group, {
+            groupID: currentGroupId,
+            groupKod: j.group.kod || this.currentGroupData?.kod || '',
+            groupName: j.group.nama || this.currentGroupData?.nama || ''
+          }));
+        } else if (window.MenuAccess && typeof window.MenuAccess.refreshGroupTableRow === 'function') {
           await window.MenuAccess.refreshGroupTableRow(currentGroupId, {
             groupID: currentGroupId,
             groupKod: this.currentGroupData?.kod || '',

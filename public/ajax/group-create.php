@@ -11,6 +11,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/init.php';
 require_login();
 require_once __DIR__ . '/_helpers.php';
+require_once __DIR__ . '/../setting/constants/prestasi_constants.php';
 header('Content-Type: application/json; charset=utf-8');
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
@@ -226,6 +227,16 @@ try {
   clearGroupUiCaches($newId);
   clearSidebarNavigationCaches();
 
+  $userCountStmt = $db->prepare('SELECT COUNT(*) FROM tbl_m_user WHERE f_groupID = :gid');
+  $userCountStmt->execute([':gid' => $newId]);
+  $userCount = (int)$userCountStmt->fetchColumn();
+  $saId = defined('PRESTASI_ROLE_ID_ADM_SA') ? (int)PRESTASI_ROLE_ID_ADM_SA : 0;
+  $saCode = defined('PRESTASI_ROLE_KOD_ADM_SA')
+    ? strtoupper(trim((string)PRESTASI_ROLE_KOD_ADM_SA))
+    : (defined('PRESTASI_ROLE_ADM_SA') ? strtoupper(trim((string)PRESTASI_ROLE_ADM_SA)) : 'ADM-SA');
+  $isProtectedGroup = ($saId > 0 && $newId === $saId)
+    || (strtoupper(trim($kod)) === $saCode);
+
   echo json_encode([
     'error'=>false,
     'group'=>[
@@ -238,6 +249,10 @@ try {
       'rowClass'=>$rowClass,
       'priority'=>$priority,
       'mod'=>$mod,
+      'modulAccess'=>$modulAccessArr,
+      'menuAccess'=>$menuAccessArr,
+      'userCount'=>$userCount,
+      'canDelete'=>empty($modulAccessArr) && empty($menuAccessArr) && $userCount === 0 && !$isProtectedGroup,
     ]
   ], JSON_UNESCAPED_UNICODE);
 

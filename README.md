@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.9.1`
+- Current version: `1.9.2`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -20,13 +20,13 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Main database: MySQL `8.x`
 - External database support: Sybase through ODBC/DBLIB, plus additional PDO connections configured from the system UI
 
-## Version 1.9.1 Administration Experience
+## Version 1.9.2 User Group and Loader Refinement
 
-- Core administration pages now share a professional visual standard for page headers, themed KPI cards, panel spacing, DataTables, compact action controls, tabs, modals, empty states, and responsive layouts.
-- In-page operations use local button, panel, or table loading states instead of blocking the whole workspace with a global loader.
-- Staff and student access assignment retains remote Select2 search, correct type-specific placeholders, and protected AJAX lookup flows.
-- Profile, user/group governance, System Settings, template generation, cache maintenance, audit, access matrix, manuals, notifications, and email-template workflows include expanded Malay and English translations.
-- Administrative AJAX endpoints apply consistent authentication, authorization, CSRF, validation, safe error responses, and audit handling appropriate to each operation.
+- User Group transactions now keep dynamically refreshed rows, access icons, action spacing, colour indicators, and delete-button eligibility synchronized without requiring a full page refresh.
+- Group and module deletion now use the shared CSRF validator, while group access-save responses return authoritative deletion eligibility and current access state.
+- Group, menu, module, and subgroup save buttons provide translated in-button progress feedback, double-click protection, and reliable state restoration when their modals are reopened.
+- Menu deletion now presents one clear success result without exposing the retired and unsupported Undo concept.
+- The global transaction loader now uses the system logo, a compact professional presentation, translated status guidance, responsive layout, dark-mode support, and reduced-motion handling.
 
 ## Actual System Features
 

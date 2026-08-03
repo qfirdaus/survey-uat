@@ -11,6 +11,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/init.php';
 require_login();
 require_once __DIR__ . '/_helpers.php';
+require_once __DIR__ . '/../setting/constants/prestasi_constants.php';
 header('Content-Type: application/json; charset=utf-8');
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
@@ -55,7 +56,7 @@ try{
   };
 
   // Get old permissions sebelum update untuk audit
-  $oldStmt = $db->prepare("SELECT f_modulAccess, f_menuAccess, f_groupName FROM tbl_m_group WHERE f_groupID = :gid LIMIT 1");
+  $oldStmt = $db->prepare("SELECT f_modulAccess, f_menuAccess, f_groupKod, f_groupName FROM tbl_m_group WHERE f_groupID = :gid LIMIT 1");
   $oldStmt->execute([':gid' => $gid]);
   $oldPerms = $oldStmt->fetch(PDO::FETCH_ASSOC);
   if (!$oldPerms) {
@@ -129,7 +130,30 @@ try{
   clearGroupUiCaches($gid);
   clearSidebarNavigationCaches();
 
-  echo json_encode(['error'=>false, 'ok'=>true], JSON_UNESCAPED_UNICODE);
+  $userCountStmt = $db->prepare('SELECT COUNT(*) FROM tbl_m_user WHERE f_groupID = :gid');
+  $userCountStmt->execute([':gid' => $gid]);
+  $userCount = (int)$userCountStmt->fetchColumn();
+  $groupKod = (string)($oldPerms['f_groupKod'] ?? '');
+  $saId = defined('PRESTASI_ROLE_ID_ADM_SA') ? (int)PRESTASI_ROLE_ID_ADM_SA : 0;
+  $saCode = defined('PRESTASI_ROLE_KOD_ADM_SA')
+    ? strtoupper(trim((string)PRESTASI_ROLE_KOD_ADM_SA))
+    : (defined('PRESTASI_ROLE_ADM_SA') ? strtoupper(trim((string)PRESTASI_ROLE_ADM_SA)) : 'ADM-SA');
+  $isProtectedGroup = ($saId > 0 && $gid === $saId)
+    || (strtoupper(trim($groupKod)) === $saCode);
+
+  echo json_encode([
+    'error' => false,
+    'ok' => true,
+    'group' => [
+      'id' => $gid,
+      'kod' => $groupKod,
+      'nama' => (string)($oldPerms['f_groupName'] ?? ''),
+      'modulAccess' => $newMods === '' ? [] : explode(',', $newMods),
+      'menuAccess' => $newMenus === '' ? [] : explode(',', $newMenus),
+      'userCount' => $userCount,
+      'canDelete' => $newMods === '' && $newMenus === '' && $userCount === 0 && !$isProtectedGroup,
+    ],
+  ], JSON_UNESCAPED_UNICODE);
 
 } catch(Throwable $e){
   http_response_code(500);

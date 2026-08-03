@@ -1422,12 +1422,6 @@
 'userGroup_non_json_response'       => 'Server tidak memulangkan JSON. Pratonton:',
 
 // =========================
-// Undo (Opsyenal)
- // =========================
-'userGroup_undo_btn'                => 'Batal',
-'userGroup_undo_title'              => 'Batal',
-'userGroup_undo_message'            => 'Menu "%s" telah dipadam.',
-// =========================
 // Carian & DataTables
 // =========================
 'userGroup_search_group_placeholder'=> 'Cari kumpulan...',
@@ -2333,6 +2327,7 @@
 'globalLoader_submitting'        => 'Menghantar...',
 'globalLoader_navigation'        => 'Memuat halaman...',
 'globalLoader_logout'            => 'Log Keluar...',
+'globalLoader_wait'              => 'Sila tunggu sebentar',
 
 'config_js_confirm_emel'         => 'Anda pasti mahu simpan tetapan emel?',
 'config_js_confirm_general'      => 'Anda pasti mahu simpan tetapan umum?',
@@ -2657,12 +2652,6 @@
 /* =========================
  * Modal — Akses Kumpulan
  * ========================= */
-
-/* =========================
- * Undo (Padam Menu)
- * ========================= */
-'userGroup_undo_info'
-                                    => 'Fungsi batal memerlukan endpoint server-side. Sila hubungi admin.',
 
 /* =========================
  * SweetAlert — Padam

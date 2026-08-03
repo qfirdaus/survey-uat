@@ -6,13 +6,36 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+## [1.9.2] - 2026-08-03
+
+### Added
+- Added reusable translated busy-button feedback with a spinner, action text, double-click protection, and state restoration for group, menu, module, and subgroup save operations.
+- Added authoritative access, user-count, and deletion-eligibility data to group create/update and permission-save responses for immediate in-place table updates.
+- Added a localized secondary status message and the system logo to the global transaction loader.
+
 ### Changed
+- Redesigned the global transaction loader as a compact, responsive, logo-led status card with a restrained progress treatment, light/dark themes, and reduced-motion support.
+- Changed User Group table redraws to preserve colour, group-action, module-access, and menu-access column alignment after all in-place transactions.
+- Changed group action buttons to use deterministic flex spacing so server-rendered and dynamically inserted rows remain visually identical.
+- Changed group colour indicators from narrow vertical bars to clear square swatches aligned with category badges.
+- Changed the Menu, Module, and Group toolbar buttons to share the same neutral visual treatment.
+- Changed module modal initialization so create/edit modes and save-button states reset reliably whenever the modal is opened or closed.
 - Changed the documented runtime from Docker/Apache to WSL 2 Ubuntu with Nginx and PHP-FPM.
 - Updated database inspection guidance to use the native WSL PHP runtime.
 - Updated setup guidance to make the native WSL runtime the only maintained local deployment path.
 - Changed `sync-updates.sh` to report sync results in the terminal without initializing unused log files.
+- Changed project release metadata to version `1.9.2`.
+
+### Fixed
+- Fixed Group and Module delete requests failing CSRF validation when the web server normalized request-header casing.
+- Fixed the Group delete button remaining hidden after all module/menu access was removed until the page was manually refreshed.
+- Fixed newly created or refreshed group rows displaying misaligned module, menu, and edit action icons.
+- Fixed Group and Module save buttons remaining stuck on `Saving...` after asynchronous transactions or modal reuse.
+- Fixed Module create reopening in edit mode after a previous module edit.
+- Fixed menu deletion displaying a misleading second Undo message even though no restore feature exists.
 
 ### Removed
+- Removed the obsolete menu-delete Undo wrapper, styling, and Malay/English translation strings.
 - Removed the retired Dockerfile, Compose service, Apache/PHP container configuration, Docker ignore rules, and development TLS key material.
 - Removed unused `sync.log` and `conflict.log` initialization and references from the update sync workflow.
 

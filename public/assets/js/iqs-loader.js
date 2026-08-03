@@ -35,19 +35,31 @@
     var panel = document.createElement('div');
     panel.className = 'iqs-box-loader__panel';
 
-    var boxes = document.createElement('div');
-    boxes.className = 'iqs-box-loader__boxes';
-    boxes.setAttribute('aria-hidden', 'true');
-    for (var i = 0; i < 4; i += 1) {
-      boxes.appendChild(document.createElement('span'));
-    }
+    var indicator = document.createElement('div');
+    indicator.className = 'iqs-box-loader__indicator';
+    indicator.setAttribute('aria-hidden', 'true');
+    var logo = document.createElement('img');
+    logo.className = 'iqs-box-loader__logo';
+    logo.src = defaultI18n.logoUrl || '';
+    logo.alt = '';
+    logo.decoding = 'async';
+    indicator.appendChild(logo);
+
+    var content = document.createElement('div');
+    content.className = 'iqs-box-loader__content';
 
     var text = document.createElement('div');
     text.className = 'iqs-box-loader__text';
     text.setAttribute('data-iqs-loader-text', '1');
 
-    panel.appendChild(boxes);
-    panel.appendChild(text);
+    var hint = document.createElement('div');
+    hint.className = 'iqs-box-loader__hint';
+    hint.textContent = defaultI18n.wait || 'Please wait a moment';
+
+    content.appendChild(text);
+    content.appendChild(hint);
+    panel.appendChild(indicator);
+    panel.appendChild(content);
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
     return overlay;

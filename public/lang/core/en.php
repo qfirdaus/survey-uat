@@ -1422,15 +1422,6 @@
 'userGroup_non_json_response'       => 'Server did not return JSON. Preview:',
 
 // =========================
-// Undo (Opsyenal)
- // =========================
-'userGroup_undo_btn'                => 'Undo',
-'userGroup_undo_title'              => 'Undo',
-'userGroup_undo_message'            => 'Menu "%s" has been deleted.',
-'userGroup_undo_info'
-                                      => 'Undo requires a server-side endpoint. Please contact the administrator.',
-
-// =========================
 // Carian & DataTables
 // =========================
 'userGroup_search_group_placeholder'=> 'Search group...',
@@ -2340,6 +2331,7 @@
 'globalLoader_submitting'        => 'Submitting...',
 'globalLoader_navigation'        => 'Loading page...',
 'globalLoader_logout'            => 'Logging out...',
+'globalLoader_wait'              => 'Please wait a moment',
 
 'config_js_confirm_emel'         => 'Are you sure you want to save email settings?',
 'config_js_confirm_general'      => 'Are you sure you want to save general settings?',

@@ -66,6 +66,8 @@ if (str_ends_with($currentPage, 'dashboard.php') && strpos($_SERVER['REQUEST_URI
     submitting: <?= json_encode(__('globalLoader_submitting') ?: 'Menghantar...', JSON_UNESCAPED_UNICODE) ?>,
     navigation: <?= json_encode(__('globalLoader_navigation') ?: 'Memuat halaman...', JSON_UNESCAPED_UNICODE) ?>,
     logout: <?= json_encode(__('globalLoader_logout') ?: 'Log Keluar...', JSON_UNESCAPED_UNICODE) ?>,
+    wait: <?= json_encode(__('globalLoader_wait') ?: 'Sila tunggu sebentar', JSON_UNESCAPED_UNICODE) ?>,
+    logoUrl: <?= json_encode(base_url('assets/images/new-logo.png'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
     impersonationStart: <?= json_encode(__('impersonation_loading_start') ?: 'Menyediakan paparan View As...', JSON_UNESCAPED_UNICODE) ?>,
     impersonationStop: <?= json_encode(__('impersonation_loading_stop') ?: 'Memulihkan akaun asal...', JSON_UNESCAPED_UNICODE) ?>
   };

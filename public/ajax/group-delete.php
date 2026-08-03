@@ -23,9 +23,7 @@ try {
         exit;
     }
 
-    $headers = function_exists('getallheaders') ? getallheaders() : [];
-    $csrfHdr = $headers['X-CSRF-Token'] ?? $headers['x-csrf-token'] ?? '';
-    if ($csrfHdr === '' || !hash_equals((string)($_SESSION['csrf_token'] ?? ''), (string)$csrfHdr)) {
+    if (!isValidCsrfToken()) {
         http_response_code(400);
         echo json_encode(['error' => true, 'message' => __('userGroup_csrf_invalid')], JSON_UNESCAPED_UNICODE);
         exit;

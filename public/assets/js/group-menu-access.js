@@ -189,6 +189,7 @@ const MenuAccess = {
     // Group create modal save handler (global page)
     document.getElementById('groupCreateSaveBtn')?.addEventListener('click', async (e) => {
       e.preventDefault();
+      const actionButton = e.currentTarget;
       const errEl = document.getElementById('groupCreateError');
       if (errEl) errEl.classList.add('d-none');
       const groupID = parseInt(document.getElementById('gc_groupID')?.value || '0', 10) || 0;
@@ -212,6 +213,7 @@ const MenuAccess = {
       // Export to global so page scripts can call populateCreateModal()
       try { window.MenuAccess = MenuAccess; } catch (e) { /* ignore */ }
       GroupUtils.showLoader('menuAction', this.T.loading || this.T.btn_save || 'Loading...');
+      GroupUtils.setButtonBusy(actionButton, true, this.T.saving || 'Saving...');
       try {
         const resp = await fetch(GroupUtils.apiUrl('group-create.php'), {
           method: 'POST',
@@ -253,6 +255,7 @@ const MenuAccess = {
       } catch (err) {
         if (errEl) { errEl.textContent = err.message || this.T.error_network || 'Ralat rangkaian'; errEl.classList.remove('d-none'); }
       } finally {
+        GroupUtils.setButtonBusy(actionButton, false);
         GroupUtils.hideLoader('menuAction');
       }
     });
@@ -262,6 +265,8 @@ const MenuAccess = {
       const btn = e.target.closest('.btn-edit-group-meta');
       if (!btn) return;
       e.preventDefault();
+
+      GroupUtils.setButtonBusy(document.getElementById('groupCreateSaveBtn'), false);
 
       const modalEl = document.getElementById('groupCreateModal');
       const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
@@ -530,7 +535,7 @@ const MenuAccess = {
     const escAttr = (value) => this.escapeAttr(value);
     const manageButtons = this.canManageGroups()
       ? [
-          '<button type="button" class="btn btn-sm btn-outline-warning icon-btn btn-edit-group-meta ms-1" ' +
+          '<button type="button" class="btn btn-sm btn-outline-warning icon-btn btn-edit-group-meta" ' +
             'data-group-id="' + escAttr(record.id) + '" ' +
             'data-group-kod="' + escAttr(record.kod) + '" ' +
             'data-group-nama="' + escAttr(record.nama) + '" ' +
@@ -545,7 +550,7 @@ const MenuAccess = {
 
     if (this.canManageGroups() && canDeleteGroup) {
       manageButtons.push(
-        '<button type="button" class="btn btn-sm btn-outline-danger icon-btn btn-delete-group ms-1" ' +
+        '<button type="button" class="btn btn-sm btn-outline-danger icon-btn btn-delete-group" ' +
           'data-group-id="' + escAttr(record.id) + '" ' +
           'data-group-kod="' + escAttr(record.kod) + '" ' +
           'data-group-nama="' + escAttr(record.nama) + '" ' +
@@ -562,13 +567,13 @@ const MenuAccess = {
         esc(record.categoryUser) +
       '</span>',
       '<div class="group-color-cell"><span class="group-color-bar" style="background-color: ' + escAttr(barColor) + ';" title="' + escAttr(barColor) + '"></span></div>',
-      '<button type="button" class="btn btn-sm btn-outline-secondary icon-btn view-group-perms" ' +
+      '<div class="group-access-actions d-inline-flex align-items-center gap-2"><button type="button" class="btn btn-sm btn-outline-secondary icon-btn view-group-perms" ' +
         'data-group-id="' + escAttr(record.id) + '" ' +
         'data-group-kod="' + escAttr(record.kod) + '" ' +
         'data-group-nama="' + escAttr(record.nama) + '" ' +
         'title="' + escAttr(this.T.userGroup_col_group_access || 'Akses kumpulan') + '">' +
         '<i class="ri-user-settings-line"></i></button>' +
-        manageButtons.join(''),
+        manageButtons.join('') + '</div>',
       canOpenModuleAccess
         ? '<button type="button" class="btn btn-sm btn-outline-primary icon-btn view-access" ' +
             'data-group-id="' + escAttr(record.id) + '" ' +
@@ -903,13 +908,16 @@ const MenuAccess = {
       throw new Error((j && j.message) || this.T.error_save || 'Gagal menyimpan akses menu kumpulan.');
     }
 
-    await this.refreshGroupTableRow(groupID, {
+    const savedGroup = Object.assign({}, j.group || {}, {
       groupID,
-      groupKod: GroupState.getLastMenuBtn()?.getAttribute('data-group-kod') || '',
-      groupName: GroupState.getLastMenuBtn()?.getAttribute('data-group-nama') || '',
-      modulAccess: GroupState.getModulIDs(),
-      menuAccess: GroupState.getMenuIDs(),
+      groupKod: j.group?.kod || GroupState.getLastMenuBtn()?.getAttribute('data-group-kod') || '',
+      groupName: j.group?.nama || GroupState.getLastMenuBtn()?.getAttribute('data-group-nama') || '',
+      modulAccess: j.group?.modulAccess ?? GroupState.getModulIDs(),
+      menuAccess: j.group?.menuAccess ?? GroupState.getMenuIDs(),
     });
+    if (!this.upsertGroupTableRow(savedGroup)) {
+      await this.refreshGroupTableRow(groupID, savedGroup);
+    }
     await this.syncSidebarForGroup(groupID);
 
     return j;
@@ -1356,6 +1364,7 @@ const MenuAccess = {
   
   async handleSave() {
     const modal = GroupUtils.getModal(this.editModalEl);
+    const saveButton = document.getElementById('menuEditSaveBtn');
     const mode = this.editModalEl.dataset.mode || 'edit';
     this.editErrorEl.classList.add('d-none');
 
@@ -1396,6 +1405,7 @@ const MenuAccess = {
     try {
       const target = (mode === 'create') ? 'menu-create.php' : 'menu-save.php';
       GroupUtils.showLoader('menuAction', this.T.loading || this.T.btn_save || 'Loading...');
+      GroupUtils.setButtonBusy(saveButton, true, this.T.saving || 'Saving...');
       const j = await GroupUtils.fetchJSONSafe(GroupUtils.apiUrl(target, { groupID }), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': GroupUtils.getCSRF() },
@@ -1453,6 +1463,7 @@ const MenuAccess = {
       this.editErrorEl.textContent = e.message || this.T.error_network;
       this.editErrorEl.classList.remove('d-none');
     } finally {
+      GroupUtils.setButtonBusy(saveButton, false);
       GroupUtils.hideLoader('menuAction');
     }
   },
@@ -1844,6 +1855,8 @@ const MenuAccess = {
       return;
     }
     GroupUtils.showLoader('menuAction', this.T.loading || this.T.btn_save || 'Loading...');
+    const saveButton = document.getElementById('menuSubgroupSaveBtn');
+    GroupUtils.setButtonBusy(saveButton, true, this.T.saving || 'Saving...');
     try {
       const j = await GroupUtils.fetchJSONSafe(GroupUtils.apiUrl('menu-subgroup-save.php'), {
         method: 'POST',
@@ -1868,6 +1881,7 @@ const MenuAccess = {
         text: e.message || this.T.error_network
       });
     } finally {
+      GroupUtils.setButtonBusy(saveButton, false);
       GroupUtils.hideLoader('menuAction');
     }
   },
