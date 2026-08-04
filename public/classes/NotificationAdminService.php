@@ -144,13 +144,16 @@ final class NotificationAdminService
         if ($status === 'inactive') $where[] = 'n.f_status = 0';
         $whereSql = $where === [] ? '' : 'WHERE ' . implode(' AND ', $where);
 
-        $fromSql = "FROM tbl_notification n LEFT JOIN tbl_notification_audience a ON a.f_notificationID = n.f_notificationID {$whereSql}";
-        $countStmt = $this->pdo->prepare("SELECT COUNT(DISTINCT n.f_notificationID) {$fromSql}");
-        $this->bindAdminListFilters($countStmt, $search, $type, $priority);
-        $countStmt->execute();
-        $filtered = (int)$countStmt->fetchColumn();
         $total = (int)$this->pdo->query('SELECT COUNT(*) FROM tbl_notification')->fetchColumn();
+        $filtered = $total;
+        if ($where !== []) {
+            $countStmt = $this->pdo->prepare("SELECT COUNT(*) FROM tbl_notification n {$whereSql}");
+            $this->bindAdminListFilters($countStmt, $search, $type, $priority);
+            $countStmt->execute();
+            $filtered = (int)$countStmt->fetchColumn();
+        }
 
+        $fromSql = "FROM tbl_notification n LEFT JOIN tbl_notification_audience a ON a.f_notificationID = n.f_notificationID {$whereSql}";
         $stmt = $this->pdo->prepare("SELECT n.f_notificationID,n.f_eventCode,n.f_moduleCode,n.f_type,n.f_category,n.f_severity,n.f_priority,n.f_title_ms,n.f_title_en,n.f_requiresAction,n.f_dueAt,n.f_dedupeKey,n.f_isBroadcast,n.f_status,n.f_insertBy,n.f_insertdt,
               COUNT(a.f_audienceID) AS audience_count,
               GROUP_CONCAT(CONCAT(a.f_targetType, ':', COALESCE(a.f_targetValue, '')) ORDER BY a.f_audienceID SEPARATOR '|') AS audience_summary_raw

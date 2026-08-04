@@ -2294,9 +2294,6 @@ if (isset($translationBundlesJs[$lang])) {
                 columnDefs: [{ targets: 0, width: '180px' }]
               }
             });
-            return;
-
-            alertSuccess(response.message || 'Maklumat sambungan tambahan berjaya dimuatkan.');
           })
           .catch(function (error) {
             alertError(error && error.message ? error.message : 'Gagal memuatkan butiran sambungan tambahan.');
@@ -2363,9 +2360,6 @@ if (isset($translationBundlesJs[$lang])) {
                 columnDefs: [{ targets: 2, orderable: false, searchable: false }]
               }
             });
-            return;
-
-            alertSuccess(response.message || 'Schema preview berjaya dimuatkan.');
           })
           .catch(function (error) {
             alertError(error && error.message ? error.message : 'Gagal memuatkan schema preview sambungan tambahan.');
@@ -2438,9 +2432,6 @@ if (isset($translationBundlesJs[$lang])) {
                 columnDefs: [{ targets: columns.length, orderable: false, searchable: false, width: '10%' }]
               }
             });
-            return;
-
-            alertSuccess(response.message || 'Data preview berjaya dimuatkan.');
           })
           .catch(function (error) {
             alertError(error && error.message ? error.message : 'Gagal memuatkan data preview sambungan tambahan.');

@@ -50,10 +50,14 @@ final class NotificationTemplateService
         if ($status === 'active') $where[] = 't.f_status = 1';
         if ($status === 'archived') $where[] = 't.f_status = 0';
         $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
-        $countStmt = $this->pdo->prepare("SELECT COUNT(*) FROM tbl_notification_template t {$whereSql}");
-        $this->bindListFilters($countStmt, $search, $type, $priority); $countStmt->execute();
-        $filtered = (int)$countStmt->fetchColumn();
         $total = (int)$this->pdo->query('SELECT COUNT(*) FROM tbl_notification_template')->fetchColumn();
+        $filtered = $total;
+        if ($where !== []) {
+            $countStmt = $this->pdo->prepare("SELECT COUNT(*) FROM tbl_notification_template t {$whereSql}");
+            $this->bindListFilters($countStmt, $search, $type, $priority);
+            $countStmt->execute();
+            $filtered = (int)$countStmt->fetchColumn();
+        }
         $stmt = $this->pdo->prepare("SELECT t.*,(SELECT COUNT(DISTINCT n.f_notificationID) FROM tbl_notification n WHERE n.f_templateCode=t.f_templateCode OR n.f_eventCode=t.f_eventCode) AS usage_count FROM tbl_notification_template t {$whereSql} ORDER BY t.f_status DESC,t.f_templateCode ASC LIMIT :limit OFFSET :offset");
         $this->bindListFilters($stmt, $search, $type, $priority); $stmt->bindValue(':limit',$limit,PDO::PARAM_INT); $stmt->bindValue(':offset',$offset,PDO::PARAM_INT); $stmt->execute();
         return ['total'=>$total,'filtered'=>$filtered,'items'=>$stmt->fetchAll(PDO::FETCH_ASSOC) ?: []];

@@ -25,7 +25,7 @@ try {
         'priority' => $data['priority'] ?? '',
         'status' => $data['status'] ?? 'all',
     ]);
-    jsonSuccessResponse(['draw'=>(int)($data['draw'] ?? 0),'recordsTotal'=>$result['total'],'recordsFiltered'=>$result['filtered'],'items'=>$result['items'],'summary'=>$service->getSummary()]);
+    jsonSuccessResponse(['draw'=>(int)($data['draw'] ?? 0),'recordsTotal'=>$result['total'],'recordsFiltered'=>$result['filtered'],'items'=>$result['items']]);
 } catch (Throwable $e) {
     error_log('[notification-admin-list] ' . $e->getMessage());
     jsonErrorResponse((string)(__('notification_admin_list_failed') ?: 'Unable to load notifications.'), 500);

@@ -658,6 +658,7 @@ try {
   $existingStafIDs = $existingStafIDs ?? [];
 }
 
+$version = (string)($_ENV['APP_ASSET_VER'] ?? date('ymdHis'));
 $PAGE_TITLE = (string)__('userList_page_heading_main');
 ?>
 <!DOCTYPE html>

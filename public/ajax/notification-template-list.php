@@ -9,5 +9,5 @@ try {
  $pdo=Database::getInstance('mysql')->getConnection(); ensureAjaxGroupManagePermission($pdo,(string)(__('notification_template_forbidden') ?: 'Permission denied.'));
  $data=json_decode((string)file_get_contents('php://input'),true); if(!is_array($data))$data=[];
  $service=new NotificationTemplateService($pdo); $result=$service->getList(['limit'=>$data['length']??10,'offset'=>$data['start']??0,'search'=>$data['search']??'','type'=>$data['type']??'','priority'=>$data['priority']??'','status'=>$data['status']??'all']);
- jsonSuccessResponse(['draw'=>(int)($data['draw']??0),'recordsTotal'=>$result['total'],'recordsFiltered'=>$result['filtered'],'items'=>$result['items'],'summary'=>$service->summary()]);
+ jsonSuccessResponse(['draw'=>(int)($data['draw']??0),'recordsTotal'=>$result['total'],'recordsFiltered'=>$result['filtered'],'items'=>$result['items']]);
 } catch(Throwable $e){error_log('[notification-template-list] '.$e->getMessage());jsonErrorResponse((string)(__('notification_template_list_failed') ?: 'Unable to load templates.'),500);}
