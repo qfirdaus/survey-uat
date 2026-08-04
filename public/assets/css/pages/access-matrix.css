@@ -152,11 +152,9 @@
 .access-matrix-table thead th span,
 .access-matrix-table thead th small { display: block; }
 .access-matrix-table thead th small { margin-top: .12rem; color: #94a3b8; font-size: .62rem; letter-spacing: 0; text-transform: none; }
-.access-matrix-table .matrix-menu-col { position: sticky; z-index: 3; left: 0; width: 15rem; min-width: 15rem; max-width: 15rem; text-align: left; }
+.access-matrix-table .matrix-menu-col { position: sticky; z-index: 3; left: 0; width: 17rem; min-width: 17rem; max-width: 17rem; text-align: left; box-shadow: 8px 0 14px -13px #475569; }
 .access-matrix-table thead .matrix-menu-col { z-index: 7; }
-.access-matrix-table .matrix-path-col { position: sticky; z-index: 3; left: 15rem; width: 18rem; min-width: 18rem; max-width: 18rem; box-shadow: 8px 0 14px -13px #475569; }
-.access-matrix-table thead .matrix-path-col { z-index: 7; text-align: left; }
-.access-matrix-table code { display: block; overflow: hidden; color: #5b6d85; font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
+.access-matrix-table .matrix-menu-path { display: block; overflow: hidden; margin-top: .18rem; color: #5b6d85; font-size: .7rem; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
 .access-matrix-table .matrix-role-col { min-width: 8.5rem; text-align: center; }
 .access-matrix-table [hidden] { display: none !important; }
 .matrix-menu-row:hover td { background: #f8fafc; }
@@ -208,8 +206,7 @@ html[data-bs-theme="dark"] .matrix-module-row td { background: #182439; }
   .access-matrix-card__header { flex-direction: column; }
   .access-matrix-filters { grid-template-columns: 1fr; padding: 1rem; }
   .access-matrix-results { align-items: flex-start; flex-direction: column; padding-inline: 1rem; }
-  .access-matrix-table .matrix-menu-col { width: 11rem; min-width: 11rem; max-width: 11rem; }
-  .access-matrix-table .matrix-path-col { position: static; width: 14rem; min-width: 14rem; max-width: 14rem; }
+  .access-matrix-table .matrix-menu-col { width: 13rem; min-width: 13rem; max-width: 13rem; }
 }
 
 @media (max-width: 479.98px) {

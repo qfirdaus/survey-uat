@@ -43,7 +43,7 @@ $totals = array_replace(
     ['roles' => 0, 'modules' => 0, 'menus' => 0, 'permissions' => 0],
     is_array($matrix['totals'] ?? null) ? $matrix['totals'] : []
 );
-$assetVersion = (string)($_ENV['APP_ASSET_VER'] ?? '1');
+$assetVersion = (string)($_ENV['APP_ASSET_VER'] ?? filemtime(__DIR__ . '/../assets/css/pages/access-matrix.css'));
 $PAGE_TITLE = am('title', 'Access Matrix');
 ?>
 <!DOCTYPE html>
@@ -150,19 +150,17 @@ $PAGE_TITLE = am('title', 'Access Matrix');
               <table class="access-matrix-table" id="access-matrix-table">
                 <thead><tr>
                   <th class="matrix-menu-col"><?= h(am('menu_column', 'Menu')) ?></th>
-                  <th class="matrix-path-col"><?= h(am('path_column', 'Path')) ?></th>
                   <?php foreach ($roles as $role): ?>
                     <th class="matrix-role-col" data-role-column="<?= h((string)$role['id']) ?>" title="<?= h($role['nama']) ?>"><span><?= h($role['nama']) ?></span><small><?= h($role['kod']) ?></small></th>
                   <?php endforeach; ?>
                 </tr></thead>
                 <tbody>
                 <?php foreach ($modules as $module): ?>
-                  <tr class="matrix-module-row" data-module-heading="<?= h((string)$module['id']) ?>"><td colspan="<?= 2 + count($roles) ?>"><i class="ri-layout-grid-line"></i><span><?= h($module['nama']) ?></span><small><?= h(sprintf(am('module_menu_count', '%d menus'), count($module['menus']))) ?></small></td></tr>
+                  <tr class="matrix-module-row" data-module-heading="<?= h((string)$module['id']) ?>"><td colspan="<?= 1 + count($roles) ?>"><i class="ri-layout-grid-line"></i><span><?= h($module['nama']) ?></span><small><?= h(sprintf(am('module_menu_count', '%d menus'), count($module['menus']))) ?></small></td></tr>
                   <?php foreach ($module['menus'] as $menu):
                     $anyAllowed = in_array(true, $menu['perms'], true); ?>
                     <tr class="matrix-menu-row" data-module="<?= h((string)$module['id']) ?>" data-search="<?= h(strtolower($menu['nama'] . ' ' . $menu['path'])) ?>" data-any-allowed="<?= $anyAllowed ? '1' : '0' ?>">
-                      <td class="matrix-menu-col"><strong><?= h($menu['nama']) ?></strong></td>
-                      <td class="matrix-path-col"><code><?= h($menu['path'] !== '' ? $menu['path'] : '—') ?></code></td>
+                      <td class="matrix-menu-col"><strong><?= h($menu['nama']) ?></strong><code class="matrix-menu-path"><?= h($menu['path'] !== '' ? $menu['path'] : '—') ?></code></td>
                       <?php foreach ($roles as $role): $allowed = !empty($menu['perms'][(int)$role['id']]); ?>
                         <td class="matrix-role-col" data-role-column="<?= h((string)$role['id']) ?>" data-access="<?= $allowed ? 'allowed' : 'denied' ?>">
                           <span class="matrix-access <?= $allowed ? 'is-allowed' : 'is-denied' ?>" title="<?= h($allowed ? am('has_access', 'Has access') : am('no_access', 'No access')) ?>">
