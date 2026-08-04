@@ -39,6 +39,10 @@ try {
 
 $roles = $matrix['roles'] ?? [];
 $modules = $matrix['modules'] ?? [];
+$totals = array_replace(
+    ['roles' => 0, 'modules' => 0, 'menus' => 0, 'permissions' => 0],
+    is_array($matrix['totals'] ?? null) ? $matrix['totals'] : []
+);
 $assetVersion = (string)($_ENV['APP_ASSET_VER'] ?? '1');
 $PAGE_TITLE = am('title', 'Access Matrix');
 ?>
