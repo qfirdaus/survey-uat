@@ -44,7 +44,7 @@ return [
     // - support: emel sokongan global
     'system' => [
         'name'        => 'Base System',
-        'version'     => '1.9.2',
+        'version'     => '1.9.3',
         'author'      => 'Sistem Induk',
         'meta_author' => 'Base System',
         'support'     => 'support@example.com',

@@ -546,11 +546,6 @@ function renderNotificationSampleCards(array $notificationDeveloperSamples): voi
         <?php
     }
 }
-$guideStats = [
-    ['icon' => 'ri-book-open-line', 'value' => count($guideTabs), 'label' => dg('developerGuide_kpi_topics', 'Guide topics')],
-    ['icon' => 'ri-code-box-line', 'value' => count($samples) + count($notificationDeveloperSamples), 'label' => dg('developerGuide_kpi_samples', 'Code samples')],
-    ['icon' => 'ri-file-list-3-line', 'value' => count($docLinks), 'label' => dg('developerGuide_kpi_references', 'References')],
-];
 ?>
 <!doctype html>
 <html lang="<?= h($lang) ?>" data-bs-theme="<?= h($_SESSION['theme.layout'] ?? 'light') ?>">
@@ -796,9 +791,6 @@ $guideStats = [
                 </div>
 
                 <div class="dg-stats mb-3">
-                    <?php foreach ($guideStats as $stat): ?>
-                        <div class="dg-stat"><span class="dg-stat__icon"><i class="<?= h($stat['icon']) ?>"></i></span><div><strong><?= h((string)$stat['value']) ?></strong><span><?= h($stat['label']) ?></span></div></div>
-                    <?php endforeach; ?>
                     <label class="dg-search-card" for="dg-guide-search"><span><?= h(dg('developerGuide_search_label', 'Search this guide')) ?></span><div><i class="ri-search-line"></i><input type="search" id="dg-guide-search" placeholder="<?= h(dg('developerGuide_search_placeholder', 'Search topics, rules or samples...')) ?>" autocomplete="off"><kbd>/</kbd></div></label>
                 </div>
 

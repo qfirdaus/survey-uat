@@ -61,7 +61,17 @@
     badge.classList.toggle('d-none', !unread);
   }
   function updateKpis(summary) {
-    ['total', 'unread', 'action_required', 'overdue'].forEach(function (key) { var el = document.querySelector('[data-notification-kpi="' + key + '"]'); if (el) el.textContent = String(Number(summary[key] || 0).toLocaleString()); });
+    var totals = {
+      all: Number(summary.total || 0),
+      unread: Number(summary.unread || 0),
+      read: Math.max(0, Number(summary.total || 0) - Number(summary.unread || 0)),
+      action_required: Number(summary.action_required || 0),
+      overdue: Number(summary.overdue || 0)
+    };
+    Object.keys(totals).forEach(function (key) {
+      var el = document.querySelector('[data-notification-filter-count="' + key + '"]');
+      if (el) el.textContent = String(totals[key].toLocaleString());
+    });
     if (elements.readAll) elements.readAll.disabled = Number(summary.unread || 0) === 0;
   }
   function severityClass(value) { value = String(value || '').toLowerCase(); return value === 'success' ? ' is-success' : (value === 'warning' ? ' is-warning' : (value === 'danger' || value === 'error' ? ' is-danger' : '')); }

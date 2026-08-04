@@ -39,7 +39,6 @@ $service = new NotificationAdminService($pdo);
 $groups = $service->getGroups();
 $templates = $service->getTemplates();
 $recent = [];
-$summary = $service->getSummary();
 $firstGroupId = (string)($groups[0]['f_groupID'] ?? '1');
 $currentLoginId = (string)($_SESSION['f_loginID'] ?? $_SESSION['f_stafID'] ?? 'user01');
 $lang = (string)($_SESSION['lang'] ?? 'ms');
@@ -384,6 +383,9 @@ $notificationDeveloperSamples = require __DIR__ . '/../includes/notification-dev
     .tooltip {
       z-index: 11080 !important;
     }
+    .swal2-container {
+      z-index: 20000 !important;
+    }
     .tooltip .tooltip-inner {
       max-width: 460px;
       padding: .45rem .65rem;
@@ -535,12 +537,6 @@ $notificationDeveloperSamples = require __DIR__ . '/../includes/notification-dev
               <p><?= h(na('notification_admin_hero_text', 'Create, target and review system notifications from one governed administration workspace.')) ?></p>
             </div>
             <div class="notification-admin-hero-note"><i class="ri-error-warning-line"></i><div><strong><?= h(na('notification_admin_hero_note_title', 'Publication affects real users')) ?></strong><span><?= h(na('notification_admin_hero_note_text', 'Review the audience and preview before confirming a publication.')) ?></span></div></div>
-          </section>
-
-          <section class="notification-admin-kpis" aria-label="<?= h(na('notification_admin_summary_label', 'Notification publication summary')) ?>">
-            <?php foreach ([['total','ri-notification-3-line','notification_admin_stat_total'],['active','ri-checkbox-circle-line','notification_admin_stat_active'],['action_required','ri-task-line','notification_admin_stat_action'],['broadcast','ri-broadcast-line','notification_admin_stat_broadcast']] as $kpi): ?>
-              <article class="notification-admin-kpi notification-admin-kpi--<?= h($kpi[0]) ?>"><span><i class="<?= h($kpi[1]) ?>"></i></span><div><small><?= h(na($kpi[2], ucfirst(str_replace('_', ' ', $kpi[0])))) ?></small><strong data-admin-kpi="<?= h($kpi[0]) ?>"><?= number_format((int)($summary[$kpi[0]] ?? 0)) ?></strong></div></article>
-            <?php endforeach; ?>
           </section>
 
           <div class="card notification-admin-card">
@@ -1439,7 +1435,7 @@ final class PermohonanNotification
             headers: { 'Accept':'application/json','Content-Type':'application/json','X-CSRF-Token':csrfToken,'X-No-Loader':'1' },
             body: JSON.stringify({ draw:request.draw,start:request.start,length:request.length,search:(request.search || {}).value || '',type:document.getElementById('notificationAdminTypeFilter').value,priority:document.getElementById('notificationAdminPriorityFilter').value,status:document.getElementById('notificationAdminStatusFilter').value })
           }).then(function (response) { return response.json().then(function (body) { if (!response.ok || body.success === false) throw new Error(body.message || <?= json_encode(na('notification_admin_list_failed', 'Unable to load notifications.'), JSON_UNESCAPED_UNICODE) ?>); return body.data || body; }); })
-            .then(function (data) { updateSummary(data.summary || {}); callback({ draw:data.draw,recordsTotal:data.recordsTotal,recordsFiltered:data.recordsFiltered,data:data.items || [] }); })
+            .then(function (data) { callback({ draw:data.draw,recordsTotal:data.recordsTotal,recordsFiltered:data.recordsFiltered,data:data.items || [] }); })
             .catch(function (error) { callback({ draw:request.draw,recordsTotal:0,recordsFiltered:0,data:[] }); if (window.Swal) window.Swal.fire({toast:true,position:'top-end',icon:'error',title:error.message,showConfirmButton:false,timer:3000}); });
         },
         columns: [
@@ -1489,13 +1485,6 @@ final class PermohonanNotification
           '</tr>';
       }).join('');
       initRecentTable();
-    }
-
-    function updateSummary(summary) {
-      ['total', 'active', 'action_required', 'broadcast'].forEach(function (key) {
-        const element = document.querySelector('[data-admin-kpi="' + key + '"]');
-        if (element) element.textContent = Number((summary || {})[key] || 0).toLocaleString();
-      });
     }
 
     function confirmPublication(payload) {
@@ -1638,7 +1627,6 @@ final class PermohonanNotification
       }).then(function (data) {
         setAlert('success', data.message || <?= json_encode(na('notification_admin_publish_success', 'Notification published successfully.'), JSON_UNESCAPED_UNICODE) ?>);
         renderRecent(data.recent || []);
-        updateSummary(data.summary || {});
       }).catch(function (error) {
         setAlert('danger', error.message || <?= json_encode(na('notification_admin_publish_failed', 'Unable to publish notification.'), JSON_UNESCAPED_UNICODE) ?>);
       }).finally(function () {

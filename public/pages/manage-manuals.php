@@ -76,18 +76,11 @@ if ($message !== '') {
 }
 
 $manualsData = $controller->getAllManuals();
-$manualTotal = count($manualsData);
-$manualAvailable = 0;
 foreach ($manualsData as &$manualRow) {
     $manualRow['_has_manual'] = !empty($manualRow['f_file_path'])
         && $controller->manualFileExists((string)$manualRow['f_file_path']);
-    if ($manualRow['_has_manual']) {
-        $manualAvailable++;
-    }
 }
 unset($manualRow);
-$manualMissing = max(0, $manualTotal - $manualAvailable);
-$manualCoverage = $manualTotal > 0 ? (int)round(($manualAvailable / $manualTotal) * 100) : 0;
 
 $lang = (string)($_SESSION['lang'] ?? 'ms');
 $version = (string)($_ENV['APP_ASSET_VER'] ?? '1');
@@ -679,17 +672,6 @@ $version = (string)($_ENV['APP_ASSET_VER'] ?? '1');
                         <div class="manual-hero__notice"><i class="ri-file-shield-2-line"></i><div><strong><?= h(__('manual_secure_title')) ?></strong><span><?= h(sprintf((string)__('manual_secure_text'), $manualMaxMb)) ?></span></div></div>
                     </section>
 
-                    <section class="manual-stats" aria-label="<?= h(__('manual_summary_label')) ?>">
-                        <?php foreach ([
-                            ['ri-team-line', __('manual_kpi_groups'), $manualTotal, 'primary', 'manualKpiTotal'],
-                            ['ri-file-check-line', __('manual_kpi_available'), $manualAvailable, 'success', 'manualKpiAvailable'],
-                            ['ri-file-warning-line', __('manual_kpi_missing'), $manualMissing, 'warning', 'manualKpiMissing'],
-                            ['ri-pie-chart-2-line', __('manual_kpi_coverage'), $manualCoverage . '%', 'info', 'manualKpiCoverage'],
-                        ] as $stat): ?>
-                            <article class="manual-stat manual-stat--<?= h($stat[3]) ?>"><span class="manual-stat__icon"><i class="<?= h($stat[0]) ?>"></i></span><div><span><?= h($stat[1]) ?></span><strong id="<?= h($stat[4]) ?>"><?= h((string)$stat[2]) ?></strong></div></article>
-                        <?php endforeach; ?>
-                    </section>
-
                     <div class="row">
                         <div class="col-12">
                             <div class="card manual-list-card">
@@ -923,18 +905,6 @@ $version = (string)($_ENV['APP_ASSET_VER'] ?? '1');
                 })[char]);
             }
 
-            function updateCoverage(delta) {
-                const totalEl = document.getElementById('manualKpiTotal');
-                const availableEl = document.getElementById('manualKpiAvailable');
-                const missingEl = document.getElementById('manualKpiMissing');
-                const coverageEl = document.getElementById('manualKpiCoverage');
-                const total = Number(totalEl?.textContent || 0);
-                const available = Math.max(0, Math.min(total, Number(availableEl?.textContent || 0) + delta));
-                if (availableEl) availableEl.textContent = String(available);
-                if (missingEl) missingEl.textContent = String(Math.max(0, total - available));
-                if (coverageEl) coverageEl.textContent = `${total > 0 ? Math.round((available / total) * 100) : 0}%`;
-            }
-
             function buildActionsHtml(data) {
                 const safeName = escapeHtml(data.groupName || '');
                 return `
@@ -991,7 +961,6 @@ $version = (string)($_ENV['APP_ASSET_VER'] ?? '1');
                             jQuery('#userDT').DataTable().row(row).invalidate('dom').draw(false);
                         }
                     }
-                    updateCoverage(-1);
                     if (window.Swal) await Swal.fire({ icon: 'success', title: <?= json_encode(__('manual_alert_success_title'), JSON_UNESCAPED_UNICODE) ?>, text: result.message || '', confirmButtonText: T.close });
                 } catch (error) {
                     if (window.Swal) await Swal.fire({ icon: 'error', title: <?= json_encode(__('manual_alert_error_title'), JSON_UNESCAPED_UNICODE) ?>, text: error.message || T.uploadNetworkError, confirmButtonText: T.close });
@@ -1259,7 +1228,6 @@ $version = (string)($_ENV['APP_ASSET_VER'] ?? '1');
                     }
 
                     refreshManualRow(result.data || {});
-                    if (!uploadWasReplacement) updateCoverage(1);
                     uploadModal.hide();
                     uploadForm.reset();
                     filePreview.classList.add('d-none');

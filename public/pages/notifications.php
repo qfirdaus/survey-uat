@@ -56,12 +56,6 @@ $jsonFlags = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JS
           <div class="notification-hero-note"><i class="ri-lock-2-line"></i><div><strong><?= h(nt('notification_private_title', 'Private to your account')) ?></strong><span><?= h(nt('notification_private_text', 'Only notifications visible to your active identity and access group are shown.')) ?></span></div></div>
         </section>
 
-        <section class="notification-kpis" aria-label="<?= h(nt('notification_summary_label', 'Notification summary')) ?>">
-          <?php foreach ([['total','ri-notification-3-line','notification_kpi_total','Total'],['unread','ri-mail-unread-line','notification_kpi_unread','Unread'],['action_required','ri-task-line','notification_kpi_action','Action required'],['overdue','ri-alarm-warning-line','notification_kpi_overdue','Overdue']] as $kpi): ?>
-            <article class="notification-kpi notification-kpi--<?= h($kpi[0]) ?>"><span class="notification-kpi-icon"><i class="<?= h($kpi[1]) ?>"></i></span><div><span><?= h(nt($kpi[2], $kpi[3])) ?></span><strong data-notification-kpi="<?= h($kpi[0]) ?>">—</strong></div></article>
-          <?php endforeach; ?>
-        </section>
-
         <section class="notification-workspace">
           <header class="notification-workspace-head">
             <div><span class="notification-eyebrow"><i class="ri-inbox-archive-line"></i><?= h(nt('notification_workspace_eyebrow', 'YOUR INBOX')) ?></span><h2><?= h(nt('notification_workspace_title', 'Notification workspace')) ?></h2><p><?= h(nt('notification_workspace_text', 'Filter, search and review messages without leaving this page.')) ?></p></div>
@@ -70,8 +64,12 @@ $jsonFlags = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JS
 
           <div class="notification-controls">
             <div class="notification-tabs" role="tablist" aria-label="<?= h(nt('notification_filter_label', 'Notification filters')) ?>">
-              <?php foreach ([['all','notification_filter_all','All'],['unread','notification_filter_unread','Unread'],['read','notification_filter_read','Read'],['action_required','notification_filter_action_required','Action Required'],['overdue','notification_filter_overdue','Overdue']] as $filter): ?>
-                <button type="button" class="notification-filter<?= $filter[0] === 'all' ? ' is-active' : '' ?>" data-filter="<?= h($filter[0]) ?>" role="tab" aria-selected="<?= $filter[0] === 'all' ? 'true' : 'false' ?>"><?= h(nt($filter[1], $filter[2])) ?></button>
+              <?php foreach ([['all','notification_filter_all','All','ri-stack-line'],['unread','notification_filter_unread','Unread','ri-mail-unread-line'],['read','notification_filter_read','Read','ri-mail-check-line'],['action_required','notification_filter_action_required','Action Required','ri-task-line'],['overdue','notification_filter_overdue','Overdue','ri-alarm-warning-line']] as $filter): ?>
+                <button type="button" class="notification-filter<?= $filter[0] === 'all' ? ' is-active' : '' ?>" data-filter="<?= h($filter[0]) ?>" role="tab" aria-selected="<?= $filter[0] === 'all' ? 'true' : 'false' ?>">
+                  <i class="<?= h($filter[3]) ?>" aria-hidden="true"></i>
+                  <span><?= h(nt($filter[1], $filter[2])) ?></span>
+                  <span class="notification-filter-count" data-notification-filter-count="<?= h($filter[0]) ?>" aria-hidden="true">—</span>
+                </button>
               <?php endforeach; ?>
             </div>
             <label class="notification-search"><span class="visually-hidden"><?= h(nt('notification_search_label', 'Search notifications')) ?></span><i class="ri-search-line"></i><input type="search" id="notificationSearch" maxlength="100" autocomplete="off" placeholder="<?= h(nt('notification_search_placeholder', 'Search title or message...')) ?>"></label>

@@ -37,7 +37,6 @@ if (empty($_SESSION['csrf_token'])) {
 
 $service = new NotificationTemplateService($pdo);
 $records = [];
-$summary = $service->summary();
 $lang = (string)($_SESSION['lang'] ?? 'ms');
 $version = (string)($_ENV['APP_ASSET_VER'] ?? filemtime(__FILE__) ?: '1');
 $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates');
@@ -208,11 +207,6 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
           <section class="ntpl-hero">
             <div><span class="ntpl-eyebrow"><i class="ri-stack-line"></i><?= h(ntpl('notification_template_hero_eyebrow', 'REUSABLE COMMUNICATION')) ?></span><h1><?= h(ntpl('notification_template_hero_title', 'Build consistent notifications once, reuse them everywhere')) ?></h1><p><?= h(ntpl('notification_template_hero_text', 'Maintain governed bilingual content for modules, schedulers and workflow escalations.')) ?></p></div>
             <div class="ntpl-hero-note"><i class="ri-code-box-line"></i><div><strong><?= h(ntpl('notification_template_hero_note_title', 'Developer-ready templates')) ?></strong><span><?= h(ntpl('notification_template_hero_note_text', 'Template and event codes connect application workflows to reusable messages.')) ?></span></div></div>
-          </section>
-          <section class="ntpl-kpis" aria-label="<?= h(ntpl('notification_template_summary_label', 'Template summary')) ?>">
-            <?php foreach ([['total','ri-file-list-3-line','notification_template_stat_total'],['active','ri-checkbox-circle-line','notification_template_stat_active'],['archived','ri-archive-line','notification_template_stat_archived'],['action_required','ri-task-line','notification_template_stat_action']] as $kpi): ?>
-              <article class="ntpl-kpi"><span><i class="<?= h($kpi[1]) ?>"></i></span><div><small><?= h(ntpl($kpi[2], ucfirst(str_replace('_',' ',$kpi[0])))) ?></small><strong data-summary="<?= h($kpi[0]) ?>"><?= number_format((int)($summary[$kpi[0]] ?? 0)) ?></strong></div></article>
-            <?php endforeach; ?>
           </section>
           <div class="card notification-template-card mb-3">
             <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
@@ -529,7 +523,7 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
   function initServerTable() {
     if (!window.jQuery || !jQuery.fn || !jQuery.fn.DataTable) return;
     const table=document.getElementById('notificationTemplateTable');
-    const options={processing:true,serverSide:true,searching:true,ordering:false,pageLength:10,lengthMenu:[10,25,50,100],ajax:function(request,callback){fetch(table.dataset.listUrl,{method:'POST',noLoader:true,credentials:'same-origin',headers:{Accept:'application/json','Content-Type':'application/json','X-CSRF-Token':csrfToken,'X-No-Loader':'1'},body:JSON.stringify({draw:request.draw,start:request.start,length:request.length,search:(request.search||{}).value||'',type:document.getElementById('ntplTypeFilter').value,priority:document.getElementById('ntplPriorityFilter').value,status:document.getElementById('ntplStatusFilter').value})}).then(function(r){return r.json().then(function(b){if(!r.ok||b.success===false)throw new Error(b.message||<?= json_encode(ntpl('notification_template_list_failed','Unable to load templates.'),JSON_UNESCAPED_UNICODE) ?>);return b.data||b;});}).then(function(data){records=data.items||[];updateSummary(data.summary||{});callback({draw:data.draw,recordsTotal:data.recordsTotal,recordsFiltered:data.recordsFiltered,data:records});}).catch(function(error){callback({draw:request.draw,recordsTotal:0,recordsFiltered:0,data:[]});setAlert('danger',error.message);});},columns:[
+    const options={processing:true,serverSide:true,searching:true,ordering:false,pageLength:10,lengthMenu:[10,25,50,100],ajax:function(request,callback){fetch(table.dataset.listUrl,{method:'POST',noLoader:true,credentials:'same-origin',headers:{Accept:'application/json','Content-Type':'application/json','X-CSRF-Token':csrfToken,'X-No-Loader':'1'},body:JSON.stringify({draw:request.draw,start:request.start,length:request.length,search:(request.search||{}).value||'',type:document.getElementById('ntplTypeFilter').value,priority:document.getElementById('ntplPriorityFilter').value,status:document.getElementById('ntplStatusFilter').value})}).then(function(r){return r.json().then(function(b){if(!r.ok||b.success===false)throw new Error(b.message||<?= json_encode(ntpl('notification_template_list_failed','Unable to load templates.'),JSON_UNESCAPED_UNICODE) ?>);return b.data||b;});}).then(function(data){records=data.items||[];callback({draw:data.draw,recordsTotal:data.recordsTotal,recordsFiltered:data.recordsFiltered,data:records});}).catch(function(error){callback({draw:request.draw,recordsTotal:0,recordsFiltered:0,data:[]});setAlert('danger',error.message);});},columns:[
       {data:null,render:function(_d,_t,r){return '<div class="fw-semibold">'+escapeHtml(r.f_templateCode||'')+'</div><small class="text-muted">'+escapeHtml(r.f_moduleCode||'')+'</small>'; }},
       {data:'f_eventCode',render:function(v){return '<code>'+escapeHtml(v||'')+'</code>'; }},
       {data:null,render:function(_d,_t,r){return '<div>'+escapeHtml(r.f_title_ms||'')+'</div><small class="text-muted">'+escapeHtml(r.f_title_en||'')+'</small>'; }},
@@ -580,12 +574,6 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
     }
   }
 
-  function updateSummary(summary) {
-    Object.keys(summary || {}).forEach(function (key) {
-      const el = document.querySelector('[data-summary="' + key + '"]');
-      if (el) el.textContent = Number(summary[key] || 0);
-    });
-  }
 
   function fillForm(row) {
     form.reset();
@@ -649,7 +637,6 @@ $PAGE_TITLE = ntpl('notification_template_page_title', 'Notification Templates')
 
   function updateFromResponse(data) {
     if(templateDt&&templateDt.ajax)templateDt.ajax.reload(null,false);
-    updateSummary(data.summary || {});
     setAlert('success', data.message || <?= json_encode(ntpl('notification_template_done','Done.'),JSON_UNESCAPED_UNICODE) ?>);
   }
 

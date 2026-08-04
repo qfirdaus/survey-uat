@@ -46,7 +46,6 @@ if (empty($_SESSION['csrf_token'])) {
 
 $controller = new SystemCacheMaintenanceController();
 $locations = $controller->getLocations();
-$summary = $controller->getSummary();
 $lang = (string)($_SESSION['lang'] ?? 'ms');
 $version = (string)($_ENV['APP_ASSET_VER'] ?? date('ymdHis'));
 $PAGE_TITLE = sc_t('systemCache_page_title', 'System Cache');
@@ -103,34 +102,6 @@ $PAGE_TITLE = sc_t('systemCache_page_title', 'System Cache');
             <div><strong><?= h(sc_t('systemCache_risk_title', 'Sensitive operation')) ?></strong><span><?= h(sc_t('systemCache_risk_text', 'Clearing all cache also resets available PHP runtime caches.')) ?></span></div>
           </div>
         </section>
-
-        <div class="row system-cache-summary gx-3">
-          <div class="col-xl-3 col-md-6">
-            <div class="card mb-0"><div class="card-body d-flex align-items-center gap-3">
-              <span class="stat-icon is-primary"><i class="ri-folder-2-line"></i></span>
-              <div><div class="sc-stat-label"><?= h(sc_t('systemCache_stat_locations', 'Cache Locations')) ?></div><h4 class="mb-0" id="systemCacheStatLocations"><?= h((string)$summary['locations']) ?></h4></div>
-            </div></div>
-          </div>
-          <div class="col-xl-3 col-md-6">
-            <div class="card mb-0"><div class="card-body d-flex align-items-center gap-3">
-              <span class="stat-icon is-info"><i class="ri-file-list-3-line"></i></span>
-              <div><div class="sc-stat-label"><?= h(sc_t('systemCache_stat_files', 'Cache Files')) ?></div><h4 class="mb-0" id="systemCacheStatFiles"><?= h((string)$summary['files']) ?></h4></div>
-            </div></div>
-          </div>
-          <div class="col-xl-3 col-md-6">
-            <div class="card mb-0"><div class="card-body d-flex align-items-center gap-3">
-              <span class="stat-icon is-warning"><i class="ri-hard-drive-3-line"></i></span>
-              <div><div class="sc-stat-label"><?= h(sc_t('systemCache_stat_size', 'Cache Size')) ?></div><h4 class="mb-0" id="systemCacheStatSize" data-cache-total-bytes="<?= h((string)$summary['bytes']) ?>"><?= h((string)$summary['size']) ?></h4></div>
-            </div></div>
-          </div>
-          <div class="col-xl-3 col-md-6">
-            <div class="card mb-0"><div class="card-body sc-runtime-card">
-              <?php foreach (['opcache' => 'OPcache', 'apcu' => 'APCu'] as $runtimeKey => $runtimeName): $runtime = $summary[$runtimeKey]; $runtimeState = !empty($runtime['enabled']) ? 'enabled' : (!empty($runtime['available']) ? 'disabled' : 'unavailable'); ?>
-              <div class="sc-runtime-row"><span><i class="ri-cpu-line"></i><?= h($runtimeName) ?></span><span class="sc-state is-<?= h($runtimeState) ?>"><i></i><?= h(sc_t('systemCache_state_' . $runtimeState, ucfirst($runtimeState))) ?></span></div>
-              <?php endforeach; ?>
-            </div></div>
-          </div>
-        </div>
 
         <div class="card system-cache-table-card">
           <div class="card-body">

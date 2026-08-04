@@ -46,9 +46,7 @@
 .dg-hero__status span { margin-top: .12rem; color: var(--dg-muted); font-size: .74rem; }
 
 .dg-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, .65fr)) minmax(18rem, 1.4fr);
-  gap: 1rem;
+  display: block;
 }
 .dg-stat,
 .dg-search-card {
@@ -64,7 +62,7 @@
 .dg-stat span { display: block; }
 .dg-stat strong { color: var(--dg-ink); font-size: 1.15rem; }
 .dg-stat div span { color: var(--dg-muted); font-size: .7rem; font-weight: 700; text-transform: uppercase; }
-.dg-search-card { display: flex; flex-direction: column; justify-content: center; padding: .75rem 1rem; }
+.dg-search-card { display: flex; width: 100%; flex-direction: column; justify-content: center; padding: .75rem 1rem; }
 .dg-search-card > span { margin-bottom: .32rem; color: var(--dg-muted); font-size: .68rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
 .dg-search-card > div { position: relative; }
 .dg-search-card i { position: absolute; top: 50%; left: .75rem; color: #94a3b8; transform: translateY(-50%); }

@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.9.2`
+- Current version: `1.9.3`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -20,13 +20,12 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Main database: MySQL `8.x`
 - External database support: Sybase through ODBC/DBLIB, plus additional PDO connections configured from the system UI
 
-## Version 1.9.2 User Group and Loader Refinement
+## Version 1.9.3 Notification and Administration UI Refinement
 
-- User Group transactions now keep dynamically refreshed rows, access icons, action spacing, colour indicators, and delete-button eligibility synchronized without requiring a full page refresh.
-- Group and module deletion now use the shared CSRF validator, while group access-save responses return authoritative deletion eligibility and current access state.
-- Group, menu, module, and subgroup save buttons provide translated in-button progress feedback, double-click protection, and reliable state restoration when their modals are reopened.
-- Menu deletion now presents one clear success result without exposing the retired and unsupported Undo concept.
-- The global transaction loader now uses the system logo, a compact professional presentation, translated status guidance, responsive layout, dark-mode support, and reduced-motion handling.
+- The personal Notifications page now uses high-contrast segmented filters with icons and inline counts, clearer unread emphasis, a professional responsive toolbar, and consistent IQS Framework theme variables.
+- Notification Admin publish confirmation now remains above its setup modal.
+- Notification Admin, Notification Templates, System Cache, Access Matrix, Developer Guide, and Manual Management now prioritize their main workflows without separate KPI card rows.
+- Developer Guide search now spans the full available content width.
 
 ## Actual System Features
 
@@ -73,7 +72,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Read-only access matrix page at `public/pages/access-matrix.php`.
 - Provides visibility of group, module, and menu access configuration.
 - Backed by `AccessController.php`.
-- Presents searchable access coverage with clearer summary cards, hierarchy context, filters, local states, and responsive table behavior.
+- Presents searchable access coverage with hierarchy context, filters, local states, and responsive table behavior.
 
 ### Audit Center
 
@@ -93,7 +92,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Supports admin announcements, direct user notifications, role/group/audience notifications, event-based notifications, and workflow task notifications.
 - Notification publishing and workflow logic is handled by `NotificationPublisher.php`, `NotificationService.php`, `NotificationWorkflowService.php`, `NotificationAudienceResolver.php`, `NotificationAdminService.php`, and `NotificationTemplateService.php`.
 - AJAX endpoints include `notification-list.php`, `notification-read.php`, `notification-read-all.php`, `notification-action.php`, `notification-admin-list.php`, `notification-admin-publish.php`, `notification-template-list.php`, and `notification-template-action.php`.
-- Notification list, publisher, and template workspaces use standardized KPI cards, tables, local loaders, professional modal tabs, preview states, and multilingual feedback.
+- Notification list, publisher, and template workspaces use clear filter controls, tables, local loaders, professional modal tabs, preview states, and multilingual feedback without separate KPI card rows.
 - Developer guidance is documented in `docs/notification-developer-standard-2026-05-04.md` and `docs/notification-developer-examples-2026-05-03.md`.
 
 ### Profile
@@ -145,9 +144,9 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 - Admin-only system cache maintenance page exists at `public/pages/system-cache.php`.
 - Discovers standard project cache locations dynamically from `app/cache`, `public/cache`, and `storage/cache` when those folders exist.
-- Displays cache location count, file count, total size, OPcache status, APCu status, and per-location last modified date.
+- Displays discovered cache locations with file count, size, and per-location last modified date in the maintenance table.
 - Supports clearing selected cache locations or all discovered cache locations while preserving directory structure, `.gitkeep`, `.htaccess`, active sessions, and login tokens.
-- Cache clearing is handled through `public/ajax/system-cache-action.php`, uses CSRF validation and admin permission enforcement, resets OPcache/APCu where available, logs the operation through the central audit mechanism, and updates KPI/table state in place with a local operation loader.
+- Cache clearing is handled through `public/ajax/system-cache-action.php`, uses CSRF validation and admin permission enforcement, resets OPcache/APCu where available, logs the operation through the central audit mechanism, and updates table state in place with a local operation loader.
 
 ### Language Architecture
 
@@ -228,7 +227,7 @@ Operational references:
 - Developer guide page exists at `public/pages/developer-guide.php`.
 - Provides centralized, copyable sample code for core-safe module development, including page skeletons, AJAX/CSRF, database access, notifications, language keys, menu/access, audit, and email guidance.
 - Intended for programmers to consume framework APIs without modifying protected core files.
-- Uses categorized navigation, searchable guidance, copy feedback, consistent code panels, and responsive multilingual presentation.
+- Uses categorized navigation, a full-width search workspace, copy feedback, consistent code panels, and responsive multilingual presentation.
 
 ### Manual Management
 

@@ -78,10 +78,6 @@
         const size = row.querySelector('[data-cache-size]'); if (size) { size.textContent = '0 B'; size.dataset.cacheBytes = '0'; }
         const modified = row.querySelector('[data-cache-modified]'); if (modified) modified.textContent = '-';
       });
-      const filesStat = document.getElementById('systemCacheStatFiles');
-      if (filesStat) filesStat.textContent = String(Math.max(0, (parseInt(filesStat.textContent || '0', 10) || 0) - (parseInt(result.files_removed || 0, 10) || 0)));
-      const bytes = Array.from(document.querySelectorAll('[data-cache-bytes]')).reduce((sum, cell) => sum + (parseInt(cell.dataset.cacheBytes || '0', 10) || 0), 0);
-      const sizeStat = document.getElementById('systemCacheStatSize'); if (sizeStat) { sizeStat.dataset.cacheTotalBytes = String(bytes); sizeStat.textContent = formatBytes(bytes); }
     }
 
     function showResult(result) {
@@ -110,6 +106,5 @@
     }
     function cssEscape(value) { return window.CSS?.escape ? window.CSS.escape(String(value)) : String(value).replace(/"/g, '\\"'); }
     function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' }[character])); }
-    function formatBytes(bytes) { let value = Math.max(0, parseInt(bytes || 0, 10) || 0); if (value < 1024) return value + ' B'; for (const unit of ['KB', 'MB', 'GB', 'TB']) { value /= 1024; if (value < 1024) return value.toFixed(value >= 10 ? 1 : 2) + ' ' + unit; } return value.toFixed(1) + ' TB'; }
   });
 })();

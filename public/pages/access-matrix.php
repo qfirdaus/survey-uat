@@ -39,7 +39,6 @@ try {
 
 $roles = $matrix['roles'] ?? [];
 $modules = $matrix['modules'] ?? [];
-$totals = array_merge(['roles' => 0, 'modules' => 0, 'menus' => 0, 'permissions' => 0], $matrix['totals'] ?? []);
 $assetVersion = (string)($_ENV['APP_ASSET_VER'] ?? '1');
 $PAGE_TITLE = am('title', 'Access Matrix');
 ?>
@@ -88,22 +87,6 @@ $PAGE_TITLE = am('title', 'Access Matrix');
             <i class="ri-eye-line"></i>
             <div><strong><?= h(am('readonly_title', 'Read-only view')) ?></strong><span><?= h(am('readonly_text', 'Access changes are managed from User Groups.')) ?></span></div>
           </div>
-        </section>
-
-        <section class="access-matrix-stats" aria-label="<?= h(am('summary_label', 'Access summary')) ?>">
-          <?php
-          $cards = [
-              ['icon' => 'ri-team-line', 'label' => am('kpi_groups', 'User groups'), 'value' => $totals['roles']],
-              ['icon' => 'ri-layout-grid-line', 'label' => am('kpi_modules', 'Modules'), 'value' => $totals['modules']],
-              ['icon' => 'ri-menu-search-line', 'label' => am('kpi_menus', 'System menus'), 'value' => $totals['menus']],
-              ['icon' => 'ri-key-2-line', 'label' => am('kpi_permissions', 'Access mappings'), 'value' => $totals['permissions']],
-          ];
-          foreach ($cards as $card): ?>
-            <article class="access-matrix-stat">
-              <span class="access-matrix-stat__icon"><i class="<?= h($card['icon']) ?>"></i></span>
-              <div><span><?= h($card['label']) ?></span><strong><?= h(number_format((int)$card['value'])) ?></strong></div>
-            </article>
-          <?php endforeach; ?>
         </section>
 
         <section class="access-matrix-card">

@@ -6,6 +6,21 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+## [1.9.3] - 2026-08-04
+
+### Changed
+- Redesigned the personal Notifications workspace with higher-contrast segmented filters, filter icons, inline counts, improved search and action styling, clearer unread emphasis, and responsive light/dark presentation.
+- Changed the Developer Guide search card to use the full available content width after removing its summary metrics.
+- Simplified Notification Admin, Notification Templates, System Cache, Access Matrix, Developer Guide, and Manual Management so their primary workflows follow the page hero without separate KPI card rows.
+- Changed project release metadata to version `1.9.3`.
+
+### Fixed
+- Fixed active notification filter labels becoming unreadable because the page stylesheet referenced Bootstrap `--bs-*` colour variables instead of the IQS Framework `--ct-*` theme variables.
+- Fixed the Notification Admin publish confirmation SweetAlert rendering behind the setup modal by assigning the alert container a higher stacking layer.
+
+### Removed
+- Removed KPI card markup and KPI-only server-side calculations or client-side update logic from Notification Admin, Notification Templates, System Cache, Access Matrix, Developer Guide, and Manual Management.
+
 ## [1.9.2] - 2026-08-03
 
 ### Added
