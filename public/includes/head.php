@@ -183,10 +183,13 @@
       try {
         const raw = window.sessionStorage.getItem('__CONFIG__');
         const cfg = raw ? JSON.parse(raw) : {};
+
+        cfg.nav = cfg.nav || 'vertical';
+        cfg.layout = Object.assign({ mode: 'fluid', position: 'fixed' }, cfg.layout || {});
         cfg.theme = serverTheme.layout;
-        cfg.topbar = Object.assign({}, cfg.topbar || {}, { color: serverTheme.topbar });
-        cfg.menu = Object.assign({}, cfg.menu || {}, { color: serverTheme.menu });
-        cfg.sidenav = Object.assign({}, cfg.sidenav || {}, { user: true });
+        cfg.topbar = Object.assign({ color: 'light' }, cfg.topbar || {}, { color: serverTheme.topbar });
+        cfg.menu = Object.assign({ color: 'light' }, cfg.menu || {}, { color: serverTheme.menu });
+        cfg.sidenav = Object.assign({ size: 'default', user: true }, cfg.sidenav || {}, { user: true });
         window.sessionStorage.setItem('__CONFIG__', JSON.stringify(cfg));
       } catch (e) {
         try { window.sessionStorage.removeItem('__CONFIG__'); } catch (_) {}
