@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.9.3`
+- Current version: `1.9.4`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -19,6 +19,13 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Runtime model: native WSL; Docker, Docker Compose, and container-specific Apache assets are no longer maintained in this repository
 - Main database: MySQL `8.x`
 - External database support: Sybase through ODBC/DBLIB, plus additional PDO connections configured from the system UI
+
+## Version 1.9.4 Administration Reliability and Performance
+
+- Theme configuration loaded during login now repairs incomplete browser session settings before `config.js` applies the layout.
+- User Management group loading now supports optional and legacy group schemas, avoids repeated metadata queries, and safely quotes SQL aliases across supported MySQL versions.
+- Notification Admin and Notification Templates now perform fewer database queries during the initial server-side DataTable load.
+- User Management asset versioning and Additional Database preview callbacks no longer emit the related PHP or Firefox console warnings.
 
 ## Version 1.9.3 Notification and Administration UI Refinement
 

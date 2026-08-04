@@ -6,6 +6,19 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+## [1.9.4] - 2026-08-04
+
+### Changed
+- Reduced the initial Notification Admin and Notification Templates DataTable workload by removing unused summary queries, reusing the total count when no filters are active, and avoiding an unnecessary audience join during notification counts.
+- Changed group-table schema inspection to load available columns once per request with a safe fallback for legacy schemas.
+- Changed project release metadata to version `1.9.4`.
+
+### Fixed
+- Fixed `config.js` failing on login or dashboard load when an incomplete legacy `sessionStorage.__CONFIG__` value did not contain the required layout, navigation, menu, topbar, or sidenav structure.
+- Fixed User Management group-list requests returning HTTP 500 because the unquoted `mod` SQL alias conflicted with MySQL syntax.
+- Fixed User Management asset links emitting an undefined `$version` warning.
+- Fixed Firefox reporting unreachable JavaScript after return statements in the Additional Database inspect, schema-preview, and data-preview callbacks.
+
 ## [1.9.3] - 2026-08-04
 
 ### Changed
