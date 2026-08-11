@@ -525,7 +525,7 @@ class TetapanSistemController {
           'title' => $this->tr('emel_title', 'Tetapan Emel'),
           'message' => $summaryText,
           'data' => [
-            'emailSettings' => $this->getEmailSettings(),
+            'emailSettings' => $this->sanitizeEmailSettingsForClient($this->getEmailSettings()),
           ],
         ];
       } else {
@@ -636,6 +636,11 @@ class TetapanSistemController {
         'errors' => [$this->tr('config_language_system_error_text', 'Ralat berlaku semasa menyimpan tetapan bahasa. Sila semak log sistem untuk maklumat lanjut.')],
       ];
     }
+  }
+
+  private function sanitizeEmailSettingsForClient(array $settings): array {
+    unset($settings['mail_password']);
+    return $settings;
   }
 
   /**
@@ -795,7 +800,7 @@ class TetapanSistemController {
           'title' => $this->tr('config_ai_chatbot_success_title', 'Berjaya'),
           'message' => $summaryText,
           'data' => [
-            'aiChatbotSettings' => $newSettings,
+            'aiChatbotSettings' => $this->sanitizeAiChatbotSettingsForClient($newSettings),
           ],
         ];
       }
@@ -1110,6 +1115,11 @@ class TetapanSistemController {
       ? 'database'
       : 'defaults';
 
+    return $settings;
+  }
+
+  private function sanitizeAiChatbotSettingsForClient(array $settings): array {
+    unset($settings['api_key']);
     return $settings;
   }
 
@@ -3863,6 +3873,13 @@ class TetapanSistemController {
       } catch (\Throwable $e) {
         error_log("[TetapanSistem] File delete failed: " . $e->getMessage());
       }
+    }
+
+    // app_config() menyimpan override DB dalam static cache sepanjang request.
+    // Tanpa reset ini, respons AJAX selepas save boleh membawa nilai lama dan
+    // menyebabkan form kelihatan kembali ke keadaan sebelum disimpan.
+    if (function_exists('app_config_reset_runtime_cache')) {
+      app_config_reset_runtime_cache();
     }
   }
 }

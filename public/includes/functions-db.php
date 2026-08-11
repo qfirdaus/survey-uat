@@ -668,3 +668,114 @@ function sybase_diag_info(): array
         'testAll'  => testAllDatabaseConnections(),
     ];
 }
+
+if (!function_exists('password_reset_normalize_category')) {
+    function password_reset_normalize_category(?string $category): string
+    {
+        $normalized = strtoupper(trim((string)$category));
+        return in_array($normalized, ['STAF', 'PELAJAR', 'UMUM'], true) ? $normalized : 'UNKNOWN';
+    }
+}
+
+if (!function_exists('password_reset_evaluate_eligibility')) {
+    function password_reset_is_super_admin(array $user, ?PDO $pdo = null): bool
+    {
+        $groupCode = trim((string)($user['f_groupKod'] ?? ''));
+        $superAdminCode = function_exists('prestasi_super_admin_code')
+            ? (string)prestasi_super_admin_code()
+            : 'ADM-SA';
+        if ($groupCode !== '' && function_exists('prestasi_group_code_equals')) {
+            return prestasi_group_code_equals($groupCode, $superAdminCode);
+        }
+        if ($groupCode !== '') {
+            return strtoupper($groupCode) === strtoupper($superAdminCode);
+        }
+
+        $groupId = (int)($user['f_groupID'] ?? 0);
+        $legacyRoleId = defined('PRESTASI_ROLE_ID_ADM_SA') ? (int)PRESTASI_ROLE_ID_ADM_SA : 0;
+        if ($groupId > 0 && $legacyRoleId > 0 && $groupId === $legacyRoleId) {
+            return true;
+        }
+        if ($groupId <= 0 || !$pdo instanceof PDO) {
+            return false;
+        }
+
+        try {
+            $stmt = $pdo->prepare('SELECT f_groupKod FROM tbl_m_group WHERE f_groupID = :groupId LIMIT 1');
+            $stmt->execute([':groupId' => $groupId]);
+            $resolvedCode = trim((string)($stmt->fetchColumn() ?: ''));
+            return function_exists('prestasi_group_code_equals')
+                ? prestasi_group_code_equals($resolvedCode, $superAdminCode)
+                : strtoupper($resolvedCode) === strtoupper($superAdminCode);
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Nilai kelayakan reset kata laluan tempatan menggunakan polisi auth semasa.
+     * Super Admin hanya memintas maintenance dan category switch; akaun SSO
+     * kekal perlu menggunakan saluran pemulihan Identity Provider.
+     */
+    function password_reset_evaluate_eligibility(array $user, ?PDO $pdo = null): array
+    {
+        $category = password_reset_normalize_category((string)($user['f_categoryUser'] ?? ''));
+        $isSuperAdmin = password_reset_is_super_admin($user, $pdo);
+        $result = [
+            'eligible' => false,
+            'reason' => 'password_reset_ineligible',
+            'category' => $category,
+            'is_super_admin' => $isSuperAdmin,
+        ];
+
+        if ((int)($user['f_flag'] ?? 0) !== 1) {
+            $result['reason'] = 'password_reset_account_disabled';
+            return $result;
+        }
+        if ((int)($user['f_statusID'] ?? 0) === 9) {
+            $result['reason'] = 'password_reset_account_deleted';
+            return $result;
+        }
+        if ($category === 'UNKNOWN') {
+            $result['reason'] = 'password_reset_unknown_category';
+            return $result;
+        }
+
+        $policy = function_exists('get_auth_policy_config') ? get_auth_policy_config() : [];
+        if (!is_array($policy) || $policy === []) {
+            $result['reason'] = 'password_reset_policy_unavailable';
+            return $result;
+        }
+
+        if (!empty($policy['maintenance_mode']) && !$isSuperAdmin) {
+            $result['reason'] = 'password_reset_maintenance_blocked';
+            return $result;
+        }
+
+        $categoryKey = strtolower($category);
+        if (empty($policy['categories'][$categoryKey]) && !$isSuperAdmin) {
+            $result['reason'] = 'password_reset_category_disabled';
+            return $result;
+        }
+
+        $sso = is_array($policy['sso'] ?? null) ? $policy['sso'] : [];
+        if (!empty($sso['enabled'])) {
+            $mode = strtoupper(trim((string)($sso['mode'] ?? 'MANUAL')));
+            if ($mode === 'ALL') {
+                $result['reason'] = 'password_reset_sso_managed';
+                return $result;
+            }
+            if ($mode === 'HYBRID') {
+                $hybridMode = strtoupper(trim((string)($sso['hybrid'][$categoryKey] ?? 'MANUAL')));
+                if ($hybridMode !== 'MANUAL') {
+                    $result['reason'] = 'password_reset_sso_managed';
+                    return $result;
+                }
+            }
+        }
+
+        $result['eligible'] = true;
+        $result['reason'] = 'password_reset_eligible';
+        return $result;
+    }
+}

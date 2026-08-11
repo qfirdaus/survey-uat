@@ -25,6 +25,7 @@ require_once __DIR__ . '/classes/Database.php';
 require_once __DIR__ . '/classes/Config.php';
 require_once __DIR__ . '/classes/User.php';
 require_once __DIR__ . '/classes/Mailer.php';
+require_once __DIR__ . '/setting/helper/access_helper.php';
 
 if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -33,43 +34,17 @@ if (!isset($_SESSION['csrf_token'])) {
 if (!function_exists('reset_password_normalize_category')) {
     function reset_password_normalize_category(?string $category): string
     {
-        $normalized = strtoupper(trim((string)$category));
-        return in_array($normalized, ['STAF', 'PELAJAR', 'UMUM'], true) ? $normalized : 'UMUM';
+        return function_exists('password_reset_normalize_category')
+            ? password_reset_normalize_category($category)
+            : 'UNKNOWN';
     }
 }
 
 if (!function_exists('reset_password_manual_login_allowed')) {
-    function reset_password_manual_login_allowed(array $user): bool
+    function reset_password_manual_login_allowed(array $user, ?PDO $pdo = null): bool
     {
-        $policy = function_exists('get_auth_policy_config') ? get_auth_policy_config() : [];
-        if (!is_array($policy) || $policy === []) {
-            return true;
-        }
-
-        if (!empty($policy['maintenance_mode'])) {
-            return false;
-        }
-
-        $category = strtolower(reset_password_normalize_category((string)($user['f_categoryUser'] ?? 'UMUM')));
-        if (isset($policy['categories'][$category]) && empty($policy['categories'][$category])) {
-            return false;
-        }
-
-        $ssoConfig = is_array($policy['sso'] ?? null) ? $policy['sso'] : [];
-        if (empty($ssoConfig['enabled'])) {
-            return true;
-        }
-
-        $mode = strtoupper(trim((string)($ssoConfig['mode'] ?? 'MANUAL')));
-        if ($mode === 'ALL') {
-            return false;
-        }
-        if ($mode === 'HYBRID') {
-            $hybridMode = strtoupper(trim((string)($ssoConfig['hybrid'][$category] ?? 'MANUAL')));
-            return $hybridMode === 'MANUAL';
-        }
-
-        return true;
+        $evaluation = password_reset_evaluate_eligibility($user, $pdo);
+        return !empty($evaluation['eligible']);
     }
 }
 
@@ -215,7 +190,7 @@ $tokenRecord = ($featureAvailable && $tokenHash !== '') ? $userModel->findActive
 $tokenUsable = $featureAvailable
     && $tokenRecord !== null
     && (int)($tokenRecord['f_flag'] ?? 0) === 1
-    && reset_password_manual_login_allowed($tokenRecord);
+    && reset_password_manual_login_allowed($tokenRecord, $pdo);
 $runtimePasswordPolicy = reset_password_runtime_policy();
 $errors = [];
 
@@ -244,7 +219,13 @@ if ($requestMethod === 'POST') {
             $expiresAt = (new DateTimeImmutable('now', new DateTimeZone('Asia/Kuala_Lumpur')))
                 ->modify('+' . (int)($runtimePasswordPolicy['expiry_days'] ?? 90) . ' days')
                 ->format('Y-m-d H:i:s');
-            $updated = $userModel->updateManualPasswordByLoginID($loginId, $passwordHash, null, (int)($runtimePasswordPolicy['expiry_days'] ?? 90), 'reset_password');
+            $updated = $userModel->completePasswordReset(
+                (int)$tokenRecord['id'],
+                $loginId,
+                $passwordHash,
+                (int)($runtimePasswordPolicy['expiry_days'] ?? 90),
+                reset_password_client_ip()
+            );
 
             if (!$updated) {
                 $errors[] = __('password_change_error_update_failed');
@@ -275,8 +256,6 @@ if ($requestMethod === 'POST') {
                     }
                 }
 
-                $userModel->markPasswordResetTokenUsed((int)$tokenRecord['id'], reset_password_client_ip());
-                $userModel->invalidatePasswordResetTokensByLoginID($loginId);
                 unset($_SESSION['pending_password_change']);
 
                 if (function_exists('audit_event')) {

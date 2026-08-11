@@ -949,9 +949,22 @@ class User extends BaseModel
 
     public function findPasswordResetCandidate(string $loginID): ?array
     {
+        $resolution = $this->resolvePasswordResetCandidate($loginID);
+        return is_array($resolution['candidate'] ?? null) ? $resolution['candidate'] : null;
+    }
+
+    /**
+     * Resolve identifier awam secara deterministik tanpa memilih emel duplikat.
+     *
+     * @return array{candidate:?array,ambiguous:bool,match_type:string}
+     */
+    public function resolvePasswordResetCandidate(string $identifier): array
+    {
+        $loginID = trim($identifier);
+        $emptyResult = ['candidate' => null, 'ambiguous' => false, 'match_type' => 'none'];
         $loginID = trim($loginID);
         if ($loginID === '') {
-            return null;
+            return $emptyResult;
         }
 
         $sql = "SELECT
@@ -963,27 +976,64 @@ class User extends BaseModel
                     f_password,
                     f_categoryUser,
                     f_flag,
-                    f_statusID
+                    f_statusID,
+                    f_stafID,
+                    f_nopekerja,
+                    f_groupID,
+                    f_groupKod,
+                    CASE
+                        WHEN TRIM(f_loginID) = :exactLogin THEN 1
+                        WHEN TRIM(COALESCE(f_stafID, '')) = :exactStaff THEN 2
+                        WHEN TRIM(COALESCE(f_nopekerja, '')) = :exactEmployee THEN 3
+                        WHEN LOWER(TRIM(COALESCE(f_email, ''))) = LOWER(:exactEmail) THEN 4
+                        ELSE 9
+                    END AS reset_match_priority
                 FROM tbl_m_user
                 WHERE (
-                    TRIM(f_loginID) = :loginID
-                    OR LOWER(TRIM(COALESCE(f_email, ''))) = LOWER(:email)
+                    TRIM(f_loginID) = :whereLogin
+                    OR TRIM(COALESCE(f_stafID, '')) = :whereStaff
+                    OR TRIM(COALESCE(f_nopekerja, '')) = :whereEmployee
+                    OR LOWER(TRIM(COALESCE(f_email, ''))) = LOWER(:whereEmail)
                 )
                   AND COALESCE(f_statusID, 0) != 9
-                ORDER BY CASE
-                    WHEN TRIM(f_loginID) = :loginIDExact THEN 0
-                    ELSE 1
-                END, f_userID DESC
-                LIMIT 1";
+                ORDER BY reset_match_priority ASC, f_userID DESC
+                LIMIT 3";
 
-        return $this->fetchOne($sql, [
-            ':loginID' => $loginID,
-            ':email' => $loginID,
-            ':loginIDExact' => $loginID,
+        $rows = $this->fetchAll($sql, [
+            ':exactLogin' => $loginID,
+            ':exactStaff' => $loginID,
+            ':exactEmployee' => $loginID,
+            ':exactEmail' => $loginID,
+            ':whereLogin' => $loginID,
+            ':whereStaff' => $loginID,
+            ':whereEmployee' => $loginID,
+            ':whereEmail' => $loginID,
         ]);
+        if ($rows === []) {
+            return $emptyResult;
+        }
+
+        $priority = (int)($rows[0]['reset_match_priority'] ?? 9);
+        $samePriority = array_values(array_filter($rows, static fn(array $row): bool => (int)($row['reset_match_priority'] ?? 9) === $priority));
+        if (count($samePriority) > 1) {
+            return [
+                'candidate' => null,
+                'ambiguous' => true,
+                'match_type' => $priority === 4 ? 'email' : 'identifier',
+            ];
+        }
+
+        $candidate = $rows[0];
+        unset($candidate['reset_match_priority']);
+        $matchTypes = [1 => 'login_id', 2 => 'staff_id', 3 => 'employee_no', 4 => 'email'];
+        return [
+            'candidate' => $candidate,
+            'ambiguous' => false,
+            'match_type' => $matchTypes[$priority] ?? 'identifier',
+        ];
     }
 
-    public function invalidatePasswordResetTokensByLoginID(string $loginID): void
+    public function invalidatePasswordResetTokensByLoginID(string $loginID, ?string $exceptTokenHash = null): void
     {
         $loginID = trim($loginID);
         if ($loginID === '' || !$this->passwordResetTableExists()) {
@@ -1001,7 +1051,12 @@ class User extends BaseModel
                 SET " . implode(', ', $setParts) . "
                 WHERE TRIM(f_loginID) = :loginID
                   AND f_used_at IS NULL";
-        $this->execute($sql, [':loginID' => $loginID]);
+        $params = [':loginID' => $loginID];
+        if ($exceptTokenHash !== null && trim($exceptTokenHash) !== '') {
+            $sql .= ' AND f_token_hash != :exceptTokenHash';
+            $params[':exceptTokenHash'] = trim($exceptTokenHash);
+        }
+        $this->execute($sql, $params);
     }
 
     public function createPasswordResetToken(
@@ -1011,7 +1066,8 @@ class User extends BaseModel
         ?string $expiresAt,
         ?string $requestedIp = null,
         ?string $userAgent = null,
-        ?int $expiresInMinutes = null
+        ?int $expiresInMinutes = null,
+        bool $invalidateExisting = true
     ): bool {
         $loginID = trim($loginID);
         $email = trim($email);
@@ -1027,7 +1083,9 @@ class User extends BaseModel
             return false;
         }
 
-        $this->invalidatePasswordResetTokensByLoginID($loginID);
+        if ($invalidateExisting) {
+            $this->invalidatePasswordResetTokensByLoginID($loginID);
+        }
 
         $fields = [
             'f_loginID',
@@ -1100,7 +1158,11 @@ class User extends BaseModel
                     u.f_nickname,
                     u.f_flag,
                     u.f_categoryUser,
-                    u.f_statusID
+                    u.f_statusID,
+                    u.f_stafID,
+                    u.f_nopekerja,
+                    u.f_groupID,
+                    u.f_groupKod
                 FROM tbl_auth_password_reset pr
                 INNER JOIN tbl_m_user u
                     ON TRIM(u.f_loginID) = TRIM(pr.f_loginID)
@@ -1141,5 +1203,53 @@ class User extends BaseModel
                   AND f_used_at IS NULL";
 
         return $this->execute($sql, $params) > 0;
+    }
+
+    public function invalidatePasswordResetTokenByHash(string $tokenHash): bool
+    {
+        $tokenHash = trim($tokenHash);
+        if ($tokenHash === '' || !$this->passwordResetTableExists()) {
+            return false;
+        }
+
+        return $this->execute(
+            "UPDATE tbl_auth_password_reset
+             SET f_used_at = COALESCE(f_used_at, NOW())
+             WHERE f_token_hash = :tokenHash
+               AND f_used_at IS NULL",
+            [':tokenHash' => $tokenHash]
+        ) > 0;
+    }
+
+    public function completePasswordReset(
+        int $tokenId,
+        string $loginID,
+        string $passwordHash,
+        int $expiresInDays,
+        ?string $consumedIp = null
+    ): bool {
+        if ($tokenId <= 0 || trim($loginID) === '' || trim($passwordHash) === '') {
+            return false;
+        }
+
+        try {
+            return (bool)$this->transaction(function () use ($tokenId, $loginID, $passwordHash, $expiresInDays, $consumedIp): bool {
+                $updated = $this->updateManualPasswordByLoginID(
+                    $loginID,
+                    $passwordHash,
+                    null,
+                    $expiresInDays,
+                    'reset_password'
+                );
+                if (!$updated || !$this->markPasswordResetTokenUsed($tokenId, $consumedIp)) {
+                    throw new RuntimeException('Password reset transaction could not be completed.');
+                }
+                $this->invalidatePasswordResetTokensByLoginID($loginID);
+                return true;
+            });
+        } catch (Throwable $e) {
+            error_log('[User] completePasswordReset failed: ' . $e->getMessage());
+            return false;
+        }
     }
 }

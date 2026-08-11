@@ -6,6 +6,38 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+## [1.9.5] - 2026-08-11
+
+### Added
+- Added centralized password-reset eligibility evaluation shared by forgot-password requests and reset-token consumption, with explicit reason codes for disabled, deleted, unknown-category, maintenance-blocked, category-disabled, SSO-managed, policy-unavailable, ambiguous, and email-missing accounts.
+- Added forgot-password lookup by Login ID, registered email, staff ID, or employee number with deterministic match priority and duplicate-identifier rejection.
+- Added password-reset regression coverage for manual accounts, Super Admin maintenance/category recovery, SSO restrictions, disabled and unknown-category accounts, unavailable policy handling, safe token lifecycle behavior, and schema-change protection.
+- Added System Settings save-sync regression coverage for request-local cache invalidation, boolean normalization, AI Chatbot synchronization, dirty-state tracking, and secret redaction.
+
+### Changed
+- Changed project release metadata to version `1.9.5`.
+- Changed manual Super Admin password recovery to remain available during maintenance mode or a disabled login category while retaining active-account, known-category, registered-email, and manual-login requirements.
+- Changed password-reset eligibility to fail closed when authentication policy cannot be loaded and to reject unknown user categories instead of silently treating them as public users.
+- Changed forgot-password throttling to use hashed session, IP, and account-identifier scopes, with APCu-backed cross-session counters when APCu is available.
+- Changed replacement reset-token handling so existing usable links remain valid until the replacement email is delivered successfully.
+- Changed password reset completion to update the local password, consume the active token, and invalidate remaining tokens in one database transaction using the existing schema.
+- Changed Forgot Password guidance to document every supported account identifier and shared-email behavior.
+
+### Fixed
+- Fixed System Settings toggles and selectors visually reverting to pre-save values because AJAX responses reread stale request-local configuration overrides.
+- Fixed incomplete post-save synchronization for General and AI Chatbot forms, including normalized selector, checkbox, Select2, runtime-summary, and saved/dirty states.
+- Fixed string boolean values such as `"0"` being unsafe for direct JavaScript truthiness checks during Login Policy synchronization.
+- Fixed eligible reset requests invalidating a previous working link before confirming replacement email delivery.
+- Fixed duplicate email addresses potentially selecting the newest matching account instead of requiring an unambiguous identifier.
+- Fixed forgot-password redirects exposing submitted account identifiers in browser history, access logs, or referrer data.
+- Fixed password-update and reset-token consumption being separate operations that could leave partially completed recovery state.
+
+### Security
+- Excluded SMTP passwords and AI provider API keys from System Settings AJAX save responses.
+- Kept SSO-managed accounts, including Super Admin accounts, on Identity Provider recovery instead of writing local passwords.
+- Added granular security audit metadata for password-reset eligibility outcomes without exposing those internal reason codes in generic public responses.
+- Invalidated newly created reset tokens when email rendering or delivery fails while retaining the preceding valid token.
+
 ## [1.9.4] - 2026-08-04
 
 ### Changed

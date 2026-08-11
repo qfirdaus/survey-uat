@@ -25,6 +25,7 @@ require_once __DIR__ . '/classes/Database.php';
 require_once __DIR__ . '/classes/Config.php';
 require_once __DIR__ . '/classes/User.php';
 require_once __DIR__ . '/classes/Mailer.php';
+require_once __DIR__ . '/setting/helper/access_helper.php';
 
 if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -33,8 +34,23 @@ if (!isset($_SESSION['csrf_token'])) {
 if (!function_exists('forgot_password_check_rate_limit')) {
     function forgot_password_check_rate_limit(string $key, int $maxRequests = 5, int $windowSeconds = 900): bool
     {
+        $cacheKey = 'forgot_password_rate:' . hash('sha256', $key);
+        if (function_exists('apcu_add') && function_exists('apcu_inc') && filter_var(ini_get('apc.enabled'), FILTER_VALIDATE_BOOL)) {
+            try {
+                if (apcu_add($cacheKey, 1, $windowSeconds)) {
+                    return true;
+                }
+                $count = apcu_inc($cacheKey, 1, $incremented);
+                if ($incremented) {
+                    return (int)$count <= $maxRequests;
+                }
+            } catch (Throwable $e) {
+                // Gunakan session fallback jika APCu tidak tersedia pada runtime ini.
+            }
+        }
+
         $now = time();
-        $sessionKey = 'forgot_password_rate_' . $key;
+        $sessionKey = 'forgot_password_rate_' . hash('sha256', $key);
         $state = $_SESSION[$sessionKey] ?? ['count' => 0, 'reset_at' => $now + $windowSeconds];
 
         if ($now >= (int)($state['reset_at'] ?? 0)) {
@@ -55,43 +71,17 @@ if (!function_exists('forgot_password_check_rate_limit')) {
 if (!function_exists('forgot_password_normalize_category')) {
     function forgot_password_normalize_category(?string $category): string
     {
-        $normalized = strtoupper(trim((string)$category));
-        return in_array($normalized, ['STAF', 'PELAJAR', 'UMUM'], true) ? $normalized : 'UMUM';
+        return function_exists('password_reset_normalize_category')
+            ? password_reset_normalize_category($category)
+            : 'UNKNOWN';
     }
 }
 
 if (!function_exists('forgot_password_manual_login_allowed')) {
-    function forgot_password_manual_login_allowed(array $user): bool
+    function forgot_password_manual_login_allowed(array $user, ?PDO $pdo = null): bool
     {
-        $policy = function_exists('get_auth_policy_config') ? get_auth_policy_config() : [];
-        if (!is_array($policy) || $policy === []) {
-            return true;
-        }
-
-        if (!empty($policy['maintenance_mode'])) {
-            return false;
-        }
-
-        $category = strtolower(forgot_password_normalize_category((string)($user['f_categoryUser'] ?? 'UMUM')));
-        if (isset($policy['categories'][$category]) && empty($policy['categories'][$category])) {
-            return false;
-        }
-
-        $ssoConfig = is_array($policy['sso'] ?? null) ? $policy['sso'] : [];
-        if (empty($ssoConfig['enabled'])) {
-            return true;
-        }
-
-        $mode = strtoupper(trim((string)($ssoConfig['mode'] ?? 'MANUAL')));
-        if ($mode === 'ALL') {
-            return false;
-        }
-        if ($mode === 'HYBRID') {
-            $hybridMode = strtoupper(trim((string)($ssoConfig['hybrid'][$category] ?? 'MANUAL')));
-            return $hybridMode === 'MANUAL';
-        }
-
-        return true;
+        $evaluation = password_reset_evaluate_eligibility($user, $pdo);
+        return !empty($evaluation['eligible']);
     }
 }
 
@@ -153,7 +143,6 @@ $errors = [];
 $submitted = false;
 $loginIdValue = trim((string)($_POST['login_id'] ?? ''));
 $requestStatus = trim((string)($_GET['status'] ?? ''));
-$successReference = trim((string)($_GET['ref'] ?? ''));
 $showSuccessAlert = $requestStatus === 'sent';
 $showReviewAlert = $requestStatus === 'review';
 
@@ -179,24 +168,44 @@ if ($requestMethod === 'POST') {
         $errors[] = __('forgot_password_error_csrf');
     } elseif (!$featureAvailable) {
         $errors[] = __('forgot_password_feature_unavailable');
-    } elseif (!forgot_password_check_rate_limit('request', 5, 900)) {
+    } elseif (!forgot_password_check_rate_limit('request', 5, 900)
+        || !forgot_password_check_rate_limit('ip_' . hash('sha256', (string)(forgot_password_client_ip() ?? 'unknown')), 10, 900)) {
         $errors[] = __('forgot_password_error_rate_limited');
     } else {
         $loginId = trim($loginIdValue);
         if ($loginId === '') {
             $errors[] = __('forgot_password_error_required');
         } else {
-            $candidate = $userModel->findPasswordResetCandidate($loginId);
+            $identifierRateKey = 'identifier_' . hash('sha256', strtolower($loginId));
+            if (!forgot_password_check_rate_limit($identifierRateKey, 5, 900)) {
+                $errors[] = __('forgot_password_error_rate_limited');
+                $candidate = null;
+                $candidateResolution = ['candidate' => null, 'ambiguous' => false, 'match_type' => 'none'];
+            } else {
+                $candidateResolution = $userModel->resolvePasswordResetCandidate($loginId);
+                $candidate = is_array($candidateResolution['candidate'] ?? null) ? $candidateResolution['candidate'] : null;
+            }
             $canIssueReset = false;
             $recipientEmail = null;
             $created = false;
             $sent = false;
+            $eligibility = [
+                'eligible' => false,
+                'reason' => !empty($candidateResolution['ambiguous'])
+                    ? 'password_reset_ambiguous_identifier'
+                    : 'password_reset_account_not_found',
+                'category' => 'UNKNOWN',
+                'is_super_admin' => false,
+            ];
 
             if ($candidate) {
                 $recipientEmail = forgot_password_resolve_email($candidate);
-                $canIssueReset = (int)($candidate['f_flag'] ?? 0) === 1
-                    && $recipientEmail !== null
-                    && forgot_password_manual_login_allowed($candidate);
+                $eligibility = password_reset_evaluate_eligibility($candidate, $pdo);
+                if ($recipientEmail === null) {
+                    $eligibility['eligible'] = false;
+                    $eligibility['reason'] = 'password_reset_email_missing';
+                }
+                $canIssueReset = !empty($eligibility['eligible']) && $recipientEmail !== null;
             }
 
             if ($isDevelopment) {
@@ -205,6 +214,8 @@ if ($requestMethod === 'POST') {
                     'candidate_found' => $candidate !== null,
                     'recipient_email' => $recipientEmail,
                     'can_issue_reset' => $canIssueReset,
+                    'reason_code' => (string)($eligibility['reason'] ?? 'password_reset_ineligible'),
+                    'match_type' => (string)($candidateResolution['match_type'] ?? 'none'),
                     'feature_available' => $featureAvailable,
                 ]);
             }
@@ -225,7 +236,8 @@ if ($requestMethod === 'POST') {
                     null,
                     forgot_password_client_ip(),
                     substr(trim((string)($_SERVER['HTTP_USER_AGENT'] ?? '')), 0, 255),
-                    $resetTokenMinutes
+                    $resetTokenMinutes,
+                    false
                 );
 
                 if ($isDevelopment) {
@@ -237,21 +249,28 @@ if ($requestMethod === 'POST') {
                 }
 
                 if ($created) {
-                    [$mailHtml, $mailText] = Mailer::render('password-reset-request', [
-                        'displayName' => $displayName !== '' ? $displayName : (string)$candidate['f_loginID'],
-                        'loginId' => (string)$candidate['f_loginID'],
-                        'resetUrl' => $resetUrl,
-                        'expiresAt' => $expiresAt,
-                        'expiresInMinutes' => $resetTokenMinutes,
-                        'siteTitle' => app_config('site.title', 'Sistem Pengurusan Fasiliti (e-Facility)'),
-                    ]);
+                    $mailError = '';
+                    try {
+                        [$mailHtml, $mailText] = Mailer::render('password-reset-request', [
+                            'displayName' => $displayName !== '' ? $displayName : (string)$candidate['f_loginID'],
+                            'loginId' => (string)$candidate['f_loginID'],
+                            'resetUrl' => $resetUrl,
+                            'expiresAt' => $expiresAt,
+                            'expiresInMinutes' => $resetTokenMinutes,
+                            'siteTitle' => app_config('site.title', 'Sistem Pengurusan Fasiliti (e-Facility)'),
+                        ]);
 
-                    $subject = (string)(__('forgot_password_mail_subject') ?: 'Reset kata laluan akaun anda');
-                    $mailer = Mailer::fromConfig($pdo);
-                    $sent = $mailer->send($recipientEmail, $subject, $mailHtml, $mailText);
+                        $subject = (string)(__('forgot_password_mail_subject') ?: 'Reset kata laluan akaun anda');
+                        $mailer = Mailer::fromConfig($pdo);
+                        $sent = $mailer->send($recipientEmail, $subject, $mailHtml, $mailText);
+                        $mailError = $sent ? '' : trim($mailer->getLastError());
+                    } catch (Throwable $mailException) {
+                        $sent = false;
+                        $mailError = trim($mailException->getMessage());
+                    }
 
                     if (!$sent) {
-                        $mailError = trim($mailer->getLastError());
+                        $userModel->invalidatePasswordResetTokenByHash($tokenHash);
                         error_log('[forgot-password] Failed sending reset mail to ' . $recipientEmail . ($mailError !== '' ? ' | ' . $mailError : ''));
                         if ($isDevelopment) {
                             $errors[] = sprintf(
@@ -259,11 +278,14 @@ if ($requestMethod === 'POST') {
                                 $mailError !== '' ? $mailError : (string)(__('forgot_password_error_mail_failed_reason_unknown') ?: 'Sebab kegagalan tidak direkodkan.')
                             );
                         }
-                    } elseif ($isDevelopment) {
-                        forgot_password_debug_log('Reset mail sent successfully', [
-                            'login_id' => (string)$candidate['f_loginID'],
-                            'recipient_email' => $recipientEmail,
-                        ]);
+                    } else {
+                        $userModel->invalidatePasswordResetTokensByLoginID((string)$candidate['f_loginID'], $tokenHash);
+                        if ($isDevelopment) {
+                            forgot_password_debug_log('Reset mail sent successfully', [
+                                'login_id' => (string)$candidate['f_loginID'],
+                                'recipient_email' => $recipientEmail,
+                            ]);
+                        }
                     }
 
                     if (function_exists('audit_event')) {
@@ -317,7 +339,10 @@ if ($requestMethod === 'POST') {
                         'session_id' => session_id() ?: null,
                         'meta' => [
                             'login_id' => $loginId,
-                            'reason_code' => 'password_reset_ineligible',
+                            'reason_code' => (string)($eligibility['reason'] ?? 'password_reset_ineligible'),
+                            'match_type' => (string)($candidateResolution['match_type'] ?? 'none'),
+                            'category' => (string)($eligibility['category'] ?? 'UNKNOWN'),
+                            'is_super_admin' => !empty($eligibility['is_super_admin']),
                             'auth_method' => 'MANUAL',
                             'auth_flow' => 'forgot_password',
                             'client_ip' => forgot_password_client_ip(),
@@ -342,16 +367,8 @@ if ($requestMethod === 'POST') {
 
     if ($errors === []) {
         $successMessage = trim((string)__('forgot_password_success_msg'));
-        $referenceLabel = trim((string)__('forgot_password_success_reference'));
-        if ($loginIdValue !== '') {
-            $successMessage .= "\n\n" . $referenceLabel . ': ' . $loginIdValue;
-        }
-
         $redirectStatus = ($candidate !== null && !$canIssueReset) ? 'review' : 'sent';
         $redirectTarget = 'forgot-password.php?status=' . rawurlencode($redirectStatus);
-        if ($redirectStatus === 'sent' && $loginIdValue !== '') {
-            $redirectTarget .= '&ref=' . rawurlencode($loginIdValue);
-        }
         redirect($redirectTarget);
     }
 }
@@ -1027,16 +1044,13 @@ $activeThemeStyle = $themeStyleMap[$sidebarTheme] ?? $themeStyleMap['light'];
               </div>
               <div>
                 <span class="fp-kicker"><i class="ri-key-2-line"></i> <?= h(__('forgot_password_kicker')) ?></span>
-                <p class="fp-panel-copy"><?= h($pageLang === 'en' ? 'Enter the login ID associated with your account to continue the recovery process.' : 'Masukkan ID log masuk yang dikaitkan dengan akaun anda untuk meneruskan proses pemulihan.') ?></p>
+                <p class="fp-panel-copy"><?= h($pageLang === 'en' ? 'Enter your login ID, registered email, staff ID, or employee number to continue.' : 'Masukkan ID log masuk, emel berdaftar, ID staf atau nombor pekerja untuk meneruskan proses pemulihan.') ?></p>
               </div>
             </div>
 
             <?php if ($showSuccessAlert): ?>
               <div class="fp-success">
                 <?= h(__('forgot_password_success_msg')) ?>
-                <?php if ($successReference !== ''): ?>
-                  <br><strong><?= h(__('forgot_password_success_reference')) ?>:</strong> <?= h($successReference) ?>
-                <?php endif; ?>
               </div>
             <?php endif; ?>
 

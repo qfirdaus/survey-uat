@@ -364,13 +364,13 @@
 'forgot_password_heading'
                            => 'Minta pautan reset kata laluan',
 'forgot_password_intro'
-                           => 'Masukkan Login ID atau emel berdaftar untuk akaun manual anda. Jika akaun itu layak, sistem akan menghantar pautan reset sekali guna ke alamat emel yang didaftarkan.',
+                           => 'Masukkan Login ID, emel berdaftar, ID staf atau nombor pekerja untuk akaun manual anda. Jika akaun itu layak, sistem akan menghantar pautan reset sekali guna ke alamat emel yang didaftarkan.',
 'forgot_password_login_id_label'
-                           => 'Login ID',
+                           => 'Pengenal Akaun',
 'forgot_password_login_id_placeholder'
-                           => 'Masukkan Login ID anda',
+                           => 'Login ID, emel, ID staf atau nombor pekerja',
 'forgot_password_login_id_hint'
-                           => 'Anda boleh gunakan Login ID sebenar atau emel berdaftar. Untuk pengguna umum, Login ID biasanya memang alamat emel.',
+                           => 'Gunakan salah satu pengenal yang tepat. Jika satu emel dikongsi oleh beberapa akaun, gunakan Login ID atau ID rasmi anda.',
 'forgot_password_submit_btn'
                            => 'Hantar Pautan Reset',
 'forgot_password_back_to_login'

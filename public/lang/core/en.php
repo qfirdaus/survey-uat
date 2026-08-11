@@ -364,13 +364,13 @@
 'forgot_password_heading'
                            => 'Request a password reset link',
 'forgot_password_intro'
-                           => 'Enter the Login ID or registered email for your manual-login account. If the account is eligible, the system will send a one-time reset link to the registered email address.',
+                           => 'Enter the Login ID, registered email, staff ID, or employee number for your manual-login account. If the account is eligible, the system will send a one-time reset link to the registered email address.',
 'forgot_password_login_id_label'
-                           => 'Login ID',
+                           => 'Account Identifier',
 'forgot_password_login_id_placeholder'
-                           => 'Enter your Login ID',
+                           => 'Login ID, email, staff ID, or employee number',
 'forgot_password_login_id_hint'
-                           => 'You can use the actual Login ID or the registered email. For public users, the Login ID is usually the registered email address.',
+                           => 'Use one exact identifier. If an email is shared by multiple accounts, use your Login ID or official ID instead.',
 'forgot_password_submit_btn'
                            => 'Send Reset Link',
 'forgot_password_back_to_login'

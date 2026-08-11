@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.9.4`
+- Current version: `1.9.5`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -19,6 +19,16 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Runtime model: native WSL; Docker, Docker Compose, and container-specific Apache assets are no longer maintained in this repository
 - Main database: MySQL `8.x`
 - External database support: Sybase through ODBC/DBLIB, plus additional PDO connections configured from the system UI
+
+## Version 1.9.5 Settings Synchronization and Account Recovery
+
+- System Settings AJAX saves now invalidate request-local configuration caches before returning authoritative values, preventing toggles and selectors from visually reverting until refresh.
+- General, Login Policy, Email, Theme, Language, Database, and AI Chatbot settings now keep their form state, runtime summaries, Select2 controls, and saved/dirty indicators synchronized with normalized server responses.
+- Sensitive SMTP passwords and AI provider API keys are excluded from settings-save responses.
+- Forgot Password now accepts Login ID, registered email, staff ID, or employee number, rejects ambiguous shared identifiers, and applies one centralized manual-login eligibility policy during both request and token consumption.
+- Manual Super Admin accounts retain controlled recovery during maintenance or a disabled category, while SSO-managed, disabled, deleted, unknown-category, and email-less accounts remain ineligible for local password reset.
+- Password reset requests now use layered session/IP/identifier throttling, avoid exposing identifiers in redirect URLs, retain the previous link until replacement email delivery succeeds, and complete password changes and token consumption transactionally.
+- Regression coverage verifies settings save synchronization, secret redaction, account-recovery policy combinations, and the absence of schema-changing SQL in this release.
 
 ## Version 1.9.4 Administration Reliability and Performance
 
@@ -44,6 +54,9 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Role switching for users with more than one available group context through `role-switch.php` and `role-switch-roles.php`.
 - Profile workspace with login activity, audit history, active session visibility, and session termination support.
 - Login policy configuration from System Settings, including manual login route control and SSO compatibility settings.
+- Forgot Password supports Login ID, registered email, staff ID, and employee-number lookup for eligible manual accounts, with duplicate-identifier protection and generic public responses.
+- Password recovery reuses the active login policy: SSO-managed accounts remain with their identity provider, while manual Super Admin recovery remains available during maintenance and category shutdowns subject to active-account and registered-email checks.
+- Reset links are hashed, expiring, single-use, rate limited, preserved until replacement email delivery succeeds, and consumed transactionally with the local password update.
 
 ### Dashboard
 
@@ -124,6 +137,8 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Settings are handled by `TetapanSistemController.php`, `Config.php`, `SystemConfigConstants.php`, and page-specific JavaScript/CSS assets.
 - General > Limits includes the `View As Timeout (Minutes)` setting for the Super Admin impersonation workflow.
 - Settings sections use standardized navigation, cards, forms, validation feedback, and theme-aware responsive presentation.
+- AJAX save responses synchronize normalized form values and runtime summaries immediately without requiring a page refresh.
+- Request-local configuration caches are invalidated after saves, and SMTP passwords or AI provider API keys are not returned to the browser in save responses.
 
 ### AI Chatbot Core
 
