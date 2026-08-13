@@ -6,6 +6,10 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+### Fixed
+- Fixed valid OneID hybrid identity packets being rejected as invalid whenever both `data3` and `data4` were populated; identity selection now follows OneID `u_category` (`2/3` staff via `data3`, `10/11/12` student or hybrid via `data4`) with the historical staff-first fallback for category-less legacy packets.
+- Fixed OneID generated or legacy application credential failures returned through `respond_description` being mislabeled as invalid tokens instead of site credential or site-access errors.
+
 ## [1.9.6] - 2026-08-13
 
 ### Added

@@ -26,14 +26,25 @@ function SSO_BUILD_AUTH_HANDOFF($packet): array
     $data4 = SSO_SANITIZE_IDENTIFIER($packet['data4'] ?? '');
     $validStafId = SSO_VALIDATE_STAFID($data3) ? $data3 : '';
     $validMatrik = SSO_VALIDATE_MATRIK($data4) ? $data4 : '';
-    $identityConflict = $validStafId !== '' && $validMatrik !== '';
+    $categoryRaw = trim((string)($packet['u_category'] ?? ''));
+    $category = ctype_digit($categoryRaw) ? (int)$categoryRaw : null;
     $resolvedLoginId = '';
     $resolvedSource = '';
+    $resolutionMode = 'legacy';
 
-    if (!$identityConflict && $validStafId !== '') {
+    if (in_array($category, [2, 3], true)) {
+        $resolvedLoginId = $validStafId;
+        $resolvedSource = $resolvedLoginId !== '' ? 'data3' : '';
+        $resolutionMode = 'category';
+    } elseif (in_array($category, [10, 11, 12], true)) {
+        $resolvedLoginId = $validMatrik;
+        $resolvedSource = $resolvedLoginId !== '' ? 'data4' : '';
+        $resolutionMode = 'category';
+    } elseif ($validStafId !== '') {
+        // Backward compatibility for legacy OneID packets without u_category.
         $resolvedLoginId = $validStafId;
         $resolvedSource = 'data3';
-    } elseif (!$identityConflict && $validMatrik !== '') {
+    } elseif ($validMatrik !== '') {
         $resolvedLoginId = $validMatrik;
         $resolvedSource = 'data4';
     }
@@ -45,7 +56,10 @@ function SSO_BUILD_AUTH_HANDOFF($packet): array
         'data3_valid' => $validStafId !== '',
         'data4_valid' => $validMatrik !== '',
         'identity_valid' => $resolvedLoginId !== '',
-        'identity_conflict' => $identityConflict,
+        'identity_conflict' => false,
+        'identity_resolution' => $resolutionMode,
+        'oneid_user_category' => $category,
+        'oneid_user_type' => trim((string)($packet['u_type'] ?? '')),
     ];
 }
 
@@ -65,8 +79,20 @@ function SSO_CLASSIFY_API_RESPONSE($response): array
         return ['status' => 'valid', 'packet' => $response['respond_user_packet'], 'reissued' => false];
     }
     if ((string)($response['respond'] ?? '') === '0') {
-        $reasonText = strtolower(trim((string)($response['reason'] ?? $response['message'] ?? $response['respond_message'] ?? '')));
-        $isSiteError = str_contains($reasonText, 'site') && (str_contains($reasonText, 'invalid') || str_contains($reasonText, 'not found'));
+        $reasonText = '';
+        foreach (['reason', 'message', 'respond_message', 'respond_description'] as $reasonKey) {
+            $candidate = strtolower(trim((string)($response[$reasonKey] ?? '')));
+            if ($candidate !== '') {
+                $reasonText = $candidate;
+                break;
+            }
+        }
+        $isSiteError = str_contains($reasonText, 'application credential')
+            || (str_contains($reasonText, 'site') && (
+                str_contains($reasonText, 'invalid')
+                || str_contains($reasonText, 'not found')
+                || str_contains($reasonText, 'not allowed')
+            ));
         return ['status' => $isSiteError ? 'invalid_site' : 'invalid_token'];
     }
     return ['status' => 'invalid_response'];

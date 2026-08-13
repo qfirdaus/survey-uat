@@ -25,7 +25,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - OneID callbacks now prioritize a newly returned token over stale browser credentials and convert invalid-token, invalid-site, malformed-response, unavailable-service, and invalid-identity outcomes into controlled local login feedback.
 - OneID API requests now enforce certificate and hostname verification with explicit connection and total timeouts.
 - The OneID browser cookie now contains only the opaque credential, uses a shorter lifetime, and applies `HttpOnly`, `SameSite=Lax`, and HTTPS-aware `Secure` protection.
-- SSO handoffs now carry an expiry, one-time nonce, correlation ID, and explicit identity state; ambiguous staff/student payloads are rejected instead of being resolved silently.
+- SSO handoffs carry an expiry, one-time nonce, correlation ID, and explicit identity state; OneID staff, student, and hybrid identities are resolved from the canonical `u_category`, with a staff-first fallback for legacy packets that do not provide a category.
 - OneID events are logged with a correlation ID without recording raw tokens or the complete identity packet.
 - Dependency-free regression coverage verifies response classification, staff/student identifier handling, auto-reissue, timeout and TLS controls, callback precedence, and handoff requirements.
 
