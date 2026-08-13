@@ -6,6 +6,35 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+## [1.9.6] - 2026-08-13
+
+### Added
+- Added dependency-free OneID SSO flow helpers for deterministic identity validation and API response classification.
+- Added localized Malay and English feedback for invalid OneID tokens, rejected site configuration, malformed provider responses, and unavailable SSO service conditions.
+- Added correlation IDs and structured OneID lifecycle logging without raw tokens or complete identity payloads.
+- Added OneID SSO regression coverage for staff and student identifiers, ambiguous or invalid identity packets, rejected tokens and sites, auto-reissue, malformed responses, callback precedence, TLS, timeouts, and handoff requirements.
+
+### Changed
+- Changed project release metadata to version `1.9.6`.
+- Changed OneID callback processing so a fresh `new_sso_cre` token always takes precedence over an existing browser cookie.
+- Changed every OneID verification outcome to terminate through a successful handoff or controlled local failure instead of redirecting repeatedly, rendering a blank response, or printing the vendor `X` marker.
+- Changed OneID API calls to use a five-second connection timeout, a fifteen-second total timeout, certificate verification, and hostname verification.
+- Changed the OneID browser cookie to retain only the opaque credential for one hour with `HttpOnly`, `SameSite=Lax`, and HTTPS-aware `Secure` attributes.
+- Changed SSO handoffs to include an explicit expiry, correlation ID, identity validity state, and identity-conflict state in addition to the existing nonce and consumption marker.
+- Changed identity resolution to reject packets containing both a valid staff ID and a valid student matric identifier instead of silently preferring the staff identity.
+
+### Fixed
+- Fixed invalid existing and callback tokens being able to finish without a redirect or user-facing result.
+- Fixed incomplete auto-reissue responses displaying a raw `X` response.
+- Fixed stale OneID cookies taking precedence over a newly returned callback token.
+- Fixed unreachable, empty, malformed, or unsupported OneID API responses falling through generic vendor behavior without actionable local feedback.
+
+### Security
+- Enabled TLS peer and hostname verification for communication with the OneID API.
+- Removed the complete OneID identity packet from the browser cookie and reduced its lifetime from thirty days to one hour.
+- Prevented raw OneID credentials and complete provider packets from being written by the new SSO lifecycle audit logging.
+- Required SSO application handoffs to carry a valid correlation ID and rejected ambiguous staff/student identities.
+
 ## [1.9.5] - 2026-08-11
 
 ### Added

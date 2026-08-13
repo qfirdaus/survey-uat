@@ -10,6 +10,7 @@
 
 //********** [USER EDITABLE] *******************************
 require_once __DIR__ . '/includes/sso-config.php';
+require_once __DIR__ . '/includes/sso-flow.php';
 
 $__ssoConfig = sso_shared_config();
 $site_id = $__ssoConfig['site_id']; //<---- Get from SSO Admin
@@ -54,46 +55,39 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 	session_start();
 }
 
-function SSO_SANITIZE_IDENTIFIER($value) {
-	$value = trim((string)$value);
-	return $value;
+function SSO_CORRELATION_ID(): string {
+	$current = trim((string)($_SESSION['sso_correlation_id'] ?? ''));
+	if ($current !== '') return $current;
+	$current = bin2hex(random_bytes(8));
+	$_SESSION['sso_correlation_id'] = $current;
+	return $current;
 }
 
-function SSO_VALIDATE_STAFID($value) {
-	$value = SSO_SANITIZE_IDENTIFIER($value);
-	return $value !== '' && preg_match('/^\d{4}-\d{2}$/', $value) === 1;
+function SSO_LOG_EVENT(string $event, array $context = []): void {
+	$context['correlation_id'] = SSO_CORRELATION_ID();
+	$context['event'] = $event;
+	$context['time'] = date('c');
+	error_log('[OneID SSO] ' . json_encode($context, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 }
 
-function SSO_VALIDATE_MATRIK($value) {
-	$value = SSO_SANITIZE_IDENTIFIER($value);
-	return $value !== '' && preg_match('/^[A-Za-z0-9]{1,12}$/', $value) === 1;
+function SSO_CLEAR_COOKIE(): void {
+	$isHttps = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off')
+		|| strtolower(trim(explode(',', (string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0])) === 'https';
+	setcookie('sso_cre', '', ['expires' => time() - 3600, 'path' => '/', 'secure' => $isHttps, 'httponly' => true, 'samesite' => 'Lax']);
+	unset($_COOKIE['sso_cre']);
 }
 
-function SSO_BUILD_AUTH_HANDOFF($IDP_RESPOND_USER_PACKET) {
-	$packet = is_array($IDP_RESPOND_USER_PACKET) ? $IDP_RESPOND_USER_PACKET : [];
-	$data3 = SSO_SANITIZE_IDENTIFIER($packet['data3'] ?? '');
-	$data4 = SSO_SANITIZE_IDENTIFIER($packet['data4'] ?? '');
-
-	$validStafId = SSO_VALIDATE_STAFID($data3) ? $data3 : '';
-	$validMatrik = SSO_VALIDATE_MATRIK($data4) ? $data4 : '';
-
-	$resolvedLoginId = '';
-	$resolvedSource = '';
-	if ($validStafId !== '') {
-		$resolvedLoginId = $validStafId;
-		$resolvedSource = 'data3';
-	} elseif ($validMatrik !== '') {
-		$resolvedLoginId = $validMatrik;
-		$resolvedSource = 'data4';
-	}
-
-	return [
-		'valid_token' => true,
-		'resolved_login_id' => $resolvedLoginId,
-		'resolved_source' => $resolvedSource,
-		'data3_valid' => $validStafId !== '',
-		'data4_valid' => $validMatrik !== '',
+function SSO_SET_FAILURE_ALERT(string $reason): void {
+	$map = [
+		'invalid_token' => ['login_sso_token_invalid_title', 'login_sso_token_invalid_msg'],
+		'invalid_site' => ['login_sso_site_invalid_title', 'login_sso_site_invalid_msg'],
+		'service_unreachable' => ['login_sso_service_unreachable_title', 'login_sso_service_unreachable_msg'],
+		'invalid_response' => ['login_sso_response_invalid_title', 'login_sso_response_invalid_msg'],
+		'identity_invalid' => ['login_sso_payload_invalid_title', 'login_sso_payload_invalid_msg'],
 	];
+	[$title, $text] = $map[$reason] ?? $map['invalid_response'];
+	$_SESSION['alert'] = ['type' => 'sweet', 'title' => $title, 'text' => $text, 'icon' => 'warning', 'confirm' => true, 'close_on_confirm' => true, 'is_key' => true];
+	$_SESSION['sso_last_failure_reference'] = SSO_CORRELATION_ID();
 }
 
 // If your site are using PHP Sessions keys $_SESSION.
@@ -107,8 +101,12 @@ function LOCAL_SESSION_HANDLER($IDP_RESPOND_USER_PACKET){
 		'resolved_source' => $handoff['resolved_source'],
 		'data3_valid' => $handoff['data3_valid'],
 		'data4_valid' => $handoff['data4_valid'],
+		'identity_valid' => $handoff['identity_valid'],
+		'identity_conflict' => $handoff['identity_conflict'],
 		'issued_at' => time(),
+		'expires_at' => time() + 300,
 		'nonce' => bin2hex(random_bytes(16)),
+		'correlation_id' => SSO_CORRELATION_ID(),
 		'consumed_at' => null,
 	];
 }
@@ -162,138 +160,114 @@ function SSO_REDIRECT($url): void {
 	header('Location: ' . $url);
 	exit;
 }
+function SSO_FAIL(string $reason): void {
+	$count = max(0, (int)($_SESSION['sso_failure_count'] ?? 0)) + 1;
+	$_SESSION['sso_failure_count'] = $count;
+	unset($_SESSION['sso_auth_handoff'], $_SESSION['sso_login_initiated_at']);
+	SSO_CLEAR_COOKIE();
+	SSO_SET_FAILURE_ALERT($reason);
+	SSO_LOG_EVENT('failure', ['reason' => $reason, 'failure_count' => $count]);
+	$loginPage = preg_replace('~/login\.php$~', '/index.php', SSO_SP_DASHBOARD) ?: SSO_SP_DASHBOARD;
+	SSO_REDIRECT($loginPage);
+}
+function SSO_VERIFY_TOKEN(string $token, string $siteId): array {
+	$payload = json_encode(['flag' => 1, 'data' => ['site_id' => $siteId, 'token' => $token]]);
+	$apiResult = SSO_API_REQUEST((string)$payload, SSO_IDP_DOMAIN);
+	if (!$apiResult['ok']) {
+		SSO_LOG_EVENT('api_unreachable', ['http_code' => $apiResult['http_code'], 'error' => $apiResult['error']]);
+		return ['status' => 'service_unreachable'];
+	}
+	$decoded = json_decode((string)$apiResult['body'], true);
+	if (!is_array($decoded) || json_last_error() !== JSON_ERROR_NONE) {
+		SSO_LOG_EVENT('api_invalid_json', ['http_code' => $apiResult['http_code']]);
+		return ['status' => 'invalid_response'];
+	}
+	return SSO_CLASSIFY_API_RESPONSE($decoded);
+}
+function SSO_COMPLETE_VERIFIED_TOKEN(string $token, array $result): void {
+	$packet = is_array($result['packet'] ?? null) ? $result['packet'] : [];
+	$handoff = SSO_BUILD_AUTH_HANDOFF($packet);
+	if (empty($handoff['identity_valid']) || !empty($handoff['identity_conflict'])) {
+		SSO_FAIL('identity_invalid');
+	}
+	COOKIE_SETTER($token, $packet);
+	LOCAL_SESSION_HANDLER($packet);
+	$_SESSION['sso_failure_count'] = 0;
+	unset($_SESSION['sso_login_initiated_at']);
+	SSO_LOG_EVENT('token_verified', ['identity_source' => $handoff['resolved_source'], 'reissued' => !empty($result['reissued'])]);
+	SSO_REDIRECT(SSO_SP_DASHBOARD);
+}
 if (!defined('SSO_SP_CLIENT_NOAUTO')) {
-	if(!isset($_COOKIE['sso_cre'])) {
-  //Check if have new SSO token to be publish to browser
-	if(isset($_GET['new_sso_cre'])) {
-		//Check if new_sso_cre is valid or not		
-		$API_post_fields = array();
-		$API_post_fields['flag'] = 1;
-		$API_post_fields['data'] = array("site_id"=>$site_id,"token"=>$_GET['new_sso_cre']);		
-		$API_REQUEST_RESULT = json_decode(API_REQUEST(json_encode($API_post_fields),SSO_IDP_DOMAIN),true);
-		
-		switch($API_REQUEST_RESULT['respond_flag']){
-			case "1": //normal
-				switch($API_REQUEST_RESULT['respond']){
-					case "0": //Invalid
-			  			SSO_REDIRECT(SSO_IDP_DOMAIN.'/?site_id='.$site_id);
-					break;
-					case "1": //Valid					
-						//Set the sso_cre token to cookies
-						COOKIE_SETTER($_GET['new_sso_cre'],$API_REQUEST_RESULT['respond_user_packet']);
-						LOCAL_SESSION_HANDLER($API_REQUEST_RESULT['respond_user_packet']);
-	  					SSO_REDIRECT(SSO_SP_DASHBOARD);
-					break; 
-				}
-			break;
-			case "2": //Auto Reissue token
-			echo "X";
-			break;
-			default:
-	  			SSO_REDIRECT(SSO_IDP_DOMAIN.'/?site_id='.$site_id);
-			break;
-		}
-	}else{
-	  //Go to IDP
-	  SSO_REDIRECT(SSO_IDP_DOMAIN.'/?site_id='.$site_id);
+	$incomingToken = trim((string)($_GET['new_sso_cre'] ?? ''));
+	if ($incomingToken !== '') {
+		// A fresh callback must always win over stale browser state.
+		SSO_CLEAR_COOKIE();
+		$result = SSO_VERIFY_TOKEN($incomingToken, (string)$site_id);
+		if (($result['status'] ?? '') !== 'valid') SSO_FAIL((string)($result['status'] ?? 'invalid_response'));
+		$verifiedToken = !empty($result['reissued']) ? (string)($result['token'] ?? '') : $incomingToken;
+		SSO_COMPLETE_VERIFIED_TOKEN($verifiedToken, $result);
 	}
-}else{
-		$cookie = json_decode( $_COOKIE["sso_cre"] );
-		// if(check_cookie_time($cookie->sso_dt) == 0){
-		// 	if(SSO_SP_LOGINPAGE == $SP_current_page){
-		// 		header('Location: '.SSO_SP_DASHBOARD); 
-		// 	}else{
-		// 		return;
-		// 	}
-		// }
 
-		$API_post_fields = array();
-		$API_post_fields['flag'] = 1;
-		$API_post_fields['data'] = array("site_id"=>$site_id,"token"=>$cookie->sso_cre);
-		$API_REQUEST_RESULT = json_decode(API_REQUEST(json_encode($API_post_fields),SSO_IDP_DOMAIN),true);
-		switch($API_REQUEST_RESULT['respond_flag']){
-			case "1": //normal
-				switch($API_REQUEST_RESULT['respond']){
-					case "0": //Invalid
-						if(isset($_GET['new_sso_cre'])) { //check ada tak new_sso_cre. kalau ad kite check dulu valid x valid. kalau valid kite use new token
-							$API_post_fields = array();
-							$API_post_fields['flag'] = 1;
-							$API_post_fields['data'] = array("site_id"=>$site_id,"token"=>$_GET['new_sso_cre']);		
-							$API_REQUEST_RESULT = json_decode(API_REQUEST(json_encode($API_post_fields),SSO_IDP_DOMAIN),true);
-							switch($API_REQUEST_RESULT['respond_flag']){
-								case "1": //normal
-									switch($API_REQUEST_RESULT['respond']){
-										case "0": //Invalid
-										break;
-										case "1": //Valid
-											COOKIE_SETTER($_GET['new_sso_cre'],$API_REQUEST_RESULT['respond_user_packet']);
-											if(SSO_SP_LOGINPAGE == $SP_current_page){
-												LOCAL_SESSION_HANDLER($API_REQUEST_RESULT['respond_user_packet']);						
-						  						SSO_REDIRECT(SSO_SP_DASHBOARD);
-											}	
-										break; 
-									}
-								break;
-								case "2": //Auto Reissue token
-								echo "X";
-								break;
-								default:
-						  			SSO_REDIRECT(SSO_IDP_DOMAIN.'/?site_id='.$site_id);
-								break;
-							}
-						}else{
-			  				SSO_REDIRECT(SSO_IDP_DOMAIN.'/?site_id='.$site_id);
-						}
-					break;
-					case "1": //Valid
-						COOKIE_SETTER($cookie->sso_cre,$API_REQUEST_RESULT['respond_user_packet']);
-						if(SSO_SP_LOGINPAGE == $SP_current_page){
-							LOCAL_SESSION_HANDLER($API_REQUEST_RESULT['respond_user_packet']);	
-							SSO_REDIRECT(SSO_SP_DASHBOARD);
-						}	
-					break; 
-				}
-			break;
-			case "2": //Auto Reissue token
-				COOKIE_SETTER($API_REQUEST_RESULT['respond_new_token'],$API_REQUEST_RESULT['respond_user_packet']);
-				if(SSO_SP_LOGINPAGE == $SP_current_page){
-					LOCAL_SESSION_HANDLER($API_REQUEST_RESULT['respond_user_packet']);	
-					SSO_REDIRECT(SSO_SP_DASHBOARD);
-				}	
-			break;
-			default:
-	  			SSO_REDIRECT(SSO_IDP_DOMAIN.'/?site_id='.$site_id);
-			break;
-		}
+	$cookie = isset($_COOKIE['sso_cre']) ? json_decode((string)$_COOKIE['sso_cre'], true) : null;
+	$cookieToken = is_array($cookie) ? trim((string)($cookie['sso_cre'] ?? '')) : '';
+	if ($cookieToken !== '') {
+		$result = SSO_VERIFY_TOKEN($cookieToken, (string)$site_id);
+		if (($result['status'] ?? '') !== 'valid') SSO_FAIL((string)($result['status'] ?? 'invalid_response'));
+		$verifiedToken = !empty($result['reissued']) ? (string)($result['token'] ?? '') : $cookieToken;
+		SSO_COMPLETE_VERIFIED_TOKEN($verifiedToken, $result);
 	}
+
+	SSO_CLEAR_COOKIE();
+	$_SESSION['sso_login_initiated_at'] = time();
+	$_SESSION['sso_correlation_id'] = bin2hex(random_bytes(8));
+	SSO_LOG_EVENT('login_initiated');
+	SSO_REDIRECT(SSO_IDP_DOMAIN . '/?site_id=' . rawurlencode((string)$site_id));
 }
 
-function API_REQUEST($API_DATA,$SSO_IDP_DOMAIN){
-    $API_URII = SSO_IDP_DOMAIN.'/api.php';
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $API_URII);
-    curl_setopt($ch,CURLOPT_RETURNTRANSFER,1);
-    curl_setopt($ch,CURLOPT_HEADER, false);
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4 );
+function SSO_API_REQUEST($API_DATA, $SSO_IDP_DOMAIN): array {
+	    $API_URII = SSO_IDP_DOMAIN.'/api.php';
+	    if (!function_exists('curl_init')) return ['ok' => false, 'body' => '', 'error' => 'curl_extension_unavailable', 'http_code' => 0];
+	    $ch = curl_init();
+	    if ($ch === false) return ['ok' => false, 'body' => '', 'error' => 'curl_init_failed', 'http_code' => 0];
+	    curl_setopt($ch, CURLOPT_URL, $API_URII);
+	    curl_setopt($ch,CURLOPT_RETURNTRANSFER,1);
+	    curl_setopt($ch,CURLOPT_HEADER, false);
+	    curl_setopt($ch, CURLOPT_POST, 1);
+	    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+	    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+	    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+	    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+	    curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4 );
     curl_setopt($ch, CURLOPT_HTTPHEADER, array(
         'Content-Type: text/plain'));
     curl_setopt($ch, CURLOPT_POSTFIELDS, ($API_DATA));
 
-    $result = curl_exec($ch);
+	    $result = curl_exec($ch);
+	    $error = curl_error($ch);
+	    $httpCode = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+	    curl_close($ch);
+	    $ok = is_string($result) && $result !== '' && $httpCode >= 200 && $httpCode < 300;
+	    return ['ok' => $ok, 'body' => is_string($result) ? $result : '', 'error' => $error, 'http_code' => $httpCode];
+}
 
-    // also get the error and response code
-    curl_close($ch);
-    return ($result);
+function API_REQUEST($API_DATA,$SSO_IDP_DOMAIN){
+	$result = SSO_API_REQUEST($API_DATA, $SSO_IDP_DOMAIN);
+	return $result['body'];
 }
 //--------- END OF SSO Checker
 
 function COOKIE_SETTER($sso_cre,$respond_user_packet){
-
-	$cookieData = array_merge(array( "sso_dt" => date('Y-m-d H:i:s'), "sso_cre" => $sso_cre), $respond_user_packet);
-	setcookie('sso_cre', json_encode($cookieData), time() + (86400 * 30),'/',''); // 86400 = 1 day (this is default 1 day)]	
+		$isHttps = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off')
+			|| strtolower(trim(explode(',', (string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0])) === 'https';
+		// The browser only needs the opaque credential for the vendor refresh flow.
+		$cookieData = ["sso_dt" => date('Y-m-d H:i:s'), "sso_cre" => (string)$sso_cre];
+		setcookie('sso_cre', json_encode($cookieData), [
+			'expires' => time() + 3600,
+			'path' => '/',
+			'secure' => $isHttps,
+			'httponly' => true,
+			'samesite' => 'Lax',
+		]);
 }
 
 function GET_CURRENT_PAGE_URI(){

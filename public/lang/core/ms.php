@@ -481,6 +481,18 @@
                            => 'Perkhidmatan SSO Tidak Dapat Dicapai',
 'login_sso_service_unreachable_msg'
                            => 'Sistem tidak dapat berhubung dengan perkhidmatan Single Sign-On (SSO) buat masa ini. Sila cuba semula kemudian.',
+'login_sso_token_invalid_title'
+                           => 'Log Masuk OneID Tidak Sah',
+'login_sso_token_invalid_msg'
+                           => 'Log masuk OneID tidak dapat disahkan. Sila mulakan semula log masuk melalui OneID.',
+'login_sso_site_invalid_title'
+                           => 'Konfigurasi OneID Tidak Sah',
+'login_sso_site_invalid_msg'
+                           => 'Aplikasi ini tidak dikenali oleh perkhidmatan OneID. Sila hubungi pentadbir sistem.',
+'login_sso_response_invalid_title'
+                           => 'Respons OneID Tidak Sah',
+'login_sso_response_invalid_msg'
+                           => 'Respons daripada OneID tidak dapat diproses. Sila cuba semula kemudian.',
 
 // Akaun dikunci / dibuka
 'login_locked_title'       => 'Akaun Dikunci',

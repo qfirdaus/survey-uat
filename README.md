@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.9.5`
+- Current version: `1.9.6`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -19,6 +19,15 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Runtime model: native WSL; Docker, Docker Compose, and container-specific Apache assets are no longer maintained in this repository
 - Main database: MySQL `8.x`
 - External database support: Sybase through ODBC/DBLIB, plus additional PDO connections configured from the system UI
+
+## Version 1.9.6 OneID SSO Security and Reliability
+
+- OneID callbacks now prioritize a newly returned token over stale browser credentials and convert invalid-token, invalid-site, malformed-response, unavailable-service, and invalid-identity outcomes into controlled local login feedback.
+- OneID API requests now enforce certificate and hostname verification with explicit connection and total timeouts.
+- The OneID browser cookie now contains only the opaque credential, uses a shorter lifetime, and applies `HttpOnly`, `SameSite=Lax`, and HTTPS-aware `Secure` protection.
+- SSO handoffs now carry an expiry, one-time nonce, correlation ID, and explicit identity state; ambiguous staff/student payloads are rejected instead of being resolved silently.
+- OneID events are logged with a correlation ID without recording raw tokens or the complete identity packet.
+- Dependency-free regression coverage verifies response classification, staff/student identifier handling, auto-reissue, timeout and TLS controls, callback precedence, and handoff requirements.
 
 ## Version 1.9.5 Settings Synchronization and Account Recovery
 
@@ -54,6 +63,8 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Role switching for users with more than one available group context through `role-switch.php` and `role-switch-roles.php`.
 - Profile workspace with login activity, audit history, active session visibility, and session termination support.
 - Login policy configuration from System Settings, including manual login route control and SSO compatibility settings.
+- OneID SSO validates callback tokens through the configured identity provider, uses a five-minute one-time application handoff, and reports provider, token, site, response, identity, provisioning, policy, and lockout failures through controlled login feedback.
+- OneID transport enforces TLS verification and bounded request timeouts, while browser state is restricted to a short-lived protected opaque credential and application audit records exclude raw tokens.
 - Forgot Password supports Login ID, registered email, staff ID, and employee-number lookup for eligible manual accounts, with duplicate-identifier protection and generic public responses.
 - Password recovery reuses the active login policy: SSO-managed accounts remain with their identity provider, while manual Super Admin recovery remains available during maintenance and category shutdowns subject to active-account and registered-email checks.
 - Reset links are hashed, expiring, single-use, rate limited, preserved until replacement email delivery succeeds, and consumed transactionally with the local password update.

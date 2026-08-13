@@ -481,6 +481,18 @@
                            => 'SSO Service Unreachable',
 'login_sso_service_unreachable_msg'
                            => 'The system could not reach the Single Sign-On (SSO) service at this time. Please try again later.',
+'login_sso_token_invalid_title'
+                           => 'Invalid OneID Login',
+'login_sso_token_invalid_msg'
+                           => 'The OneID login could not be verified. Please start the OneID login again.',
+'login_sso_site_invalid_title'
+                           => 'Invalid OneID Configuration',
+'login_sso_site_invalid_msg'
+                           => 'This application is not recognized by OneID. Please contact the system administrator.',
+'login_sso_response_invalid_title'
+                           => 'Invalid OneID Response',
+'login_sso_response_invalid_msg'
+                           => 'The response from OneID could not be processed. Please try again later.',
 
 // Akaun dikunci / dibuka
 'login_locked_title'       => 'Account Locked',
