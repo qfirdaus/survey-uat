@@ -107,6 +107,9 @@ class LoginController
             $this->auditLoginFail($loginID, (string)$policyDecision['reason'], $user, $attemptedMethod);
             throw new \RuntimeException((string)$policyDecision['exception']);
         }
+        if ($attemptedMethod === 'SSO') {
+            $user = $this->reconcileExistingSsoUser($user, $loginID);
+        }
 
         $prePasswordDecision = $this->evaluatePrePasswordCredentialLifecycle($user, $attemptedMethod);
         if (!$prePasswordDecision['allowed']) {
@@ -615,7 +618,7 @@ class LoginController
                 throw new \RuntimeException('SSO_ACCOUNT_NOT_PROVISIONED');
             }
 
-            $existingUser = $this->findProvisionableUserByIdentifier($resolvedLoginId);
+            $existingUser = $this->findProvisionableUserByIdentifier($resolvedLoginId, $category);
             if ($existingUser) {
                 return $existingUser;
             }
@@ -642,7 +645,7 @@ class LoginController
 
             $this->pdo->beginTransaction();
 
-            $recheckUser = $this->findProvisionableUserByIdentifier($resolvedLoginId);
+            $recheckUser = $this->findProvisionableUserByIdentifier($resolvedLoginId, $category);
             if ($recheckUser) {
                 $this->pdo->commit();
                 return $recheckUser;
@@ -663,7 +666,7 @@ class LoginController
                 $this->pdo->rollBack();
             }
             error_log('[LoginController] SSO auto provision failed: ' . $e->getMessage());
-            if ($e instanceof \RuntimeException && in_array($e->getMessage(), ['SSO_ACCOUNT_NOT_PROVISIONED', 'SSO_AUTO_PROVISION_FAILED', 'SSO_DEFAULT_GROUP_INVALID', 'SSO_SOURCE_UNAVAILABLE'], true)) {
+            if ($e instanceof \RuntimeException && in_array($e->getMessage(), ['SSO_ACCOUNT_NOT_PROVISIONED', 'SSO_AUTO_PROVISION_FAILED', 'SSO_DEFAULT_GROUP_INVALID', 'SSO_SOURCE_UNAVAILABLE', 'ACCESS_BLOCKED', 'SSO_ACCOUNT_CATEGORY_MISMATCH'], true)) {
                 throw $e;
             }
             $this->auditAutoProvisionBlocked($resolvedLoginId, $category, 'provision_insert_failed');
@@ -674,10 +677,16 @@ class LoginController
     private function resolveSsoProvisionCategory(array $handoff, string $loginID): string
     {
         $source = strtolower(trim((string)($handoff['resolved_source'] ?? '')));
-        if ($source === 'data3' || !empty($handoff['data3_valid'])) {
+        if ($source === 'data3') {
             return 'STAF';
         }
-        if ($source === 'data4' || !empty($handoff['data4_valid'])) {
+        if ($source === 'data4') {
+            return 'PELAJAR';
+        }
+        if (!empty($handoff['data3_valid']) && empty($handoff['data4_valid'])) {
+            return 'STAF';
+        }
+        if (!empty($handoff['data4_valid']) && empty($handoff['data3_valid'])) {
             return 'PELAJAR';
         }
 
@@ -734,6 +743,10 @@ class LoginController
     private function fetchStaffProvisioningRecord(string $staffId): ?array
     {
         $pdoSybase = Database::pdoSybaseStaff();
+        if (!$pdoSybase) {
+            throw new \RuntimeException('Staff provisioning source is unavailable.');
+        }
+        $staffId = $this->normalizeSsoIdentifier($staffId, 'STAF');
         $sql = "
             SELECT
                 nopekerja,
@@ -753,8 +766,8 @@ class LoginController
                 kodstatus,
                 status
             FROM v630staf_service_skim_all
-            WHERE nopekerja = :nopekerja
-              AND CONVERT(INT, kodstatus) = 1
+            WHERE LTRIM(RTRIM(CONVERT(VARCHAR(50), nopekerja))) = :nopekerja
+              AND LTRIM(RTRIM(CONVERT(VARCHAR(20), kodstatus))) = '1'
         ";
         $stmt = $pdoSybase->prepare($sql);
         $stmt->execute([':nopekerja' => $staffId]);
@@ -767,13 +780,14 @@ class LoginController
     private function fetchStudentProvisioningRecord(string $matrik): ?array
     {
         if (function_exists('is_student_mode_enabled') && !is_student_mode_enabled()) {
-            return null;
+            throw new \RuntimeException('Student provisioning mode is disabled.');
         }
 
         $pdoSybase = Database::pdoSybaseStudent();
         if (!$pdoSybase) {
-            return null;
+            throw new \RuntimeException('Student provisioning source is unavailable.');
         }
+        $matrik = $this->normalizeSsoIdentifier($matrik, 'PELAJAR');
 
         $sql = "
             SELECT
@@ -797,8 +811,8 @@ class LoginController
                 statusketerangan,
                 statuskategori
             FROM v210
-            WHERE convert(varchar(50), matrik) = :matrik
-              AND upper(convert(varchar(20), statuskategori)) = 'AKTIF'
+            WHERE UPPER(LTRIM(RTRIM(CONVERT(VARCHAR(50), matrik)))) = :matrik
+              AND UPPER(LTRIM(RTRIM(CONVERT(VARCHAR(20), statuskategori)))) = 'AKTIF'
         ";
         $stmt = $pdoSybase->prepare($sql);
         $stmt->execute([':matrik' => $matrik]);
@@ -979,22 +993,38 @@ class LoginController
     /**
      * @return array<string,mixed>|null
      */
-    private function findProvisionableUserByIdentifier(string $identifier): ?array
+    private function findProvisionableUserByIdentifier(string $identifier, string $expectedCategory): ?array
     {
+        $identifier = $this->normalizeSsoIdentifier($identifier, $expectedCategory);
         $stmt = $this->pdo->prepare(
-            "SELECT f_userID, TRIM(COALESCE(f_loginID, '')) AS f_loginID, TRIM(COALESCE(f_stafID, '')) AS f_stafID
+            "SELECT f_userID, TRIM(COALESCE(f_loginID, '')) AS f_loginID,
+                    TRIM(COALESCE(f_stafID, '')) AS f_stafID,
+                    TRIM(COALESCE(f_categoryUser, '')) AS f_categoryUser,
+                    COALESCE(f_statusID, 0) AS f_statusID,
+                    COALESCE(f_flag, 1) AS f_flag
              FROM tbl_m_user
-             WHERE TRIM(COALESCE(f_loginID, '')) = :login_identifier
-                OR TRIM(COALESCE(f_stafID, '')) = :staff_identifier
+             WHERE UPPER(TRIM(COALESCE(f_loginID, ''))) = :login_identifier
+                OR UPPER(TRIM(COALESCE(f_stafID, ''))) = :staff_identifier
              LIMIT 1"
         );
         $stmt->execute([
-            ':login_identifier' => trim($identifier),
-            ':staff_identifier' => trim($identifier),
+            ':login_identifier' => strtoupper($identifier),
+            ':staff_identifier' => strtoupper($identifier),
         ]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         if (!$row) {
             return null;
+        }
+
+        if ((int)($row['f_statusID'] ?? 0) === 9 || (int)($row['f_flag'] ?? 1) !== 1) {
+            $this->auditAutoProvisionBlocked($identifier, $expectedCategory, 'existing_account_disabled');
+            throw new \RuntimeException('ACCESS_BLOCKED');
+        }
+
+        $actualCategory = $this->normalizeLoginCategory($row['f_categoryUser'] ?? null, $row);
+        if ($actualCategory !== $expectedCategory) {
+            $this->auditAutoProvisionBlocked($identifier, $expectedCategory, 'existing_account_category_mismatch');
+            throw new \RuntimeException('SSO_ACCOUNT_CATEGORY_MISMATCH');
         }
 
         $resolvedLoginId = trim((string)($row['f_loginID'] ?? ''));
@@ -1002,7 +1032,68 @@ class LoginController
             $resolvedLoginId = trim((string)($row['f_stafID'] ?? ''));
         }
 
-        return $resolvedLoginId !== '' ? $this->userModel->findByLoginID($resolvedLoginId) : null;
+        $user = $resolvedLoginId !== '' ? $this->userModel->findByLoginID($resolvedLoginId) : null;
+        return $user ? $this->reconcileExistingSsoUser($user, $identifier) : null;
+    }
+
+    private function normalizeSsoIdentifier(string $identifier, string $category): string
+    {
+        $identifier = trim($identifier);
+        if ($category === 'STAF') {
+            return preg_replace('/\s*-\s*/', '-', $identifier) ?? $identifier;
+        }
+        return strtoupper($identifier);
+    }
+
+    /**
+     * A valid OneID response is sufficient to verify an active existing account,
+     * but must never reactivate it or silently change its category/group.
+     *
+     * @param array<string,mixed> $user
+     * @return array<string,mixed>
+     */
+    private function reconcileExistingSsoUser(array $user, string $loginID): array
+    {
+        $handoff = is_array($_SESSION['sso_auth_handoff'] ?? null) ? $_SESSION['sso_auth_handoff'] : [];
+        $expectedCategory = $this->resolveSsoProvisionCategory($handoff, $loginID);
+        $actualCategory = $this->normalizeLoginCategory($user['f_categoryUser'] ?? null, $user);
+
+        if (in_array($expectedCategory, ['STAF', 'PELAJAR'], true) && $actualCategory !== $expectedCategory) {
+            $this->auditAutoProvisionBlocked($loginID, $expectedCategory, 'existing_account_category_mismatch');
+            throw new \RuntimeException('SSO_ACCOUNT_CATEGORY_MISMATCH');
+        }
+        if ((int)($user['f_statusID'] ?? 0) === 9 || (int)($user['f_flag'] ?? 1) !== 1) {
+            $this->auditAutoProvisionBlocked($loginID, $actualCategory, 'existing_account_disabled');
+            throw new \RuntimeException('ACCESS_BLOCKED');
+        }
+
+        $updates = [];
+        if ($this->tableHasColumn('tbl_m_user', 'f_verified_at') && trim((string)($user['f_verified_at'] ?? '')) === '') {
+            $updates['f_verified_at'] = date('Y-m-d H:i:s');
+        }
+        if ($this->tableHasColumn('tbl_m_user', 'f_identitySource') && strtoupper(trim((string)($user['f_identitySource'] ?? ''))) !== 'SSO') {
+            $updates['f_identitySource'] = 'SSO';
+        }
+        if ($updates === []) {
+            return $user;
+        }
+
+        $assignments = [];
+        $params = [':user_id' => (int)($user['f_userID'] ?? 0)];
+        foreach ($updates as $column => $value) {
+            $assignments[] = $column . ' = :' . $column;
+            $params[':' . $column] = $value;
+        }
+        if ($this->tableHasColumn('tbl_m_user', 'f_updatedt')) {
+            $assignments[] = 'f_updatedt = NOW()';
+        }
+        if ($params[':user_id'] <= 0) {
+            throw new \RuntimeException('SSO_AUTO_PROVISION_FAILED');
+        }
+
+        $stmt = $this->pdo->prepare('UPDATE tbl_m_user SET ' . implode(', ', $assignments) . ' WHERE f_userID = :user_id');
+        $stmt->execute($params);
+        return $this->userModel->findByLoginID((string)($user['f_loginID'] ?? $loginID)) ?? $user;
     }
 
     private function auditAutoProvisionSuccess(string $loginID, string $category, int $userId, string $groupCode): void

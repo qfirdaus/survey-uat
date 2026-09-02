@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.9.6`
+- Current version: `1.9.7`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -19,6 +19,15 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Runtime model: native WSL; Docker, Docker Compose, and container-specific Apache assets are no longer maintained in this repository
 - Main database: MySQL `8.x`
 - External database support: Sybase through ODBC/DBLIB, plus additional PDO connections configured from the system UI
+
+## Version 1.9.7 Staff and Student SSO Provisioning Reliability
+
+- Staff and Student auto provisioning now prioritizes the canonical identity selected from the OneID category, preventing Student packets that also contain `data3` from being routed through Staff provisioning.
+- Staff IDs and Student matric identifiers are normalized consistently across OneID, local users, and external Sybase lookups; surrounding whitespace and Student identifier case differences no longer cause false record-not-found results.
+- Student `AKTIF` and Staff status lookups are more resilient to non-canonical source formatting, while disabled Student mode and unavailable provisioning sources are reported through the correct controlled failure path.
+- Active existing accounts can reconcile missing verification and SSO identity-source metadata after successful OneID authentication without changing their category or assigned group.
+- Disabled accounts remain blocked, and category conflicts between OneID and the local account are rejected and audited instead of being silently repaired or reprovisioned.
+- Dependency-free OneID regression coverage now verifies 31 Staff, Student, source lookup, identity resolution, and security cases.
 
 ## Version 1.9.6 OneID SSO Security and Reliability
 

@@ -666,6 +666,20 @@ try {
         exit;
     }
 
+    if ($e->getMessage() === 'SSO_ACCOUNT_CATEGORY_MISMATCH') {
+        set_alert([
+            'type'  => 'sweet',
+            'title' => 'login_sso_account_not_provisioned_title',
+            'text'  => 'login_sso_account_not_provisioned_msg',
+            'icon'  => 'warning',
+            'confirm' => true,
+            'close_on_confirm' => true,
+        ]);
+        log_login_event("SSO_ACCOUNT_CATEGORY_MISMATCH", $f_loginID);
+        redirect('index.php');
+        exit;
+    }
+
     if ($e->getMessage() === 'SSO_DEFAULT_GROUP_INVALID') {
         set_alert([
             'type'  => 'sweet',

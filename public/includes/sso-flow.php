@@ -7,23 +7,34 @@ function SSO_SANITIZE_IDENTIFIER($value): string
     return trim((string)$value);
 }
 
-function SSO_VALIDATE_STAFID($value): bool
+function SSO_NORMALIZE_STAFF_ID($value): string
 {
     $value = SSO_SANITIZE_IDENTIFIER($value);
+    return preg_replace('/\s*-\s*/', '-', $value) ?? $value;
+}
+
+function SSO_NORMALIZE_MATRIK($value): string
+{
+    return strtoupper(SSO_SANITIZE_IDENTIFIER($value));
+}
+
+function SSO_VALIDATE_STAFID($value): bool
+{
+    $value = SSO_NORMALIZE_STAFF_ID($value);
     return $value !== '' && preg_match('/^\d{4}-\d{2}$/', $value) === 1;
 }
 
 function SSO_VALIDATE_MATRIK($value): bool
 {
-    $value = SSO_SANITIZE_IDENTIFIER($value);
+    $value = SSO_NORMALIZE_MATRIK($value);
     return $value !== '' && preg_match('/^[A-Za-z0-9]{1,12}$/', $value) === 1;
 }
 
 function SSO_BUILD_AUTH_HANDOFF($packet): array
 {
     $packet = is_array($packet) ? $packet : [];
-    $data3 = SSO_SANITIZE_IDENTIFIER($packet['data3'] ?? '');
-    $data4 = SSO_SANITIZE_IDENTIFIER($packet['data4'] ?? '');
+    $data3 = SSO_NORMALIZE_STAFF_ID($packet['data3'] ?? '');
+    $data4 = SSO_NORMALIZE_MATRIK($packet['data4'] ?? '');
     $validStafId = SSO_VALIDATE_STAFID($data3) ? $data3 : '';
     $validMatrik = SSO_VALIDATE_MATRIK($data4) ? $data4 : '';
     $categoryRaw = trim((string)($packet['u_category'] ?? ''));

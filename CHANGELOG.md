@@ -6,9 +6,29 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+## [1.9.7] - 2026-09-02
+
+### Added
+- Added SSO reconciliation for active existing Staff and Student accounts so a valid OneID login can complete missing verification metadata and record `SSO` as the identity source without silently changing the account category or group.
+- Added regression coverage for normalized Staff IDs and Student matric identifiers, resilient external-source status matching, protected existing accounts, and canonical provisioning-category resolution.
+
+### Changed
+- Changed project release metadata to version `1.9.7`.
+- Changed Staff and Student provisioning-category resolution to prioritize the canonical OneID `resolved_source` before considering secondary identifier-validity flags.
+- Changed Staff and Student source lookups to normalize identifiers and tolerate surrounding source-data whitespace and letter-case differences.
+- Changed unavailable Student operational mode or external provisioning connections to produce explicit source-unavailable handling instead of being reported as a missing person record.
+
 ### Fixed
+- Fixed Student auto provisioning being misclassified as Staff provisioning when a valid Student OneID packet also contained a valid Staff identifier in `data3`.
+- Fixed active Student records being missed when matric identifiers or `statuskategori` values in `v210` contained case differences or surrounding whitespace.
+- Fixed Staff source queries relying on a fragile integer conversion of `kodstatus`, which could fail on non-canonical source values.
+- Fixed existing active SSO accounts with incomplete verification metadata being rejected before a valid OneID login could reconcile them.
+- Fixed case differences in existing local identifiers causing the provisioning flow to overlook the matching account.
 - Fixed valid OneID hybrid identity packets being rejected as invalid whenever both `data3` and `data4` were populated; identity selection now follows OneID `u_category` (`2/3` staff via `data3`, `10/11/12` student or hybrid via `data4`) with the historical staff-first fallback for category-less legacy packets.
 - Fixed OneID generated or legacy application credential failures returned through `respond_description` being mislabeled as invalid tokens instead of site credential or site-access errors.
+
+### Security
+- Prevented SSO reconciliation from automatically reactivating disabled accounts or changing an existing account category or group when OneID and local identity data disagree.
 
 ## [1.9.6] - 2026-08-13
 

@@ -121,7 +121,7 @@ class User extends BaseModel
             'f_status',
         ];
 
-        foreach (['f_verified_at', 'f_must_change_password', 'f_password_changed_at', 'f_password_expires_at'] as $optionalField) {
+        foreach (['f_verified_at', 'f_must_change_password', 'f_password_changed_at', 'f_password_expires_at', 'f_identitySource'] as $optionalField) {
             if ($this->tableHasColumn('tbl_m_user', $optionalField)) {
                 $fields[] = $optionalField;
             }
