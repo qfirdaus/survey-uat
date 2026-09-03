@@ -74,6 +74,9 @@ if (!function_exists('impersonation_current_actor_context')) {
             'name' => (string)($_SESSION['f_nama'] ?? $_SESSION['user']['f_nama'] ?? ''),
             'group_id' => (int)($_SESSION['group_active_id'] ?? $_SESSION['f_groupID'] ?? 0),
             'group_kod' => (string)($_SESSION['f_groupKod'] ?? $_SESSION['user']['f_groupKod'] ?? ''),
+            'category' => (string)($_SESSION['f_categoryUser'] ?? $_SESSION['user']['f_categoryUser'] ?? ''),
+            'department_code' => (string)($_SESSION['f_jabatanKod'] ?? $_SESSION['user']['f_jabatanKod'] ?? ''),
+            'department_name' => (string)($_SESSION['f_namajabatan'] ?? $_SESSION['user']['f_namajabatan'] ?? ''),
         ];
     }
 }
@@ -93,6 +96,9 @@ if (!function_exists('impersonation_current_effective_user_context')) {
             'name' => (string)($_SESSION['f_nama'] ?? $_SESSION['user']['f_nama'] ?? ''),
             'group_id' => (int)($_SESSION['group_active_id'] ?? $_SESSION['f_groupID'] ?? 0),
             'group_kod' => (string)($_SESSION['f_groupKod'] ?? $_SESSION['user']['f_groupKod'] ?? ''),
+            'category' => (string)($_SESSION['f_categoryUser'] ?? $_SESSION['user']['f_categoryUser'] ?? ''),
+            'department_code' => (string)($_SESSION['f_jabatanKod'] ?? $_SESSION['user']['f_jabatanKod'] ?? ''),
+            'department_name' => (string)($_SESSION['f_namajabatan'] ?? $_SESSION['user']['f_namajabatan'] ?? ''),
         ];
     }
 }
@@ -177,6 +183,7 @@ if (!function_exists('impersonation_safe_session_snapshot')) {
     {
         $keys = [
             'f_userID', 'f_loginID', 'f_stafID', 'f_nopekerja', 'f_nama', 'f_nickname',
+            'f_email', 'f_categoryUser', 'f_jabatanKod', 'f_namajabatan',
             'f_groupID', 'f_groupKod', 'group_default_id', 'group_active_id',
             'auth_login_method', 'user', 'lang',
             'theme.menu', 'theme.topbar', 'theme.layout', 'theme.sidebar',
@@ -196,7 +203,7 @@ if (!function_exists('impersonation_safe_session_snapshot')) {
 if (!function_exists('impersonation_restore_session_snapshot')) {
     function impersonation_restore_session_snapshot(array $snapshot): void
     {
-        foreach (['f_userID', 'f_loginID', 'f_stafID', 'f_nopekerja', 'f_nama', 'f_nickname', 'f_groupID', 'f_groupKod', 'group_default_id', 'group_active_id', 'auth_login_method', 'user', 'lang', 'theme.menu', 'theme.topbar', 'theme.layout', 'theme.sidebar'] as $key) {
+        foreach (['f_userID', 'f_loginID', 'f_stafID', 'f_nopekerja', 'f_nama', 'f_nickname', 'f_email', 'f_categoryUser', 'f_jabatanKod', 'f_namajabatan', 'f_groupID', 'f_groupKod', 'group_default_id', 'group_active_id', 'auth_login_method', 'user', 'lang', 'theme.menu', 'theme.topbar', 'theme.layout', 'theme.sidebar'] as $key) {
             unset($_SESSION[$key]);
         }
 
@@ -219,6 +226,10 @@ if (!function_exists('impersonation_apply_profile_to_session')) {
         $_SESSION['f_nopekerja'] = (string)($profile['f_nopekerja'] ?? $stafId);
         $_SESSION['f_nama'] = (string)($profile['f_nama'] ?? ($profile['f_nickname'] ?? $loginId));
         $_SESSION['f_nickname'] = (string)($profile['f_nickname'] ?? '');
+        $_SESSION['f_email'] = (string)($profile['f_email'] ?? '');
+        $_SESSION['f_categoryUser'] = (string)($profile['f_categoryUser'] ?? '');
+        $_SESSION['f_jabatanKod'] = (string)($profile['f_jabatanKod'] ?? '');
+        $_SESSION['f_namajabatan'] = (string)($profile['f_namajabatan'] ?? '');
         $_SESSION['f_groupID'] = $groupId;
         $_SESSION['f_groupKod'] = (string)($profile['f_groupKod'] ?? '');
         $_SESSION['group_default_id'] = $groupId;
@@ -231,6 +242,10 @@ if (!function_exists('impersonation_apply_profile_to_session')) {
             'f_nopekerja' => $_SESSION['f_nopekerja'],
             'f_nama' => $_SESSION['f_nama'],
             'f_nickname' => $_SESSION['f_nickname'],
+            'f_email' => $_SESSION['f_email'],
+            'f_categoryUser' => $_SESSION['f_categoryUser'],
+            'f_jabatanKod' => $_SESSION['f_jabatanKod'],
+            'f_namajabatan' => $_SESSION['f_namajabatan'],
             'f_groupID' => $_SESSION['f_groupID'],
             'f_groupKod' => $_SESSION['f_groupKod'],
             'f_groupName' => $profile['f_groupName'] ?? null,
@@ -380,6 +395,9 @@ if (!function_exists('impersonation_start')) {
             'name' => (string)($actorProfile['f_nama'] ?? $actorProfile['f_nickname'] ?? $actorLoginId),
             'group_id' => (int)($actorProfile['f_groupID'] ?? 0),
             'group_kod' => (string)($actorProfile['f_groupKod'] ?? ''),
+            'category' => (string)($actorProfile['f_categoryUser'] ?? ''),
+            'department_code' => (string)($actorProfile['f_jabatanKod'] ?? ''),
+            'department_name' => (string)($actorProfile['f_namajabatan'] ?? ''),
         ];
         $target = [
             'user_id' => (int)($targetProfile['f_userID'] ?? 0),
@@ -390,6 +408,9 @@ if (!function_exists('impersonation_start')) {
             'group_id' => (int)($targetProfile['f_groupID'] ?? 0),
             'group_kod' => (string)($targetProfile['f_groupKod'] ?? ''),
             'group_name' => (string)($targetProfile['f_groupName'] ?? ''),
+            'category' => (string)($targetProfile['f_categoryUser'] ?? ''),
+            'department_code' => (string)($targetProfile['f_jabatanKod'] ?? ''),
+            'department_name' => (string)($targetProfile['f_namajabatan'] ?? ''),
         ];
 
         $_SESSION['impersonation'] = [
