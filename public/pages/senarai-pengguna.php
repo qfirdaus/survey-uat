@@ -510,6 +510,11 @@ function render_user_access_table(
                       $isProtectedAccount = is_protected_staff_account_local($stafID);
                       $isAutoProvisioned = (int)($u['f_isAutoProvisioned'] ?? 0) === 1;
                       $identitySource = strtoupper(trim((string)($u['f_identitySource'] ?? '')));
+                      $isSsoIdentity = $identitySource === 'SSO';
+                      $showSsoIndicator = $isAutoProvisioned || $isSsoIdentity;
+                      $ssoIndicatorTooltip = $isAutoProvisioned
+                        ? sprintf((string)__('userList_auto_provisioned_tooltip'), $identitySource !== '' ? $identitySource : 'SSO')
+                        : (string)__('userList_sso_identity_tooltip');
                       $isCurrentLoggedInUser =
                         ($currentUserId > 0 && $userID === $currentUserId) ||
                         ($currentUserStafIDNormalized !== '' && str_replace('-', '', $stafID) === $currentUserStafIDNormalized) ||
@@ -535,10 +540,10 @@ function render_user_access_table(
                       <td class="col-nama">
                         <div class="user-name-shell">
                           <span class="truncate-1line cell-tooltip-text" data-bs-toggle="tooltip" data-bs-placement="top" title="<?= h($nama . ' (' . $visibleIdentifier . ')') ?>"><?= h($nama) ?> (<?= h($visibleIdentifier) ?>)</span>
-                          <?php if ($isAutoProvisioned || $isProtectedAccount): ?>
+                          <?php if ($showSsoIndicator || $isProtectedAccount): ?>
                             <span class="user-name-indicators">
-                              <?php if ($isAutoProvisioned): ?>
-                                <span class="auto-provisioned-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="<?= h(sprintf((string)__('userList_auto_provisioned_tooltip'), $identitySource !== '' ? $identitySource : 'SSO')) ?>"><i class="ri-user-add-line"></i></span>
+                              <?php if ($showSsoIndicator): ?>
+                                <span class="auto-provisioned-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="<?= h($ssoIndicatorTooltip) ?>"><i class="ri-user-add-line"></i></span>
                               <?php endif; ?>
                               <?php if ($isProtectedAccount): ?>
                                 <span class="protected-account-badge" data-bs-toggle="tooltip" data-bs-placement="top" title="<?= h(__('userList_protected_tooltip')) ?>"><?= h(__('userList_protected_badge')) ?></span>
@@ -3872,16 +3877,21 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
         .text(nameText)
     );
     const isAutoProvisioned = Number(r.f_isAutoProvisioned || r.is_auto_provisioned || 0) === 1;
-    if (isAutoProvisioned || isProtectedAccount) {
+    const identitySource = String(r.f_identitySource || r.identitySource || '').trim().toUpperCase();
+    const isSsoIdentity = identitySource === 'SSO';
+    const showSsoIndicator = isAutoProvisioned || isSsoIdentity;
+    if (showSsoIndicator || isProtectedAccount) {
       const $indicators = $('<span>').addClass('user-name-indicators');
-      if (isAutoProvisioned) {
-        const identitySource = String(r.f_identitySource || r.identitySource || 'SSO').trim().toUpperCase() || 'SSO';
+      if (showSsoIndicator) {
+        const indicatorTooltip = isAutoProvisioned
+          ? '<?= h(__('userList_auto_provisioned_tooltip')) ?>'.replace('%s', identitySource || 'SSO')
+          : '<?= h(__('userList_sso_identity_tooltip')) ?>';
         $indicators.append(
           $('<span>')
             .addClass('auto-provisioned-icon')
             .attr('data-bs-toggle', 'tooltip')
             .attr('data-bs-placement', 'top')
-            .attr('title', '<?= h(__('userList_auto_provisioned_tooltip')) ?>'.replace('%s', identitySource))
+            .attr('title', indicatorTooltip)
             .append($('<i>').addClass('ri-user-add-line'))
         );
       }

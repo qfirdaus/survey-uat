@@ -6,6 +6,17 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+## [1.9.8] - 2026-09-03
+
+### Added
+- Added an idempotent user SSO metadata migration for `f_isAutoProvisioned` and `f_identitySource`, including evidence-based backfill for accounts previously created by `SSO-AUTO`.
+
+### Changed
+- Changed project release metadata to version `1.9.8`.
+
+### Fixed
+- Fixed User Management hiding the OneID SSO indicator for existing Staff or Student accounts that were SSO-verified but were not originally auto-provisioned.
+
 ## [1.9.7] - 2026-09-02
 
 ### Added

@@ -1089,6 +1089,7 @@
 'userList_protected_tooltip'     => 'Akaun ini dilindungi oleh sistem. Ia tidak boleh dipadam, dan perubahan akses hanya dibenarkan oleh pemilik akaun.',
 'userList_auto_provisioned_badge' => 'Auto Provisioned',
 'userList_auto_provisioned_tooltip' => 'Rekod ini diwujudkan secara automatik melalui log masuk %s.',
+'userList_sso_identity_tooltip' => 'Pengguna ini telah log masuk dan disahkan melalui OneID SSO.',
 'userList_protected_delete_denied' => 'Akaun pengguna ini dilindungi oleh sistem dan tidak boleh dipadam.',
 'userList_protected_self_manage_only' => 'Akaun pengguna ini dilindungi oleh sistem dan hanya boleh diurus oleh pemilik akaun tersebut.',
 'userList_ajax_invalid_data'     => 'Data tidak sah.',

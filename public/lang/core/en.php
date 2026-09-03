@@ -1089,6 +1089,7 @@
 'userList_protected_tooltip'     => 'This account is protected by the system. It cannot be deleted, and access changes are only allowed by the account owner.',
 'userList_auto_provisioned_badge' => 'Auto Provisioned',
 'userList_auto_provisioned_tooltip' => 'This account was created automatically through %s login.',
+'userList_sso_identity_tooltip' => 'This user has signed in and been verified through OneID SSO.',
 'userList_protected_delete_denied' => 'This user account is protected by the system and cannot be deleted.',
 'userList_protected_self_manage_only' => 'This user account is protected by the system and can only be managed by the account owner.',
 'userList_ajax_invalid_data'     => 'Invalid data.',

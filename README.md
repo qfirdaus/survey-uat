@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.9.7`
+- Current version: `1.9.8`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -19,6 +19,13 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Runtime model: native WSL; Docker, Docker Compose, and container-specific Apache assets are no longer maintained in this repository
 - Main database: MySQL `8.x`
 - External database support: Sybase through ODBC/DBLIB, plus additional PDO connections configured from the system UI
+
+## Version 1.9.8 OneID SSO Identity Indicators
+
+- User Management now displays the OneID SSO indicator for both automatically provisioned accounts and existing Staff or Student accounts verified through OneID.
+- Indicator tooltips distinguish accounts created by SSO auto provisioning from existing accounts subsequently linked to OneID authentication.
+- The idempotent SSO metadata migration adds `f_isAutoProvisioned` and `f_identitySource`, and safely backfills accounts carrying explicit `SSO-AUTO` evidence.
+- Future sync packages include the SSO metadata migration so downstream projects receive the required schema artifact together with the UI change.
 
 ## Version 1.9.7 Staff and Student SSO Provisioning Reliability
 
@@ -72,6 +79,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Role switching for users with more than one available group context through `role-switch.php` and `role-switch-roles.php`.
 - Profile workspace with login activity, audit history, active session visibility, and session termination support.
 - Login policy configuration from System Settings, including manual login route control and SSO compatibility settings.
+- User Management identifies both accounts created automatically through SSO and existing Staff or Student accounts subsequently verified through OneID; the metadata columns are supplied by `docs/user-sso-metadata-migration-2026-09-03.sql`.
 - OneID SSO validates callback tokens through the configured identity provider, uses a five-minute one-time application handoff, and reports provider, token, site, response, identity, provisioning, policy, and lockout failures through controlled login feedback.
 - OneID transport enforces TLS verification and bounded request timeouts, while browser state is restricted to a short-lived protected opaque credential and application audit records exclude raw tokens.
 - Forgot Password supports Login ID, registered email, staff ID, and employee-number lookup for eligible manual accounts, with duplicate-identifier protection and generic public responses.
