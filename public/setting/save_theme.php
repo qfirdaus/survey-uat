@@ -36,7 +36,9 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
 // ✅ Sahkan sesi login
-if (!isset($_SESSION['f_stafID'])) {
+$loginID = trim((string)($_SESSION['f_loginID'] ?? ''));
+$staffID = trim((string)($_SESSION['f_stafID'] ?? ''));
+if ($loginID === '' && $staffID === '') {
     http_response_code(401);
     echo json_encode([
         'success' => false,
@@ -150,7 +152,6 @@ $themeData = [
     'layoutMode'   => $layoutMode !== '' ? $layoutMode : 'light'
 ];
 
-$f_stafID  = $_SESSION['f_stafID'];
 $themeJson = json_encode($themeData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
 // ✅ Sambungan DB guna Singleton
@@ -158,22 +159,25 @@ try {
     $pdo_mysql = Database::getInstance('mysql')->getConnection();
     $userModel = new User($pdo_mysql);
 
-    // 💾 Simpan ke DB berdasarkan f_stafID
-    $stmt = $pdo_mysql->prepare("UPDATE tbl_m_user SET f_themeSetting = :setting WHERE f_stafID = :id");
+    // Resolve the account from the authenticated session, including public users.
+    $identityColumn = $loginID !== '' ? 'TRIM(f_loginID)' : 'f_stafID';
+    $identity = $loginID !== '' ? $loginID : $staffID;
+    $stmt = $pdo_mysql->prepare("UPDATE tbl_m_user SET f_themeSetting = :setting WHERE {$identityColumn} = :id LIMIT 1");
     $stmt->execute([
         'setting' => $themeJson,
-        'id'      => $f_stafID
+        'id' => $identity,
     ]);
 
-    // Check if update was successful
-    if ($stmt->rowCount() === 0) {
-        // User mungkin tidak wujud dalam DB, tapi kita proceed dengan session update
-        error_log("[save_theme] Warning: No rows updated for f_stafID: {$f_stafID}");
-    }
-
-    // ♻️ Refresh setting dalam session
-    $profile      = $userModel->getProfile($f_stafID);
+    // A repeated save may affect zero rows. Verify persisted values instead.
+    $profile = $loginID !== ''
+        ? $userModel->getProfileByLoginID($loginID)
+        : $userModel->getProfile($staffID);
     $themeSetting = json_decode($profile['f_themeSetting'] ?? '{}', true);
+    foreach ($themeData as $key => $value) {
+        if (!is_array($themeSetting) || ($themeSetting[$key] ?? null) !== $value) {
+            throw new RuntimeException('Theme persistence verification failed.');
+        }
+    }
 
     $_SESSION['theme.menu']   = $themeSetting['sidebarColor'] ?? $themeData['sidebarColor'];
     $_SESSION['theme.topbar'] = $themeSetting['topbarColor'] ?? $themeData['topbarColor'];
@@ -188,7 +192,7 @@ try {
 
 } catch (PDOException $e) {
     // ✅ Sanitize error message - jangan expose database details
-    error_log('[save_theme] PDO Error: ' . $e->getMessage() . ' | f_stafID: ' . ($f_stafID ?? 'N/A'));
+    error_log('[save_theme] PDO Error: ' . $e->getMessage() . ' | login_id: ' . ($loginID !== '' ? $loginID : $staffID));
     
     http_response_code(500);
     echo json_encode([
@@ -199,7 +203,7 @@ try {
 
 } catch (Throwable $e) {
     // ✅ Catch semua exceptions lain
-    error_log('[save_theme] Unexpected Error: ' . $e->getMessage() . ' | f_stafID: ' . ($f_stafID ?? 'N/A'));
+    error_log('[save_theme] Unexpected Error: ' . $e->getMessage() . ' | login_id: ' . ($loginID !== '' ? $loginID : $staffID));
     
     http_response_code(500);
     echo json_encode([
