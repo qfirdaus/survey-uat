@@ -32,7 +32,8 @@ $current = basename($_SERVER['SCRIPT_NAME']);
 // Jika page mahu benarkan anonymous AJAX (contoh: `ALLOW_ANON_AJAX` defined), skip redirect
 if (!defined('ALLOW_ANON_AJAX') || !ALLOW_ANON_AJAX) {
     if (!in_array($current, ['index.php', 'login.php', 'logout.php'])) {
-        if (empty($_SESSION['f_stafID'])) {
+        // Public accounts authenticate with a login ID and may have no staff ID.
+        if (empty($_SESSION['f_loginID']) && empty($_SESSION['f_stafID'])) {
             if (request_is_ajax_like_legacy()) {
                 // Untuk AJAX, biar bootstrap/controller tentukan 401 JSON yang lebih tepat.
                 return;

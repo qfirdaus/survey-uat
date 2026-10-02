@@ -737,7 +737,8 @@ if (!defined('BASE_URL')) {
 // 16) Gate helpers
 if (!function_exists('require_login')) {
     function require_login(string $redirectTo = '../index.php'): void {
-        if (empty($_SESSION['f_stafID'])) {
+        // Public accounts authenticate with a login ID and may have no staff ID.
+        if (empty($_SESSION['f_loginID']) && empty($_SESSION['f_stafID'])) {
             if (request_is_ajax_like()) {
                 tetapan_sistem_ajax_debug_log('require_login_unauthorized', [
                     'redirect' => terminated_session_login_url(),

@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.9.8`
+- Current version: `1.9.9`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -19,6 +19,12 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Runtime model: native WSL; Docker, Docker Compose, and container-specific Apache assets are no longer maintained in this repository
 - Main database: MySQL `8.x`
 - External database support: Sybase through ODBC/DBLIB, plus additional PDO connections configured from the system UI
+
+## Version 1.9.9 Public User Login and Profile Fixes
+
+- Authenticated public users can open protected pages without a staff ID, preventing the login/dashboard redirect loop.
+- Account profiles and language preference updates use the session Login ID, with a staff ID fallback for legacy sessions.
+- Language updates continue to validate CSRF tokens and active languages; unauthenticated requests remain blocked.
 
 ## Version 1.9.8 OneID SSO Identity Indicators
 

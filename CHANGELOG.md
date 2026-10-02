@@ -6,6 +6,16 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+## [1.9.9] - 2026-10-02
+
+### Changed
+- Changed project release metadata to version `1.9.9`.
+
+### Fixed
+- Fixed authenticated public users being redirected repeatedly between the login page and dashboard because session guards required a staff ID.
+- Fixed public users being unable to save their language preference because the profile controller rejected sessions without a staff ID.
+- Fixed public account profiles showing empty identity details by looking up the session Login ID, with a staff ID fallback for legacy sessions.
+
 ## [1.9.8] - 2026-09-03
 
 ### Added

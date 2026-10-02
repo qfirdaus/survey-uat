@@ -88,8 +88,9 @@ class ProfileController
             exit;
         }
 
+        $loginID = trim((string)($_SESSION['f_loginID'] ?? ''));
         $stafID = trim((string)($_SESSION['f_stafID'] ?? ''));
-        if ($stafID === '') {
+        if ($loginID === '' && $stafID === '') {
             set_alert([
                 'title' => 'profile_alert_access_title',
                 'text' => 'profile_alert_access_text',
@@ -114,7 +115,9 @@ class ProfileController
         }
 
         try {
-            $updated = $this->userModel->updateLanguagePreference($stafID, $lang);
+            $updated = $loginID !== ''
+                ? $this->userModel->updateLanguagePreferenceByLoginID($loginID, $lang)
+                : $this->userModel->updateLanguagePreference($stafID, $lang);
             if (!$updated) {
                 set_alert([
                     'title' => 'profile_alert_save_title',
@@ -162,15 +165,19 @@ class ProfileController
 
     /**
      * Profil ringkas untuk view
-     * - Cari guna f_stafID daripada session sahaja
+     * - Cari guna f_loginID daripada session, dengan fallback f_stafID
      * - Tiada JOIN / tiada filter status
      */
     public function getCurrentUserProfile(): array
     {
-        $stafID = trim((string)($_SESSION['f_stafID'] ?? '')); // cth: '0530-09'
-        if ($stafID === '') {
+        $loginID = trim((string)($_SESSION['f_loginID'] ?? ''));
+        $stafID = trim((string)($_SESSION['f_stafID'] ?? ''));
+        if ($loginID === '' && $stafID === '') {
             return $this->profile = $this->emptyProfile($this->userModel->getAvatarUrl(null));
         }
+
+        $identityColumn = $loginID !== '' ? 'TRIM(u.f_loginID)' : 'u.f_stafID';
+        $identity = $loginID !== '' ? $loginID : $stafID;
 
         $sql = "
             SELECT
@@ -188,12 +195,12 @@ class ProfileController
                 u.f_kumpjawatan,
                 u.f_namajabatan
             FROM tbl_m_user u
-            WHERE u.f_stafID = :id
+            WHERE {$identityColumn} = :id
             LIMIT 1
         ";
 
         $stmt = $this->pdoMysql->prepare($sql);
-        $stmt->execute([':id' => $stafID]);
+        $stmt->execute([':id' => $identity]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
         if (!$row) {
