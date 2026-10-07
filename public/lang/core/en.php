@@ -2092,6 +2092,14 @@
 'theme_mist' => 'Mist',
 'theme_strawberry' => 'Strawberry Pink',
 'theme_matcha' => 'Matcha',
+'theme_custom' => 'Custom',
+'config_theme_custom_seed_label' => 'Custom base colour',
+'config_theme_custom_description' => 'Smart palette generated from your selected colour',
+'config_theme_custom_help' => 'Gradient, text, hover and contrast are generated automatically.',
+'config_theme_custom_reset' => 'Reset',
+'config_theme_topbar_custom_seed' => 'Topbar Custom Colour',
+'config_theme_sidebar_custom_seed' => 'Sidebar Custom Colour',
+'config_theme_custom_invalid' => '%s must use a hexadecimal colour such as #4254BA.',
 'config_tab_tema_penerangan_sidebar_terang_penerangan'
                                         => 'Light sidebar with clean white background.',
 'config_tab_tema_penerangan_sidebar_gelap_penerangan'

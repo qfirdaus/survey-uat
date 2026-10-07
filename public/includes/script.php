@@ -459,6 +459,28 @@ document.addEventListener('DOMContentLoaded', () => {
   const sidebar = document.getElementById('leftside-menu');
   const offcanvas = document.getElementById('theme-settings-offcanvas');
 
+  document.querySelectorAll('[data-user-custom-editor]').forEach(editor => {
+    const surface = editor.getAttribute('data-user-custom-editor');
+    const picker = editor.querySelector('input[type="color"]');
+    const text = editor.querySelector('input[type="text"]');
+    if (!picker || !text) return;
+    const applyCustom = value => {
+      if (!window.IQSThemePalette) return;
+      const normalized = window.IQSThemePalette.normalizeHex(value, null);
+      if (!normalized) return;
+      picker.value = normalized;
+      text.value = normalized;
+      if (typeof window.updateCustomThemeSeed === 'function') {
+        window.updateCustomThemeSeed(surface, normalized);
+      }
+      const radioName = surface === 'topbar' ? 'data-topbar-color' : 'data-menu-color';
+      const radio = document.querySelector(`input[name="${radioName}"][value="custom"]`);
+      if (radio) radio.checked = true;
+    };
+    picker.addEventListener('change', () => applyCustom(picker.value));
+    text.addEventListener('change', () => applyCustom(text.value));
+  });
+
   if (offcanvas) {
     offcanvas.addEventListener('shown.bs.offcanvas', () => {
       const saved = {

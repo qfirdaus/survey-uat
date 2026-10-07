@@ -31,7 +31,9 @@ class SystemConfigConstants {
   
   // Theme Settings
   const ALLOWED_THEME_MODES = ['light', 'dark'];
-  const ALLOWED_THEME_COLORS = ['light', 'dark', 'brand', 'emerald', 'navy', 'sunset', 'mist', 'strawberry', 'matcha'];
+  const ALLOWED_THEME_COLORS = ['light', 'dark', 'brand', 'emerald', 'navy', 'sunset', 'mist', 'strawberry', 'matcha', 'custom'];
+  const DEFAULT_THEME_TOPBAR_CUSTOM_SEED = '#4254BA';
+  const DEFAULT_THEME_SIDEBAR_CUSTOM_SEED = '#1E3A5F';
   
   // Email Settings
   const ALLOWED_MAIL_DRIVERS = ['smtp', 'mail', 'sendmail'];

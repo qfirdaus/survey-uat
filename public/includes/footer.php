@@ -81,7 +81,6 @@ $systemVersion = app_current_version();
             </div>
           <?php endforeach; ?>
         </div>
-
         <!-- ✅ Topbar Colour -->
         <h5 class="my-3 fs-16 fw-bold"><?= h(__('theme_topbar_color')) ?></h5>
         <div class="d-flex flex-column gap-2">
@@ -96,6 +95,14 @@ $systemVersion = app_current_version();
               <label class="form-check-label" for="topbar-color-<?= h($topbar) ?>"><?= h(__('theme_'.$topbar)) ?></label>
             </div>
           <?php endforeach; ?>
+        </div>
+        <div class="mt-3 p-2 border rounded" data-user-custom-editor="topbar">
+          <label class="form-label small fw-semibold" for="user-topbar-custom-seed"><?= h(__('config_theme_custom_seed_label') ?: 'Custom base colour') ?></label>
+          <div class="input-group input-group-sm">
+            <input type="color" class="form-control form-control-color" id="user-topbar-custom-picker" value="<?= h($_SESSION['theme.topbar_custom_seed'] ?? SystemConfigConstants::DEFAULT_THEME_TOPBAR_CUSTOM_SEED) ?>">
+            <input type="text" class="form-control font-monospace" id="user-topbar-custom-seed" maxlength="7" value="<?= h($_SESSION['theme.topbar_custom_seed'] ?? SystemConfigConstants::DEFAULT_THEME_TOPBAR_CUSTOM_SEED) ?>">
+          </div>
+          <div class="form-text"><?= h(__('config_theme_custom_help') ?: 'Gradient and contrast are generated automatically.') ?></div>
         </div>
 
         <!-- ✅ Sidebar Colour -->
@@ -112,6 +119,14 @@ $systemVersion = app_current_version();
               <label class="form-check-label" for="leftbar-color-<?= h($menu) ?>"><?= h(__('theme_'.$menu)) ?></label>
             </div>
           <?php endforeach; ?>
+        </div>
+        <div class="mt-3 p-2 border rounded" data-user-custom-editor="sidebar">
+          <label class="form-label small fw-semibold" for="user-sidebar-custom-seed"><?= h(__('config_theme_custom_seed_label') ?: 'Custom base colour') ?></label>
+          <div class="input-group input-group-sm">
+            <input type="color" class="form-control form-control-color" id="user-sidebar-custom-picker" value="<?= h($_SESSION['theme.sidebar_custom_seed'] ?? SystemConfigConstants::DEFAULT_THEME_SIDEBAR_CUSTOM_SEED) ?>">
+            <input type="text" class="form-control font-monospace" id="user-sidebar-custom-seed" maxlength="7" value="<?= h($_SESSION['theme.sidebar_custom_seed'] ?? SystemConfigConstants::DEFAULT_THEME_SIDEBAR_CUSTOM_SEED) ?>">
+          </div>
+          <div class="form-text"><?= h(__('config_theme_custom_help') ?: 'Gradient and contrast are generated automatically.') ?></div>
         </div>
       </div>
     </div>

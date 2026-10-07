@@ -668,7 +668,15 @@ class TetapanSistemController {
     $topbar  = trim($_POST['topbar_color'] ?? SystemConfigConstants::DEFAULT_THEME_TOPBAR);
     $sidebar = trim($_POST['sidebar_color'] ?? SystemConfigConstants::DEFAULT_THEME_SIDEBAR);
     $layout  = trim($_POST['layout_mode']   ?? SystemConfigConstants::DEFAULT_THEME_LAYOUT);
-    $themeSetting = ['topbarColor'=>$topbar,'sidebarColor'=>$sidebar,'layoutMode'=>$layout];
+    $topbarCustomSeed = strtoupper(trim((string)($_POST['topbar_custom_seed'] ?? SystemConfigConstants::DEFAULT_THEME_TOPBAR_CUSTOM_SEED)));
+    $sidebarCustomSeed = strtoupper(trim((string)($_POST['sidebar_custom_seed'] ?? SystemConfigConstants::DEFAULT_THEME_SIDEBAR_CUSTOM_SEED)));
+    $themeSetting = [
+      'topbarColor' => $topbar,
+      'sidebarColor' => $sidebar,
+      'layoutMode' => $layout,
+      'topbarCustomSeed' => $topbarCustomSeed,
+      'sidebarCustomSeed' => $sidebarCustomSeed,
+    ];
 
     // Validate input
     $validationErrors = $this->validateThemeSettings($themeSetting);
@@ -694,6 +702,8 @@ class TetapanSistemController {
         $_SESSION['theme.menu']   = $sidebar;
         $_SESSION['theme.layout'] = $layout;
         $_SESSION['theme.sidebar'] = $sidebar;
+        $_SESSION['theme.topbar_custom_seed'] = $topbarCustomSeed;
+        $_SESSION['theme.sidebar_custom_seed'] = $sidebarCustomSeed;
         $summaryLabels = $this->getThemeChangeSummary($oldTheme, $themeSetting);
         $summaryText = !empty($summaryLabels)
           ? sprintf(
@@ -1103,6 +1113,8 @@ class TetapanSistemController {
       'layoutMode' => $layout,
       'topbarColor' => $topbar,
       'sidebarColor' => $sidebar,
+      'topbarCustomSeed' => $this->normalizeThemeHex($theme['topbarCustomSeed'] ?? '', SystemConfigConstants::DEFAULT_THEME_TOPBAR_CUSTOM_SEED),
+      'sidebarCustomSeed' => $this->normalizeThemeHex($theme['sidebarCustomSeed'] ?? '', SystemConfigConstants::DEFAULT_THEME_SIDEBAR_CUSTOM_SEED),
     ];
   }
 
@@ -2493,8 +2505,19 @@ class TetapanSistemController {
     if (!empty($data['layoutMode']) && !in_array($data['layoutMode'], SystemConfigConstants::ALLOWED_THEME_MODES, true)) {
       $errors[] = sprintf($this->tr('config_theme_validation_invalid', '%s tidak sah. Hanya %s dibenarkan.'), $labels['layoutMode'], implode(', ', SystemConfigConstants::ALLOWED_THEME_MODES));
     }
+
+    foreach (['topbarCustomSeed', 'sidebarCustomSeed'] as $seedKey) {
+      if (!isset($data[$seedKey]) || !preg_match('/^#[0-9A-Fa-f]{6}$/', (string)$data[$seedKey])) {
+        $errors[] = sprintf($this->tr('config_theme_custom_invalid', '%s mesti menggunakan format warna hex seperti #4254BA.'), $labels[$seedKey] ?? $seedKey);
+      }
+    }
     
     return $errors;
+  }
+
+  private function normalizeThemeHex(mixed $value, string $fallback): string {
+    $hex = strtoupper(trim((string)$value));
+    return preg_match('/^#[0-9A-F]{6}$/', $hex) ? $hex : $fallback;
   }
 
   /**
@@ -2908,6 +2931,8 @@ class TetapanSistemController {
       'layoutMode' => $this->tr('config_tab_tema_komponen_layout', 'Layout Mode'),
       'topbarColor' => $this->tr('config_tab_tema_komponen_topbar', 'Topbar Color'),
       'sidebarColor' => $this->tr('config_tab_tema_komponen_sidebar', 'Sidebar Color'),
+      'topbarCustomSeed' => $this->tr('config_theme_topbar_custom_seed', 'Topbar Custom Colour'),
+      'sidebarCustomSeed' => $this->tr('config_theme_sidebar_custom_seed', 'Sidebar Custom Colour'),
     ];
   }
 

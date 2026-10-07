@@ -51,6 +51,22 @@
   <link rel="canonical" href="<?= base_url($defaultHome) ?>" />
   <link rel="icon" type="image/x-icon" href="<?= h(base_url($faviconPath !== '' ? $faviconPath : 'assets/images/favicon.ico')) ?>" />
 
+  <script src="<?= base_url('assets/js/theme-palette.js') ?>?v=<?= time(); ?>"></script>
+  <script>
+    (function () {
+      var settings = <?= json_encode([
+        'topbarColor' => $_SESSION['theme.topbar'] ?? 'light',
+        'sidebarColor' => $_SESSION['theme.menu'] ?? 'light',
+        'topbarCustomSeed' => $_SESSION['theme.topbar_custom_seed'] ?? SystemConfigConstants::DEFAULT_THEME_TOPBAR_CUSTOM_SEED,
+        'sidebarCustomSeed' => $_SESSION['theme.sidebar_custom_seed'] ?? SystemConfigConstants::DEFAULT_THEME_SIDEBAR_CUSTOM_SEED,
+      ], JSON_UNESCAPED_SLASHES) ?>;
+      document.documentElement.setAttribute('data-topbar-color', settings.topbarColor);
+      document.documentElement.setAttribute('data-menu-color', settings.sidebarColor);
+      window.IQSThemePalette.applyTheme(settings);
+      window.IQS_THEME_SETTINGS = settings;
+    })();
+  </script>
+
   <!-- App CSS (asas) -->
   <link rel="stylesheet" href="<?= base_url('assets/css/icons.min.css') ?>?v=<?= time(); ?>" />
   <link id="app-style" rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>?v=<?= time(); ?>" />

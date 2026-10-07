@@ -898,7 +898,9 @@
       var mapping = {
         layoutMode: 'layout_mode',
         topbarColor: 'topbar_color',
-        sidebarColor: 'sidebar_color'
+        sidebarColor: 'sidebar_color',
+        topbarCustomSeed: 'topbar_custom_seed',
+        sidebarCustomSeed: 'sidebar_custom_seed'
       };
 
       Object.keys(mapping).forEach(function (key) {
@@ -907,9 +909,13 @@
         if (!expectedValue) {
           return;
         }
-        var target = form.querySelector('input[name="' + inputName + '"][value="' + expectedValue + '"]');
+        var isSeed = key === 'topbarCustomSeed' || key === 'sidebarCustomSeed';
+        var target = isSeed
+          ? form.querySelector('input[name="' + inputName + '"]')
+          : form.querySelector('input[name="' + inputName + '"][value="' + expectedValue + '"]');
         if (target) {
-          target.checked = true;
+          if (isSeed) target.value = expectedValue;
+          else target.checked = true;
         }
       });
 
@@ -3260,6 +3266,8 @@
       var layoutMode = String(themeSettings.layoutMode || '').trim();
       var topbarColor = String(themeSettings.topbarColor || '').trim();
       var sidebarColor = String(themeSettings.sidebarColor || '').trim();
+      var topbarCustomSeed = String(themeSettings.topbarCustomSeed || '').trim();
+      var sidebarCustomSeed = String(themeSettings.sidebarCustomSeed || '').trim();
       var topbar = document.getElementById('topbar');
       var sidebar = document.getElementById('leftside-menu');
 
@@ -3301,6 +3309,15 @@
         if (sidebar) {
           sidebar.setAttribute('data-menu-color', sidebarColor);
         }
+      }
+
+      if (window.IQSThemePalette) {
+        window.IQSThemePalette.applyTheme({
+          topbarColor: topbarColor,
+          sidebarColor: sidebarColor,
+          topbarCustomSeed: topbarCustomSeed,
+          sidebarCustomSeed: sidebarCustomSeed
+        });
       }
 
       var config = {

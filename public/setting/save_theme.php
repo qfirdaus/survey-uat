@@ -114,6 +114,8 @@ $allowedColorValues = SystemConfigConstants::ALLOWED_THEME_COLORS; // Topbar dan
 $sidebarColor = isset($data['sidebarColor']) ? trim((string)$data['sidebarColor']) : '';
 $topbarColor  = isset($data['topbarColor']) ? trim((string)$data['topbarColor']) : '';
 $layoutMode   = isset($data['layoutMode']) ? trim((string)$data['layoutMode']) : '';
+$topbarCustomSeed = strtoupper(trim((string)($data['topbarCustomSeed'] ?? SystemConfigConstants::DEFAULT_THEME_TOPBAR_CUSTOM_SEED)));
+$sidebarCustomSeed = strtoupper(trim((string)($data['sidebarCustomSeed'] ?? SystemConfigConstants::DEFAULT_THEME_SIDEBAR_CUSTOM_SEED)));
 
 // Validate sidebarColor (light, dark, atau brand)
 if ($sidebarColor !== '' && !in_array($sidebarColor, $allowedColorValues, true)) {
@@ -145,11 +147,21 @@ if ($layoutMode !== '' && !in_array($layoutMode, $allowedLayoutValues, true)) {
     exit;
 }
 
+foreach (['topbarCustomSeed' => $topbarCustomSeed, 'sidebarCustomSeed' => $sidebarCustomSeed] as $field => $seed) {
+    if (!preg_match('/^#[0-9A-F]{6}$/', $seed)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => $field . ' mesti menggunakan format hex seperti #4254BA.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+}
+
 // ✅ Set defaults jika kosong
 $themeData = [
     'sidebarColor' => $sidebarColor !== '' ? $sidebarColor : 'dark',
     'topbarColor'  => $topbarColor !== '' ? $topbarColor : 'light',
-    'layoutMode'   => $layoutMode !== '' ? $layoutMode : 'light'
+    'layoutMode'   => $layoutMode !== '' ? $layoutMode : 'light',
+    'topbarCustomSeed' => $topbarCustomSeed,
+    'sidebarCustomSeed' => $sidebarCustomSeed,
 ];
 
 $themeJson = json_encode($themeData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -183,6 +195,8 @@ try {
     $_SESSION['theme.topbar'] = $themeSetting['topbarColor'] ?? $themeData['topbarColor'];
     $_SESSION['theme.layout'] = $themeSetting['layoutMode'] ?? $themeData['layoutMode'];
     $_SESSION['theme.sidebar'] = $_SESSION['theme.menu'];
+    $_SESSION['theme.topbar_custom_seed'] = $themeSetting['topbarCustomSeed'] ?? $topbarCustomSeed;
+    $_SESSION['theme.sidebar_custom_seed'] = $themeSetting['sidebarCustomSeed'] ?? $sidebarCustomSeed;
 
     echo json_encode([
         'success' => true,

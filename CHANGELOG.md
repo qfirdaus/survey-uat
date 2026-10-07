@@ -6,6 +6,23 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-10-07
+
+### Added
+- Added custom topbar and sidebar seed colours for system defaults and individual user preferences, with live preview and persistence through the existing theme settings flows.
+- Added deterministic palette generation for gradients, foregrounds, hover states, borders, shadows, and dynamic light/dark logo treatment.
+- Added shared public-page palette resolution for login, forgot-password, reset-password, and change-password screens.
+- Added regression coverage for custom theme whitelisting, hexadecimal validation, public-page integration, safe fallbacks, and bright-colour contrast.
+
+### Changed
+- Changed project release metadata to version `1.10.0`.
+- Changed duplicated public authentication palettes to use one shared resolver.
+- Changed custom colour foreground selection to compare light and dark contrast rather than relying on a fixed luminance threshold.
+
+### Fixed
+- Fixed session theme updates accepting unvalidated theme values.
+- Fixed bright custom colours producing insufficient contrast on public-page primary actions by enforcing a WCAG AA contrast target.
+
 ## [1.9.9] - 2026-10-02
 
 ### Changed

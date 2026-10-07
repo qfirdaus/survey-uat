@@ -58,6 +58,23 @@ function applyThemeSetting() {
   document.documentElement.setAttribute('data-menu-color', sidebarColor);
   document.body.setAttribute('data-menu-color', sidebarColor);
 
+  const topbarCustomSeed = (window.IQS_THEME_SETTINGS && window.IQS_THEME_SETTINGS.topbarCustomSeed)
+    || safeStorage.get('theme.topbarCustomSeed')
+    || '#4254BA';
+  const sidebarCustomSeed = (window.IQS_THEME_SETTINGS && window.IQS_THEME_SETTINGS.sidebarCustomSeed)
+    || safeStorage.get('theme.sidebarCustomSeed')
+    || '#1E3A5F';
+  if (window.IQSThemePalette) {
+    window.IQSThemePalette.applyTheme({
+      topbarColor: topbarColor,
+      sidebarColor: sidebarColor,
+      topbarCustomSeed: topbarCustomSeed,
+      sidebarCustomSeed: sidebarCustomSeed
+    });
+  }
+  safeStorage.set('theme.topbarCustomSeed', topbarCustomSeed);
+  safeStorage.set('theme.sidebarCustomSeed', sidebarCustomSeed);
+
   // ✅ Update topbar
   const topbar = document.getElementById('topbar');
   if (topbar) {
@@ -133,7 +150,9 @@ function saveThemeSettingToServer(callback = null) {
   const setting = {
     sidebarColor: document.body.getAttribute('data-menu-color') || safeStorage.get('sidebar-color') || 'dark',
     topbarColor: document.body.getAttribute('data-topbar-color') || safeStorage.get('topbar-color') || 'light',
-    layoutMode: document.documentElement.getAttribute('data-bs-theme') || safeStorage.get('layout-mode') || 'light'
+    layoutMode: document.documentElement.getAttribute('data-bs-theme') || safeStorage.get('layout-mode') || 'light',
+    topbarCustomSeed: safeStorage.get('theme.topbarCustomSeed') || '#4254BA',
+    sidebarCustomSeed: safeStorage.get('theme.sidebarCustomSeed') || '#1E3A5F'
   };
 
   // ✅ Add CSRF token to request
@@ -254,6 +273,22 @@ function updateThemeSetting(key, value) {
   // ✅ Then save to server
   saveThemeSettingToServer();
 }
+
+function updateCustomThemeSeed(surface, value, persist) {
+  if (!window.IQSThemePalette) return false;
+  const normalized = window.IQSThemePalette.normalizeHex(value, null);
+  if (!normalized) return false;
+  const isTopbar = surface === 'topbar';
+  safeStorage.set(isTopbar ? 'theme.topbarCustomSeed' : 'theme.sidebarCustomSeed', normalized);
+  window.IQS_THEME_SETTINGS = window.IQS_THEME_SETTINGS || {};
+  window.IQS_THEME_SETTINGS[isTopbar ? 'topbarCustomSeed' : 'sidebarCustomSeed'] = normalized;
+  window.IQSThemePalette.apply(surface, normalized);
+  updateThemeSetting(isTopbar ? 'topbar-color' : 'sidebar-color', 'custom');
+  if (persist === false) return true;
+  return true;
+}
+
+window.updateCustomThemeSeed = updateCustomThemeSeed;
 
 // ============================================
 // ✅ Sync UI Radio Button

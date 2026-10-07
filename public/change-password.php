@@ -342,19 +342,8 @@ $systemName = trim((string)app_config('system.name', 'Sistem Pengurusan Fasiliti
 $siteTitle = trim((string)app_config('site.title', 'Sistem Pengurusan Fasiliti (e-Facility)'));
 $organizationName = trim((string)app_config('organization.name', $systemName !== '' ? $systemName : $siteTitle));
 $pageLang = (string)($_SESSION['lang'] ?? 'ms');
-$sidebarTheme = strtolower(trim((string)($globalThemeSettings['sidebarColor'] ?? $_SESSION['theme.menu'] ?? 'light')));
-$themeStyleMap = [
-  'light' => ['start' => '#6f86a3', 'end' => '#8ea2bb', 'primary' => '#64748b', 'primaryStrong' => '#475569', 'accent' => '#94a3b8', 'primaryRgb' => '100, 116, 139', 'accentRgb' => '148, 163, 184'],
-  'dark' => ['start' => '#111827', 'end' => '#1f2937', 'primary' => '#374151', 'primaryStrong' => '#111827', 'accent' => '#6b7280', 'primaryRgb' => '55, 65, 81', 'accentRgb' => '107, 114, 128'],
-  'brand' => ['start' => '#0b4fd6', 'end' => '#0f9db1', 'primary' => '#0f4fd6', 'primaryStrong' => '#0b3caa', 'accent' => '#0f9db1', 'primaryRgb' => '15, 79, 214', 'accentRgb' => '15, 157, 177'],
-  'emerald' => ['start' => '#065f46', 'end' => '#10b981', 'primary' => '#10b981', 'primaryStrong' => '#065f46', 'accent' => '#6ee7b7', 'primaryRgb' => '16, 185, 129', 'accentRgb' => '110, 231, 183'],
-  'navy' => ['start' => '#0c1b32', 'end' => '#12355f', 'primary' => '#1d4ed8', 'primaryStrong' => '#0c1b32', 'accent' => '#60a5fa', 'primaryRgb' => '29, 78, 216', 'accentRgb' => '96, 165, 250'],
-  'sunset' => ['start' => '#b45309', 'end' => '#f97316', 'primary' => '#ea580c', 'primaryStrong' => '#b45309', 'accent' => '#fb923c', 'primaryRgb' => '234, 88, 12', 'accentRgb' => '251, 146, 60'],
-  'mist' => ['start' => '#475569', 'end' => '#64748b', 'primary' => '#64748b', 'primaryStrong' => '#475569', 'accent' => '#94a3b8', 'primaryRgb' => '100, 116, 139', 'accentRgb' => '148, 163, 184'],
-  'strawberry' => ['start' => '#be185d', 'end' => '#f43f5e', 'primary' => '#e11d48', 'primaryStrong' => '#be185d', 'accent' => '#fb7185', 'primaryRgb' => '225, 29, 72', 'accentRgb' => '251, 113, 133'],
-  'matcha' => ['start' => '#3f6212', 'end' => '#65a30d', 'primary' => '#65a30d', 'primaryStrong' => '#3f6212', 'accent' => '#a3e635', 'primaryRgb' => '101, 163, 13', 'accentRgb' => '163, 230, 53'],
-];
-$activeThemeStyle = $themeStyleMap[$sidebarTheme] ?? $themeStyleMap['light'];
+require_once __DIR__ . '/includes/theme_palette_helper.php';
+$activeThemeStyle = iqs_theme_resolve_public_palette($globalThemeSettings);
 ?>
 <!DOCTYPE html>
 <html lang="<?= h($_SESSION['lang'] ?? 'ms') ?>">

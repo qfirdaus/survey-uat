@@ -623,6 +623,8 @@ $_SESSION['theme.menu']   = $themeSetting['sidebarColor'] ?? 'light';
 $_SESSION['theme.topbar'] = $themeSetting['topbarColor']  ?? 'light';
 $_SESSION['theme.layout'] = $themeSetting['layoutMode']   ?? 'light';
 $_SESSION['theme.sidebar'] = $_SESSION['theme.menu'];
+$_SESSION['theme.topbar_custom_seed'] = $themeSetting['topbarCustomSeed'] ?? SystemConfigConstants::DEFAULT_THEME_TOPBAR_CUSTOM_SEED;
+$_SESSION['theme.sidebar_custom_seed'] = $themeSetting['sidebarCustomSeed'] ?? SystemConfigConstants::DEFAULT_THEME_SIDEBAR_CUSTOM_SEED;
 
 // 11) Compatibility flags derived from environment.
 $GLOBALS['sybase_active'] = ['ehrmdb'=>false,'ehrmdb_dev'=>false];

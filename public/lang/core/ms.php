@@ -2088,6 +2088,14 @@
 'theme_mist' => 'Mist',
 'theme_strawberry' => 'Strawberry Pink',
 'theme_matcha' => 'Matcha',
+'theme_custom' => 'Custom',
+'config_theme_custom_seed_label' => 'Warna asas custom',
+'config_theme_custom_description' => 'Palette pintar dijana daripada warna pilihan anda',
+'config_theme_custom_help' => 'Gradient, teks, hover dan contrast dijana secara automatik.',
+'config_theme_custom_reset' => 'Tetap semula',
+'config_theme_topbar_custom_seed' => 'Warna Custom Topbar',
+'config_theme_sidebar_custom_seed' => 'Warna Custom Sidebar',
+'config_theme_custom_invalid' => '%s mesti menggunakan format warna hex seperti #4254BA.',
 'config_tab_tema_penerangan_sidebar_terang_penerangan'
                                         => 'Sidebar cerah dengan latar putih bersih.',
 'config_tab_tema_penerangan_sidebar_gelap_penerangan'

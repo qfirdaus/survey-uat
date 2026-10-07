@@ -1,5 +1,7 @@
 <?php
 $esc = static fn(string $value): string => htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+$topbarCustomSeed = strtoupper((string)($themeSettings['topbarCustomSeed'] ?? SystemConfigConstants::DEFAULT_THEME_TOPBAR_CUSTOM_SEED));
+$sidebarCustomSeed = strtoupper((string)($themeSettings['sidebarCustomSeed'] ?? SystemConfigConstants::DEFAULT_THEME_SIDEBAR_CUSTOM_SEED));
 
 $themeSections = [
   [
@@ -107,6 +109,13 @@ $themeSections = [
         'description_icon' => 'ri-plant-line',
         'preview_style' => 'width: 32px; height: 32px; background: linear-gradient(135deg, #bfd49c 0%, #9db77b 55%, #7b915d 100%); border: 2px solid #6b8150; border-radius: 6px;'
       ],
+      [
+        'value' => 'custom',
+        'label' => __('theme_custom') ?? 'Custom',
+        'description' => __('config_theme_custom_description') ?? 'Palette pintar daripada warna pilihan anda',
+        'description_icon' => 'ri-color-filter-line',
+        'preview_style' => 'width: 32px; height: 32px; background: linear-gradient(135deg, color-mix(in srgb, ' . $topbarCustomSeed . ' 72%, white), ' . $topbarCustomSeed . ' 52%, color-mix(in srgb, ' . $topbarCustomSeed . ' 72%, black)); border: 2px solid ' . $topbarCustomSeed . '; border-radius: 6px;'
+      ],
     ],
   ],
   [
@@ -184,6 +193,13 @@ $themeSections = [
         'description' => __('config_tab_tema_desc_sidebar_matcha') ?? 'Hijau matcha yang lembut dan matang untuk navigasi yang tenang',
         'description_icon' => 'ri-plant-line',
         'preview_style' => 'width: 32px; height: 32px; background: linear-gradient(180deg, #8ba36b 0%, #758d59 52%, #5f7447 100%); border: 2px solid #4f613b; border-radius: 6px;'
+      ],
+      [
+        'value' => 'custom',
+        'label' => __('theme_custom') ?? 'Custom',
+        'description' => __('config_theme_custom_description') ?? 'Palette pintar daripada warna pilihan anda',
+        'description_icon' => 'ri-color-filter-line',
+        'preview_style' => 'width: 32px; height: 32px; background: linear-gradient(180deg, color-mix(in srgb, ' . $sidebarCustomSeed . ' 72%, white), ' . $sidebarCustomSeed . ' 52%, color-mix(in srgb, ' . $sidebarCustomSeed . ' 72%, black)); border: 2px solid ' . $sidebarCustomSeed . '; border-radius: 6px;'
       ],
     ],
   ],
@@ -268,6 +284,26 @@ $themeSections = [
                                 </div>
                               </label>
                             <?php endforeach; ?>
+                            <?php if ($section['key'] === 'topbar_color' || $section['key'] === 'sidebar_color'): ?>
+                              <?php
+                                $isTopbarCustom = $section['key'] === 'topbar_color';
+                                $customName = $isTopbarCustom ? 'topbar_custom_seed' : 'sidebar_custom_seed';
+                                $customValue = $isTopbarCustom ? $topbarCustomSeed : $sidebarCustomSeed;
+                              ?>
+                              <div class="theme-custom-editor mt-2 p-3 rounded border" data-custom-editor="<?= $isTopbarCustom ? 'topbar' : 'sidebar' ?>">
+                                <label class="form-label small fw-semibold mb-2" for="<?= $esc($customName) ?>_picker">
+                                  <?= $esc(__('config_theme_custom_seed_label') ?? 'Warna asas custom') ?>
+                                </label>
+                                <div class="input-group">
+                                  <input type="color" class="form-control form-control-color" id="<?= $esc($customName) ?>_picker" value="<?= $esc($customValue) ?>" aria-label="<?= $esc(__('config_theme_custom_seed_label') ?? 'Warna asas custom') ?>">
+                                  <input type="text" class="form-control font-monospace" name="<?= $esc($customName) ?>" value="<?= $esc($customValue) ?>" maxlength="7" pattern="#[0-9A-Fa-f]{6}" data-custom-seed>
+                                  <button type="button" class="btn btn-outline-secondary" data-custom-reset data-default-seed="<?= $isTopbarCustom ? '#4254BA' : '#1E3A5F' ?>">
+                                    <?= $esc(__('config_theme_custom_reset') ?? 'Reset') ?>
+                                  </button>
+                                </div>
+                                <div class="form-text"><?= $esc(__('config_theme_custom_help') ?? 'Gradient, teks, hover dan contrast dijana secara automatik.') ?></div>
+                              </div>
+                            <?php endif; ?>
                           </div>
                         </div>
                       </div>
@@ -380,8 +416,48 @@ $themeSections = [
                   section.querySelectorAll('input[type="radio"]').forEach(function (radio) {
                     radio.addEventListener('change', function () {
                       syncSummary(section);
+                      var surface = section.getAttribute('data-theme-section') === 'topbar_color' ? 'topbar' : (section.getAttribute('data-theme-section') === 'sidebar_color' ? 'sidebar' : '');
+                      if (surface && radio.value === 'custom') {
+                        var seed = section.querySelector('[data-custom-seed]');
+                        if (seed && window.IQSThemePalette) {
+                          window.IQSThemePalette.apply(surface, seed.value);
+                          document.documentElement.setAttribute(surface === 'topbar' ? 'data-topbar-color' : 'data-menu-color', 'custom');
+                          document.body.setAttribute(surface === 'topbar' ? 'data-topbar-color' : 'data-menu-color', 'custom');
+                        }
+                      }
                     });
                   });
+                  var editor = section.querySelector('[data-custom-editor]');
+                  if (editor) {
+                    var picker = editor.querySelector('input[type="color"]');
+                    var seedInput = editor.querySelector('[data-custom-seed]');
+                    var reset = editor.querySelector('[data-custom-reset]');
+                    var surface = editor.getAttribute('data-custom-editor');
+                    var applySeed = function (value) {
+                      var normalized = window.IQSThemePalette ? window.IQSThemePalette.normalizeHex(value, null) : null;
+                      if (!normalized) return;
+                      picker.value = normalized;
+                      seedInput.value = normalized;
+                      window.IQSThemePalette.apply(surface, normalized);
+                      var customRadio = section.querySelector('input[type="radio"][value="custom"]');
+                      if (customRadio) {
+                        customRadio.checked = true;
+                        var customOption = customRadio.closest('.theme-option');
+                        if (customOption) {
+                          var direction = surface === 'topbar' ? '135deg' : '180deg';
+                          customOption.setAttribute('data-theme-preview', 'width: 32px; height: 32px; background: linear-gradient(' + direction + ', color-mix(in srgb, ' + normalized + ' 72%, white), ' + normalized + ' 52%, color-mix(in srgb, ' + normalized + ' 72%, black)); border: 2px solid ' + normalized + '; border-radius: 6px;');
+                          var preview = customOption.querySelector('.theme-preview');
+                          if (preview) preview.style.cssText = customOption.getAttribute('data-theme-preview');
+                        }
+                      }
+                      document.documentElement.setAttribute(surface === 'topbar' ? 'data-topbar-color' : 'data-menu-color', 'custom');
+                      document.body.setAttribute(surface === 'topbar' ? 'data-topbar-color' : 'data-menu-color', 'custom');
+                      syncSummary(section);
+                    };
+                    picker.addEventListener('input', function () { applySeed(picker.value); });
+                    seedInput.addEventListener('change', function () { applySeed(seedInput.value); });
+                    reset.addEventListener('click', function () { applySeed(reset.getAttribute('data-default-seed')); });
+                  }
                 });
 
                 window.__tetapanSyncThemeSectionUi = function () {

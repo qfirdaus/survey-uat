@@ -105,6 +105,23 @@ html[data-menu-color=matcha] {
   --ct-help-box-bg: rgba(255, 255, 255, 0.08);
 }
 
+html[data-menu-color=custom] {
+  --ct-menu-bg: linear-gradient(180deg, var(--iqs-sidebar-start) 0%, var(--iqs-sidebar-mid) 52%, var(--iqs-sidebar-end) 100%);
+  --ct-menu-shell-bg: linear-gradient(180deg, var(--iqs-sidebar-start) 0%, var(--iqs-sidebar-mid) 52%, var(--iqs-sidebar-end) 100%);
+  --ct-menu-shell-shadow: 18px 0 42px var(--iqs-sidebar-shadow);
+  --ct-menu-shell-border: var(--iqs-sidebar-border);
+  --ct-menu-hover-bg: var(--iqs-sidebar-overlay);
+  --ct-menu-hover-shadow: 0 12px 24px var(--iqs-sidebar-shadow);
+  --ct-menu-active-bg: linear-gradient(135deg, var(--iqs-sidebar-overlay), rgba(255, 255, 255, 0.06));
+  --ct-menu-active-border: var(--iqs-sidebar-border);
+  --ct-menu-active-indicator: var(--iqs-sidebar-accent);
+  --ct-menu-item-color: var(--iqs-sidebar-muted);
+  --ct-menu-item-hover-color: var(--iqs-sidebar-fg);
+  --ct-menu-item-active-color: var(--iqs-sidebar-fg);
+  --ct-menu-condensed-link-bg: var(--iqs-sidebar-end);
+  --ct-help-box-bg: var(--iqs-sidebar-overlay);
+}
+
 html[data-bs-theme=dark][data-menu-color=light],
 html[data-bs-theme=dark][data-menu-color=dark] {
   --ct-menu-bg: #313a46;
@@ -194,6 +211,25 @@ html[data-topbar-color=mist] {
   --ct-topbar-search-bg: rgba(255, 255, 255, 0.52);
   --ct-topbar-user-bg: rgba(255, 255, 255, 0.5);
   --ct-topbar-user-border: rgba(148, 163, 184, 0.22);
+}
+
+html[data-topbar-color=custom] {
+  --ct-topbar-bg: linear-gradient(135deg, var(--iqs-topbar-start), var(--iqs-topbar-mid) 52%, var(--iqs-topbar-end));
+  --ct-topbar-item-color: var(--iqs-topbar-muted);
+  --ct-topbar-item-hover-color: var(--iqs-topbar-fg);
+  --ct-topbar-search-bg: var(--iqs-topbar-overlay);
+  --ct-topbar-user-bg: var(--iqs-topbar-overlay);
+  --ct-topbar-user-border: var(--iqs-topbar-border);
+  --ct-accent: var(--iqs-topbar-accent);
+  --ct-primary-start: var(--iqs-topbar-start);
+  --ct-primary-end: var(--iqs-topbar-end);
+  --ct-topbar-shell-bg: linear-gradient(135deg, var(--iqs-topbar-start) 0%, var(--iqs-topbar-mid) 52%, var(--iqs-topbar-end) 100%);
+  --ct-topbar-shell-shadow: 0 22px 48px var(--iqs-topbar-shadow);
+  --ct-topbar-shell-border: var(--iqs-topbar-border);
+  --ct-topbar-link-hover-bg: var(--iqs-topbar-overlay);
+  --ct-topbar-pill-bg: var(--iqs-topbar-overlay);
+  --ct-topbar-pill-border: var(--iqs-topbar-border);
+  --ct-topbar-search-border: var(--iqs-topbar-border);
 }
 
 html[data-bs-theme=dark][data-topbar-color=light],
@@ -15011,6 +15047,7 @@ html[data-menu-color=navy] .logo.logo-light,
 html[data-menu-color=sunset] .logo.logo-light,
 html[data-menu-color=strawberry] .logo.logo-light,
 html[data-menu-color=matcha] .logo.logo-light,
+html[data-menu-color=custom][data-custom-sidebar-tone=dark] .logo.logo-light,
 html[data-menu-color=dark] .logo.logo-light,
 html[data-bs-theme=dark] .logo.logo-light {
   display: block;
@@ -15021,6 +15058,7 @@ html[data-menu-color=navy] .logo.logo-dark,
 html[data-menu-color=sunset] .logo.logo-dark,
 html[data-menu-color=strawberry] .logo.logo-dark,
 html[data-menu-color=matcha] .logo.logo-dark,
+html[data-menu-color=custom][data-custom-sidebar-tone=dark] .logo.logo-dark,
 html[data-menu-color=dark] .logo.logo-dark,
 html[data-bs-theme=dark] .logo.logo-dark {
   display: none;
@@ -15825,6 +15863,7 @@ html[data-topbar-color=navy] .logo-topbar .logo-light,
 html[data-topbar-color=sunset] .logo-topbar .logo-light,
 html[data-topbar-color=strawberry] .logo-topbar .logo-light,
 html[data-topbar-color=matcha] .logo-topbar .logo-light,
+html[data-topbar-color=custom][data-custom-topbar-tone=dark] .logo-topbar .logo-light,
 html[data-topbar-color=dark] .logo-topbar .logo-light,
 html[data-bs-theme=dark] .logo-topbar .logo-light {
   display: block;
@@ -15835,6 +15874,7 @@ html[data-topbar-color=navy] .logo-topbar .logo-dark,
 html[data-topbar-color=sunset] .logo-topbar .logo-dark,
 html[data-topbar-color=strawberry] .logo-topbar .logo-dark,
 html[data-topbar-color=matcha] .logo-topbar .logo-dark,
+html[data-topbar-color=custom][data-custom-topbar-tone=dark] .logo-topbar .logo-dark,
 html[data-topbar-color=dark] .logo-topbar .logo-dark,
 html[data-bs-theme=dark] .logo-topbar .logo-dark {
   display: none;

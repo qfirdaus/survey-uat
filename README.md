@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.9.9`
+- Current version: `1.10.0`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -19,6 +19,14 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Runtime model: native WSL; Docker, Docker Compose, and container-specific Apache assets are no longer maintained in this repository
 - Main database: MySQL `8.x`
 - External database support: Sybase through ODBC/DBLIB, plus additional PDO connections configured from the system UI
+
+## Version 1.10.0 Custom Theme Palette
+
+- System administrators and individual users can select custom topbar and sidebar seed colours with live preview and persistent preferences.
+- Custom colours generate coordinated gradients, foregrounds, hover states, borders, shadows, and light/dark logo treatment instead of rendering as flat colours.
+- Colour input is restricted to normalized hexadecimal values, and automatic contrast selection keeps navigation text readable.
+- Login, forgot-password, reset-password, and change-password pages now share one public palette resolver and inherit the system custom sidebar theme.
+- Bright public-page themes are adjusted to maintain WCAG AA contrast for white button text, while legacy and invalid values fall back safely.
 
 ## Version 1.9.9 Public User Login and Profile Fixes
 
