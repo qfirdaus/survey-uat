@@ -25,6 +25,7 @@ require_once __DIR__ . '/../classes/DatabasePreviewSanitizer.php';
 require_once __DIR__ . '/../classes/DatabaseErrorRedactor.php';
 require_once __DIR__ . '/../classes/DatabaseErrorClassifier.php';
 require_once __DIR__ . '/../classes/AiChatbotService.php';
+require_once __DIR__ . '/../classes/SystemInformationService.php';
 require_once __DIR__ . '/../setting/constants/prestasi_constants.php';
 require_once __DIR__ . '/../setting/helper/config_helper.php';
 require_once __DIR__ . '/../includes/functions-db.php';
@@ -1188,7 +1189,7 @@ class TetapanSistemController {
     ];
   }
 
-  public function getPageViewData(bool $refreshLanguageData = false): array {
+  public function getPageViewData(bool $refreshLanguageData = false, bool $includeSystemInformation = false): array {
     $dbAktif = $this->getCachedValue(
       'dbcfg',
       SystemConfigConstants::CACHE_TTL_DB_CONFIG,
@@ -1257,6 +1258,20 @@ class TetapanSistemController {
     );
 
     $sidebarSmallImages = $this->getSidebarSmallImageOptions();
+    $systemInformation = [];
+    if ($includeSystemInformation) {
+      try {
+        $systemInformation = (new SystemInformationService(
+          $this->pdo,
+          dirname(__DIR__, 2)
+        ))->build();
+      } catch (Throwable $e) {
+        error_log('[TetapanSistem] System information collection failed: ' . $e->getMessage());
+        $systemInformation = [
+          'error' => $this->tr('config_system_info_collection_error', 'System information could not be collected.'),
+        ];
+      }
+    }
 
     return [
       'dbAktif' => $dbAktif,
@@ -1271,6 +1286,7 @@ class TetapanSistemController {
       'themeSettings' => $themeSettings,
       'aiChatbotSettings' => $aiChatbotSettings,
       'sidebarSmallImages' => $sidebarSmallImages,
+      'systemInformation' => $systemInformation,
     ];
   }
 

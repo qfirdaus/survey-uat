@@ -41,7 +41,11 @@ $controller->handleRequest(); // Handle POST requests
 $lang     = $controller->lang;
 $profile  = $controller->profile;
 $pageAssetVersion = (string)($_ENV['APP_ASSET_VER'] ?? date('ymdHis'));
-$viewData = $controller->getPageViewData((($_GET['tab'] ?? '') === 'lang'));
+$activeSystemTab = trim((string)($_GET['tab'] ?? 'general'));
+$viewData = $controller->getPageViewData(
+  $activeSystemTab === 'lang',
+  $activeSystemTab === 'system-info'
+);
 
 $dbAktif = is_array($viewData['dbAktif'] ?? null) ? $viewData['dbAktif'] : [];
 $mysqlInfo = is_array($viewData['mysqlInfo'] ?? null) ? $viewData['mysqlInfo'] : [];
@@ -55,6 +59,7 @@ $additionalDiagnostics = is_array($viewData['additionalDiagnostics'] ?? null) ? 
 $themeSettings = is_array($viewData['themeSettings'] ?? null) ? $viewData['themeSettings'] : [];
 $aiChatbotSettings = is_array($viewData['aiChatbotSettings'] ?? null) ? $viewData['aiChatbotSettings'] : [];
 $sidebarSmallImages = is_array($viewData['sidebarSmallImages'] ?? null) ? $viewData['sidebarSmallImages'] : [];
+$systemInformation = is_array($viewData['systemInformation'] ?? null) ? $viewData['systemInformation'] : [];
 $systemVersion = app_current_version();
 
 $senaraiBahasa = $languageData['list']   ?? [];
@@ -339,6 +344,11 @@ if (isset($translationBundlesJs[$lang])) {
                   <i class="ri-chat-3-line me-1"></i> <?= __('config_tab_ai_chatbot') ?? 'AI Chatbot' ?>
                 </a>
               </li>
+              <li class="nav-item">
+                <a class="nav-link <?= ($_GET['tab'] ?? '') === 'system-info' ? 'active' : '' ?>" href="<?= h(url_with_param('tab', 'system-info')) ?>" role="tab" aria-controls="system-info-tab" aria-selected="<?= ($_GET['tab'] ?? '') === 'system-info' ? 'true' : 'false' ?>">
+                  <i class="ri-information-line me-1"></i> <?= __('config_tab_system_info') ?? 'System Information' ?>
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -358,6 +368,8 @@ if (isset($translationBundlesJs[$lang])) {
             <?php include __DIR__ . '/partials/tetapan-sistem/tab-language.php'; ?>
 
             <?php include __DIR__ . '/partials/tetapan-sistem/tab-ai-chatbot.php'; ?>
+
+            <?php include __DIR__ . '/partials/tetapan-sistem/tab-system-information.php'; ?>
 
           </div><!-- /tab-content -->
           </section>
