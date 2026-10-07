@@ -594,7 +594,7 @@ $__IS_DEV = ($__APP_ENV === 'development');
 // Error reporting: ON for dev, OFF for production/staging
 ini_set('display_errors', $__IS_DEV ? '1' : '0');
 ini_set('display_startup_errors', $__IS_DEV ? '1' : '0');
-error_reporting($__IS_DEV ? E_ALL : E_ALL & ~E_DEPRECATED & ~E_STRICT);
+error_reporting($__IS_DEV ? E_ALL : E_ALL & ~E_DEPRECATED);
 
 // 8.1) Ensure application log directory exists and route PHP error_log there
 // Provide a simple helper for application code to write structured logs

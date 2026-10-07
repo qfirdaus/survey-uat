@@ -47,7 +47,7 @@ final class AuditLogger
                 if (str_starts_with($colType, 'enum(')) {
                     // parse enum values like: enum('A','B','C')
                     $inside = substr($colType, 5, -1);
-                    $parts = str_getcsv($inside, ',', "'");
+                    $parts = str_getcsv($inside, ',', "'", '');
                     $enum = array_map(fn($v) => trim($v, " '\""), $parts);
                 }
                 return ['column_type' => $colType, 'max_length' => $max, 'enum_values' => $enum];

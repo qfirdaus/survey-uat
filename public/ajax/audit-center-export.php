@@ -174,13 +174,13 @@ function stream_csv(array $rows, string $filename): never
     }
     if ($headers === []) {
         $headers = ['message'];
-        fputcsv($out, $headers);
-        fputcsv($out, ['No records found']);
+        fputcsv($out, $headers, ',', '"', '');
+        fputcsv($out, ['No records found'], ',', '"', '');
         fclose($out);
         exit;
     }
 
-    fputcsv($out, $headers);
+    fputcsv($out, $headers, ',', '"', '');
     foreach ($rows as $row) {
         $line = [];
         foreach ($headers as $header) {
@@ -194,7 +194,7 @@ function stream_csv(array $rows, string $filename): never
             }
             $line[] = $cell;
         }
-        fputcsv($out, $line);
+        fputcsv($out, $line, ',', '"', '');
     }
 
     fclose($out);
