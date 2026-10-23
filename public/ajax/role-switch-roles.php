@@ -49,7 +49,7 @@ try {
     }
     if (!$profile) {
         http_response_code(403);
-        echo json_encode(['error' => true, 'message' => 'Akses ditolak.'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['error' => true, 'message' => __('topbar_switch_role_access_denied')], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -59,7 +59,7 @@ try {
     $stafNorm = str_replace('-', '', $stafRaw);
     if ($userID <= 0 && $stafRaw === '' && $stafNorm === '') {
         http_response_code(403);
-        echo json_encode(['error' => true, 'message' => 'Akses ditolak.'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['error' => true, 'message' => __('topbar_switch_role_access_denied')], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -122,5 +122,5 @@ try {
 } catch (Throwable $e) {
     role_switch_roles_trace_log('[role_switch_roles] exception ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['error' => true, 'message' => 'Ralat pelayan.'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['error' => true, 'message' => __('topbar_switch_role_server_error')], JSON_UNESCAPED_UNICODE);
 }

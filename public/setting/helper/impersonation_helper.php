@@ -467,6 +467,12 @@ if (!function_exists('impersonation_write_guard')) {
         if (str_ends_with($script, '/ajax/impersonation-stop.php')) {
             return;
         }
+        // Role selection changes only the effective session role. Both routes
+        // validate the target user's allowed roles; no application data is written.
+        if (str_ends_with($script, '/ajax/role-switch-roles.php')
+            || str_ends_with($script, '/ajax/role-switch.php')) {
+            return;
+        }
 
         $state = impersonation_state();
         $actor = impersonation_actor();

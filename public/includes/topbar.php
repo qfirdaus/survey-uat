@@ -111,11 +111,6 @@ try {
   $allowedRoles = [];
   $hasExtraRole = false;
 }
-$showDisabledRoleSwitch = $isImpersonating && $hasExtraRole;
-if ($isImpersonating) {
-  $allowedRoles = [];
-  $hasExtraRole = false;
-}
 
 // Default role label (from tbl_m_user)
 $defaultGroupName = $profile['f_groupName'] ?? 'Pengguna';
@@ -329,15 +324,11 @@ if ($roleSwitchFlash !== null) {
           <div class="dropdown-header noti-title profile-dropdown-header">
             <h6 class="text-overflow m-0"><?= h(__('topbar_welcome')) ?></h6>
           </div>
-          <a href="<?= h(base_url('pages/profile.php')) ?>" class="dropdown-item"><i class="ri-account-circle-fill me-1"></i> Profil Saya</a>
+          <a href="<?= h(base_url('pages/profile.php')) ?>" class="dropdown-item"><i class="ri-account-circle-fill me-1"></i> <?= h(__('topbar_profile')) ?></a>
           <?php if ($hasExtraRole): ?>
             <a href="#" class="dropdown-item" id="btnSwitchRole">
               <i class="ri-shuffle-line me-1"></i> <?= h(__('topbar_switch_role') ?? 'Tukar Peranan') ?>
             </a>
-          <?php elseif ($showDisabledRoleSwitch): ?>
-            <span class="dropdown-item disabled" aria-disabled="true" title="<?= h($lang === 'ms' ? 'Tidak tersedia dalam mod View As' : 'Unavailable in View As mode') ?>">
-              <i class="ri-shuffle-line me-1"></i> <?= h(__('topbar_switch_role') ?? 'Tukar Peranan') ?>
-            </span>
           <?php endif; ?>
           <!-- <a href="<?= h(base_url('pages/pages-settings.html')) ?>" class="dropdown-item"><i class="ri-settings-4-fill me-1"></i> Tetapan</a>
           <a href="<?= h(base_url('pages/pages-faq.html')) ?>" class="dropdown-item"><i class="ri-customer-service-2-fill me-1"></i> Sokongan</a> -->
@@ -1108,10 +1099,13 @@ if ($roleSwitchFlash !== null) {
     let primaryNameEl = null;
     const successTitleTpl = <?= json_encode(__('topbar_switch_role_success_title') ?? 'Peranan {role}', JSON_UNESCAPED_UNICODE) ?>;
     const successTextTpl = <?= json_encode(__('topbar_switch_role_success_text') ?? 'Paparan dan akses sistem telah dikemas kini mengikut pilihan peranan baru iaitu <strong>{role}</strong>.', JSON_UNESCAPED_UNICODE) ?>;
+    const roleSwitchFailed = <?= json_encode(__('topbar_switch_role_failed'), JSON_UNESCAPED_UNICODE) ?>;
+    const roleSwitchUnknownError = <?= json_encode(__('topbar_switch_role_unknown_error'), JSON_UNESCAPED_UNICODE) ?>;
+    const roleSwitchFallbackName = <?= json_encode(__('topbar_switch_role_fallback_name'), JSON_UNESCAPED_UNICODE) ?>;
     const fallbackRedirectUrl = <?= json_encode(base_url(app_config('site.default_home', 'pages/dashboard.php')), JSON_UNESCAPED_UNICODE) ?>;
 
     function showRoleSwitchSuccess(roleName){
-      const safeRole = String(roleName || 'peranan').trim() || 'peranan';
+      const safeRole = String(roleName || roleSwitchFallbackName).trim() || roleSwitchFallbackName;
       const title = String(successTitleTpl || '').replace('{role}', safeRole);
       const html = String(successTextTpl || '').replace('{role}', safeRole);
       if (window.Swal && typeof Swal.fire === 'function') {
@@ -1200,7 +1194,7 @@ if ($roleSwitchFlash !== null) {
             let j = null;
             try { j = JSON.parse(text); } catch (e) {}
             if (!r.ok || !j || j.error) {
-              throw new Error((j && j.message) || 'Gagal menukar peranan.');
+              throw new Error((j && j.message) || roleSwitchFailed);
             }
             modal.hide();
 
@@ -1220,7 +1214,7 @@ if ($roleSwitchFlash !== null) {
               window.location.href = String(j.redirect_url || fallbackRedirectUrl || window.location.href);
               return;
             }
-            showRoleSwitchSuccess(roleName || selected.closest('.role-item')?.textContent || 'peranan');
+            showRoleSwitchSuccess(roleName || selected.closest('.role-item')?.textContent || roleSwitchFallbackName);
           };
 
           if (window.AccessUiSync && typeof window.AccessUiSync.runExclusive === 'function') {
@@ -1229,7 +1223,7 @@ if ($roleSwitchFlash !== null) {
             await runRoleSwitch();
           }
         } catch (e) {
-          showErr(e.message || 'Gagal menukar peranan.');
+          showErr(e.message || roleSwitchFailed);
         } finally {
           saveBtn.disabled = false;
           saveBtn.innerHTML = originalHtml;
@@ -1239,7 +1233,7 @@ if ($roleSwitchFlash !== null) {
 
     function showErr(msg){
       if (!errEl) return;
-      errEl.textContent = msg || 'Ralat tidak diketahui.';
+      errEl.textContent = msg || roleSwitchUnknownError;
       errEl.classList.remove('d-none');
     }
     function hideErr(){

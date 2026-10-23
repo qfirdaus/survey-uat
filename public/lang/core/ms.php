@@ -2629,6 +2629,7 @@
  * TOPBAR
  * ========================= */
 'topbar_welcome'              => 'Selamat Datang!',
+'topbar_profile'              => 'Profil Saya',
 'topbar_keluar'               => 'Log Keluar',
 
 // Profil & menu
@@ -2641,6 +2642,14 @@
 'topbar_switch_role_err_select' => 'Sila pilih peranan.',
 'topbar_switch_role_err_invalid' => 'Sila pilih peranan yang sah.',
 'topbar_switch_role_saving'   => 'Menyimpan...',
+'topbar_switch_role_failed'   => 'Gagal menukar peranan.',
+'topbar_switch_role_unknown_error' => 'Ralat tidak diketahui.',
+'topbar_switch_role_fallback_name' => 'peranan',
+'topbar_switch_role_invalid_data' => 'Data tidak sah.',
+'topbar_switch_role_access_denied' => 'Akses ditolak.',
+'topbar_switch_role_not_allowed' => 'Peranan tidak dibenarkan untuk pengguna ini.',
+'topbar_switch_role_updated' => 'Peranan berjaya dikemas kini.',
+'topbar_switch_role_server_error' => 'Ralat sistem semasa menukar peranan.',
 'topbar_switch_role_success_title' => 'Peranan {role}',
 'topbar_switch_role_success_text'  => 'Paparan dan akses sistem telah dikemas kini mengikut pilihan peranan baru iaitu <strong>{role}</strong>.',
 

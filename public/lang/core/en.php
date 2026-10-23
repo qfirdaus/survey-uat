@@ -2633,6 +2633,7 @@
  * TOPBAR
  * ========================= */
 'topbar_welcome'              => 'Welcome!',
+'topbar_profile'              => 'My Profile',
 'topbar_keluar'               => 'Logout',
 
 // Profil & menu
@@ -2645,6 +2646,14 @@
 'topbar_switch_role_err_select' => 'Please select a role.',
 'topbar_switch_role_err_invalid' => 'Please select a valid role.',
 'topbar_switch_role_saving'   => 'Saving...',
+'topbar_switch_role_failed'   => 'Unable to switch role.',
+'topbar_switch_role_unknown_error' => 'An unknown error occurred.',
+'topbar_switch_role_fallback_name' => 'role',
+'topbar_switch_role_invalid_data' => 'Invalid data.',
+'topbar_switch_role_access_denied' => 'Access denied.',
+'topbar_switch_role_not_allowed' => 'This role is not allowed for this user.',
+'topbar_switch_role_updated' => 'Role updated successfully.',
+'topbar_switch_role_server_error' => 'A server error occurred while switching roles.',
 'topbar_switch_role_success_title' => 'Role {role}',
 'topbar_switch_role_success_text'  => 'Display and system access have been updated according to the newly selected role, <strong>{role}</strong>.',
 

@@ -54,7 +54,7 @@ try {
     $data = json_decode($rawInput, true);
     if (!is_array($data)) {
         http_response_code(400);
-        echo json_encode(['error' => true, 'message' => 'Data tidak sah.'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['error' => true, 'message' => __('topbar_switch_role_invalid_data')], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -71,7 +71,7 @@ try {
 
     if ($groupID <= 0) {
         http_response_code(422);
-        echo json_encode(['error' => true, 'message' => 'Peranan tidak sah.'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['error' => true, 'message' => __('topbar_switch_role_err_invalid')], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -89,7 +89,7 @@ try {
 
     if (!$profile) {
         http_response_code(403);
-        echo json_encode(['error' => true, 'message' => 'Akses ditolak.'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['error' => true, 'message' => __('topbar_switch_role_access_denied')], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -99,7 +99,7 @@ try {
     $stafNorm = str_replace('-', '', $stafRaw);
     if ($userID <= 0 && $stafRaw === '' && $stafNorm === '') {
         http_response_code(403);
-        echo json_encode(['error' => true, 'message' => 'Akses ditolak.'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['error' => true, 'message' => __('topbar_switch_role_access_denied')], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -130,7 +130,7 @@ try {
         if (!$ok) {
             role_switch_trace_log(sprintf('[role_switch] denied requested_group=%d user_id=%d staf_id=%s', $groupID, $userID, $stafRaw));
             http_response_code(403);
-            echo json_encode(['error' => true, 'message' => 'Peranan tidak dibenarkan untuk pengguna ini.'], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['error' => true, 'message' => __('topbar_switch_role_not_allowed')], JSON_UNESCAPED_UNICODE);
             exit;
         }
     }
@@ -267,7 +267,7 @@ try {
 
     echo json_encode([
         'error' => false,
-        'message' => 'Peranan berjaya dikemas kini.',
+        'message' => __('topbar_switch_role_updated'),
         'ui' => $ui,
         'active_group_id' => $groupID,
         'group_name' => $newGroupName,
@@ -280,5 +280,5 @@ try {
     role_switch_trace_log('[role_switch] exception ' . $e->getMessage());
     error_log('[role-switch] Error: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['error' => true, 'message' => 'Ralat sistem semasa menukar peranan.'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['error' => true, 'message' => __('topbar_switch_role_server_error')], JSON_UNESCAPED_UNICODE);
 }
