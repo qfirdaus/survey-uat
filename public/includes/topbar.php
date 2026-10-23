@@ -111,6 +111,7 @@ try {
   $allowedRoles = [];
   $hasExtraRole = false;
 }
+$showDisabledRoleSwitch = $isImpersonating && $hasExtraRole;
 if ($isImpersonating) {
   $allowedRoles = [];
   $hasExtraRole = false;
@@ -208,7 +209,7 @@ if ($roleSwitchFlash !== null) {
 <?php endif; ?>
 
 <!-- ========== Topbar Start ========== -->
-<div id="topbar" class="navbar-custom" data-topbar-color="<?= h($topbarColor) ?>">
+<div id="topbar" class="navbar-custom<?= $isImpersonating ? ' navbar-custom--impersonating' : '' ?>" data-topbar-color="<?= h($topbarColor) ?>">
   <div class="topbar container-fluid">
     <div class="d-flex align-items-center gap-lg-2 gap-1">
       <!-- Logo -->
@@ -333,6 +334,10 @@ if ($roleSwitchFlash !== null) {
             <a href="#" class="dropdown-item" id="btnSwitchRole">
               <i class="ri-shuffle-line me-1"></i> <?= h(__('topbar_switch_role') ?? 'Tukar Peranan') ?>
             </a>
+          <?php elseif ($showDisabledRoleSwitch): ?>
+            <span class="dropdown-item disabled" aria-disabled="true" title="<?= h($lang === 'ms' ? 'Tidak tersedia dalam mod View As' : 'Unavailable in View As mode') ?>">
+              <i class="ri-shuffle-line me-1"></i> <?= h(__('topbar_switch_role') ?? 'Tukar Peranan') ?>
+            </span>
           <?php endif; ?>
           <!-- <a href="<?= h(base_url('pages/pages-settings.html')) ?>" class="dropdown-item"><i class="ri-settings-4-fill me-1"></i> Tetapan</a>
           <a href="<?= h(base_url('pages/pages-faq.html')) ?>" class="dropdown-item"><i class="ri-customer-service-2-fill me-1"></i> Sokongan</a> -->
@@ -446,6 +451,9 @@ if ($roleSwitchFlash !== null) {
 
 <!-- ========== Development Mode Banner CSS ========== -->
 <style>
+  .navbar-custom--impersonating {
+    z-index: 1002;
+  }
   .impersonation-banner {
     position: sticky;
     top: 70px;
