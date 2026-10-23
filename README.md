@@ -6,7 +6,7 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 
 ## Version
 
-- Current version: `1.11.0`
+- Current version: `1.11.1`
 - Release history: [CHANGELOG.md](./CHANGELOG.md)
 - Version file: [VERSION](./VERSION)
 - Runtime fallback: [public/configuration/settings.php](./public/configuration/settings.php)
@@ -20,6 +20,12 @@ README ini hanya mendokumenkan ciri yang wujud dalam kod semasa projek ini.
 - Runtime model: native WSL; Docker, Docker Compose, and container-specific Apache assets are no longer maintained in this repository
 - Main database: MySQL `8.x`
 - External database support: Sybase through ODBC/DBLIB, plus additional PDO connections configured from the system UI
+
+## Version 1.11.1 View As Role Testing
+
+- The profile dropdown remains above the View As banner and shows Welcome, My Profile, Switch Role, and Logout in that order.
+- Super Admins in View As can switch among roles assigned to the selected user to test that user's menus and access. Role switching changes only the effective session role; the View As read-only guard still blocks other changes.
+- The role menu and role-switch feedback are translated in Malay and English. Ending View As restores the administrator's original session and role.
 
 ## Version 1.11.0 System Information Diagnostics
 

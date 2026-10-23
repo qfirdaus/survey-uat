@@ -6,6 +6,19 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+## [1.11.1] - 2026-10-23
+
+### Changed
+- Updated the shared IQS Framework version to `1.11.1`.
+- Enabled switching among the selected user's assigned roles during Super Admin View As without permitting other changes in read-only mode.
+- Localized the profile menu and role-switch feedback in Malay and English.
+
+### Fixed
+- Kept the View As profile dropdown, including its Welcome heading, above the impersonation banner.
+
+### Security
+- Kept role switching limited to the selected user's authorized roles, with CSRF validation and audit logging; stopping View As restores the administrator's original role.
+
 ## [1.11.0] - 2026-10-08
 
 ### Added
