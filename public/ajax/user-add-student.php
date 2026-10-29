@@ -20,6 +20,7 @@ try {
     $initOutput = ob_get_clean();
     require_once __DIR__ . '/_helpers.php';
     require_once __DIR__ . '/../includes/functions-db.php';
+    require_once __DIR__ . '/../includes/user-list-extension.php';
     logAjaxUnexpectedOutput('user-add-student:init.php', $initOutput);
 
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
@@ -348,6 +349,12 @@ try {
     userListEnsureAssignableGroup($pdo, (int)$payload['groupID']);
     $ensureUserNotExists($pdo, $matrik);
     $student = $fetchStudent($matrik);
+    if (!iqs_user_list_extension_sync_allowed($pdo, 'student.add', $student, [
+        'identifier' => $matrik,
+        'source' => 'v210',
+    ])) {
+        jsonErrorResponse((string)__('userList_ajax_student_exists'), 409);
+    }
 
     $loggedInStafID = $_SESSION['f_stafID'] ?? null;
     $newUserId = $insertStudent($pdo, $student, $group['groupID'], $group['groupKod'], $payload['flag'], $loggedInStafID, $derivePhone, $userSchema);

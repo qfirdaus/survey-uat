@@ -21,6 +21,7 @@ require_once __DIR__ . '/../controllers/UserListController.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Database.php';
 require_once __DIR__ . '/../includes/functions-db.php';
+require_once __DIR__ . '/../includes/user-list-extension.php';
 
 $controller   = new UserListController();
 $studentModeEnabled = function_exists('is_student_mode_enabled') ? is_student_mode_enabled() : false;
@@ -315,6 +316,13 @@ function load_users_by_category(PDO $pdo, string $category, string $q = ''): arr
   if ($q !== '') {
     $where[] = "(u.f_nama LIKE :q OR u.f_loginID LIKE :q OR u.f_stafID LIKE :q OR u.f_nopekerja LIKE :q)";
     $params[':q'] = '%' . $q . '%';
+  }
+
+  if (strtoupper(trim($category)) === 'PELAJAR') {
+    iqs_user_list_extension_apply_query_filters($pdo, 'student.list', $where, $params, [
+      'category' => $category,
+      'alias' => 'u',
+    ]);
   }
 
   $whereSql = 'WHERE ' . implode(' AND ', $where);
@@ -2683,6 +2691,7 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
                 </button>
               </li>
               <?php endif; ?>
+              <?php iqs_user_list_extension_render('nav.after_student'); ?>
               <li class="nav-item" role="presentation">
                 <button
                   class="nav-link"
@@ -2771,6 +2780,8 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
             ); ?>
           </div>
           <?php endif; ?>
+
+          <?php iqs_user_list_extension_render('panel.after_student'); ?>
 
           <div
             class="tab-pane fade"
@@ -6896,6 +6907,7 @@ $PAGE_TITLE = (string)__('userList_page_heading_main');
   });
 })();
 </script>
+<?php iqs_user_list_extension_render('assets.footer'); ?>
 
 </body>
 </html>

@@ -82,6 +82,7 @@ try {
     require_once __DIR__ . '/_helpers.php';
     require_once __DIR__ . '/../classes/Database.php';
     require_once __DIR__ . '/../includes/functions-db.php';
+    require_once __DIR__ . '/../includes/user-list-extension.php';
     logAjaxUnexpectedOutput('user-sync-student:init.php', $initOutput);
 
     if (empty($_SESSION['f_stafID'])) {
@@ -253,6 +254,14 @@ try {
     foreach ($students as $student) {
         $matrik = trim((string)($student['matrik'] ?? ''));
         if ($matrik === '') {
+            $skipped++;
+            continue;
+        }
+
+        if (!iqs_user_list_extension_sync_allowed($pdo, 'student.sync', $student, [
+            'identifier' => $matrik,
+            'source' => 'v210',
+        ])) {
             $skipped++;
             continue;
         }

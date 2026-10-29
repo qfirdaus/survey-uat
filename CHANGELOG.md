@@ -6,6 +6,20 @@ This changelog follows a release-style summary based on major project milestones
 
 ## [Unreleased]
 
+## [1.11.2] - 2026-10-30
+
+### Added
+- Added a no-op-by-default user-list extension contract for project-owned tabs,
+  parameterised Student-list filters, footer assets and core Student sync guards.
+- Added regression coverage and documentation for isolated downstream user-list
+  extensions.
+
+### Security
+- Added project guard hooks to prevent core Student add and bulk-sync workflows
+  from changing records owned by an approved downstream extension.
+- Reserved `public/extensions/project/*` for downstream code and excluded it
+  from framework collection and synchronisation.
+
 ## [1.11.1] - 2026-10-23
 
 ### Changed
